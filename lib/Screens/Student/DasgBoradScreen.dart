@@ -5,11 +5,14 @@ import 'package:http/http.dart' as http;
 import 'package:online_classes/Screens/AddQuestionsScreen.dart';
 import 'package:online_classes/Screens/Auth/asktype.dart';
 import 'package:online_classes/Screens/Student/notificcationstudents.dart';
+import 'package:online_classes/Screens/Student/purchasedcourses.dart';
 import 'package:online_classes/Screens/Student/result.dart';
 import 'package:online_classes/Screens/Student/videos.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../mcq.dart';
+import '../../servcies.dart';
 import '../All Courses.dart';
+import '../Auth/signinScreen.dart';
 import '../MCQQuestion.dart';
 import '../Notification/notificationScreen.dart';
 import '../Question.dart';
@@ -26,20 +29,99 @@ class StudentDashboardScreen extends StatefulWidget {
 
   @override
   State<StudentDashboardScreen> createState() => _StudentDashboardScreenState();
+
 }
 
 class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
+
   Map<String, dynamic>? apiData;
   bool isLoading = true;
   String sname = '';
   String simage = '';
+  Map<String, dynamic>? apiData1;
+  bool loading = true;
+  List<dynamic> notices = [];
+
+  Future<void> fetchNotices() async {
+    setState(() => isLoading = true);
+
+    SharedPreferences pref = await SharedPreferences.getInstance();
+    String apiToken = pref.getString("token") ?? "";
+
+    try {
+      final response = await http.post(
+        Uri.parse("https://truescoreedu.com/api/active-notices"),
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        body: {"apiToken": apiToken},
+      );
+
+      print("NOTICE RESPONSE: ${response.body}");
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        if (data["status"] == 1) {
+          setState(() => notices = data["data"]);
+        }
+      }
+    } catch (e) {
+      print("Error: $e");
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
+
+
 
   @override
   void initState() {
     super.initState();
+    SecureScreen.enable();
+
     fetchDashboardData();
     getname();
+    fetchCourses();
+    fetchNotices();
   }
+
+  Future<void> fetchCourses() async {
+    try {
+
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      final response = await http.post(
+        Uri.parse("https://truescoreedu.com/api/get-batches"),
+        body: {
+          if (token != null) "apiToken": token,
+          "type": "free",
+        },
+      );
+
+      final decoded = jsonDecode(response.body);
+
+      if (!mounted) return;
+
+      if (decoded is Map && decoded["data"] != null) {
+        setState(() {
+          apiData1 = decoded["data"];
+          loading = false;
+        });
+      } else {
+        setState(() {
+          apiData1 = {};
+          loading = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        apiData1 = {};
+        loading = false;
+      });
+    }
+  }
+
 
   getname() async {
     final prefs = await SharedPreferences.getInstance();
@@ -57,11 +139,17 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     print(token);
     try {
       final response = await http.post(
-        Uri.parse("https://testora.codeeratech.in/api/get-batches"),
+        Uri.parse("https://truescoreedu.com/api/get-batches"),
         body: {"apiToken": token, "type": "free"},
       );
       if (response.statusCode == 200) {
+        print('yes');
         final json = jsonDecode(response.body);
+        print(json);
+        if(json['msg'].toString()=="Invalid Token"){
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>SigninScreen()));
+        }
+
         setState(() {
           apiData = json["data"];
           isLoading = false;
@@ -75,7 +163,22 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   }
 
   @override
+  void dispose() {
+    SecureScreen.disable();
+
+    // TODO: implement dispose
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final categories = apiData1?["categories"] ?? [];
+    final courses = [
+      ...?apiData?["trendingCourses"],
+      ...?apiData?["freeCourses"],
+      ...?apiData?["newCourses"],
+    ];
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -87,20 +190,49 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
 
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Ionicons.notifications_outline, color: Colors.white),
-            onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context)=>NotificationScreen1()));
-            },
+          Stack(
+            children: [
+              IconButton(
+                icon: const Icon(
+                  Ionicons.notifications_outline,
+                  color: Colors.white,
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => NotificationScreen1()),
+                  );
+                },
+              ),
+
+              // 🔴 Red Dot
+              if (notices.isNotEmpty)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    width: 10,
+                    height: 10,
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+            ],
           ),
+
+
           const SizedBox(width: 10),
+
         ],
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        child: Column(
+        child:
+        Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Greeting with name (small text)
@@ -150,16 +282,85 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                 contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
               ),
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 15),
             // Explore section
             // const Text(
             //   "Explore",
             //   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             // ),
-            const SizedBox(height: 15),
-            Container(height: 160,
-            child: CoursesScreen()),
-            // testoraBannerCard(),
+            const Padding(
+              padding: EdgeInsets.all(12),
+              child: Text(
+                "Course Categories",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+
+            if (categories.isNotEmpty)
+              SizedBox(
+                height: 120,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: categories.length,
+                  padding: EdgeInsets.zero,
+                  itemBuilder: (context, index) {
+                    final cat = categories[index] ?? {};
+                    final name = cat["name"]?.toString() ?? "Category";
+                    final id = cat["id"]?.toString() ?? "";
+
+                    return InkWell(
+                      onTap: id.isEmpty
+                          ? null
+                          : () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => CategoryDetailScreen(
+                              categoryId: id,
+                              categoryName: name,
+                              allData: apiData ?? {},
+                            ),
+                          ),
+                        );
+                      },
+                      child: Column(
+                        children: [
+                          Material(
+                            elevation: 2,
+                            shape: const CircleBorder(),
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 10),
+                              height: 80,
+                              width: 80,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.blueAccent,
+                              ),
+                              child: const Icon(Icons.menu_book,
+                                  color: Colors.white, size: 32),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          SizedBox(
+                            width: 80,
+                            child: Text(
+                              name,
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            // Container(height: 100,width: double.maxFinite
+            //   ,decoration: BoxDecoration(
+            //     borderRadius: BorderRadius.circular(20),color: Colors.blueAccent
+            //   ),)
+
             // GridView.count(
             //   shrinkWrap: true,
             //   physics: const NeverScrollableScrollPhysics(),
@@ -222,24 +423,23 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             const SizedBox(height: 15),
             if (apiData != null)
               SizedBox(
-                height: 210, // Adjust height for card size
+                height: 210,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
-
-                  itemCount:3,
-                  //[...?apiData!["trendingCourses"], ...?apiData!["freeCourses"], ...?apiData!["newCourses"]].length,
+                  itemCount: courses.length > 3 ? 3 : courses.length, // ✅ SAFE
                   itemBuilder: (context, index) {
-                    final course = [...?apiData!["trendingCourses"], ...?apiData!["freeCourses"], ...?apiData!["newCourses"]][index];
+                    final course = courses[index];
                     return Padding(
                       padding: const EdgeInsets.only(right: 12),
                       child: SizedBox(
-                        width: MediaQuery.of(context).size.width / 2- 20, // Show approx 3 at a time
+                        width: MediaQuery.of(context).size.width / 2 - 20,
                         child: _recommendedCourseCard(course),
                       ),
                     );
                   },
                 ),
               )
+
             else
               const Center(child: Text("No courses available")),
             const SizedBox(height: 30),
@@ -272,10 +472,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
 
   Widget testoraBannerCard() {
     return InkWell(onTap: (){
-      Navigator.push(context, MaterialPageRoute(builder: (context)=>GetNotesScreen()));
+     // Navigator.push(context, MaterialPageRoute(builder: (context)=>Videos()));
     },
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
@@ -321,7 +521,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     borderRadius: BorderRadius.circular(18),
                   ),
                   child: const Icon(
-                    Icons.school_rounded,
+                    Icons.question_answer,
                     size: 30,
                     color: Colors.white,
                   ),
@@ -335,21 +535,14 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: const [
                       Text(
-                        "Notes",
+                        "Practice paper",
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
                       ),
-                      SizedBox(height: 6),
-                      Text(
-                        "Learn and grow faster",
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.white70,
-                        ),
-                      ),
+
                     ],
                   ),
                 ),
@@ -407,7 +600,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                 color: Colors.white,
                 image: item["batch_image"] != null
                     ? DecorationImage(image:
-                NetworkImage('https://testora.codeeratech.in/uploads/batch_image/${item["batch_image"]}'), fit: BoxFit.cover)
+                NetworkImage('https://truescoreedu.com/uploads/batch_image/${item["batch_image"]}'), fit: BoxFit.cover)
                     : null,
               ),
               child: item["batch_image"] == null

@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../servcies.dart';
 import 'Student/result.dart';
 
 
@@ -41,7 +42,7 @@ class _PaperTypeScreenState extends State<PaperTypeScreen> {
       }
 
       final response = await http.post(
-        Uri.parse("https://testora.codeeratech.in/api/get-active-questions"),
+        Uri.parse("https://truescoreedu.com/api/get-active-questions"),
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
@@ -257,8 +258,11 @@ class _ExamScreenState extends State<ExamScreen> {
   @override
   void initState() {
     super.initState();
+    SecureScreen.enable();
+
     _initSharedPrefsAndResume();
   }
+
 
   Future<void> _initSharedPrefsAndResume() async {
     prefs = await SharedPreferences.getInstance();
@@ -315,6 +319,8 @@ class _ExamScreenState extends State<ExamScreen> {
 
   @override
   void dispose() {
+    SecureScreen.disable();
+
     _timer.cancel();
     super.dispose();
   }
@@ -337,7 +343,7 @@ class _ExamScreenState extends State<ExamScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse("https://testora.codeeratech.in/api/submit-paper"),
+        Uri.parse("https://truescoreedu.com/api/submit-paper"),
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: {
           "apiToken": token,
@@ -375,6 +381,64 @@ class _ExamScreenState extends State<ExamScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
     }
   }
+  void openDoubtDialog(BuildContext context, String des, String batchId) {
+    final TextEditingController problemController = TextEditingController();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text(
+            "Your Problem",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: TextField(
+            controller: problemController,
+            maxLines: 4,
+            decoration: InputDecoration(
+              hintText: "Type your problem here...",
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () {
+                if (problemController.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Please enter your problem")),
+                  );
+                  return;
+                }
+
+                /// 🔥 Combine description text
+                String finalDescription =
+                    "$des\n my problem is: ${problemController.text.trim()}";
+
+                submitDoubt(finalDescription, batchId);
+
+                Navigator.pop(context);
+              },
+              child: const Text("Submit"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> submitDoubt(String des,String id) async {
     print(des);
     print(id);
@@ -397,7 +461,7 @@ class _ExamScreenState extends State<ExamScreen> {
       // }
 
       final response = await http.post(
-        Uri.parse('https://testora.codeeratech.in/api/add-doubt'),
+        Uri.parse('https://truescoreedu.com/api/add-doubt'),
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: body,
       );
@@ -464,17 +528,25 @@ class _ExamScreenState extends State<ExamScreen> {
               style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
           ),
-          SizedBox(width: 40,),
+          SizedBox(width: 20,),
           InkWell(onTap: (){
-            submitDoubt(htmlToPlainText(q['question']?.toString() ?? ""),widget.paperData['batch_id'].toString());
+            openDoubtDialog(
+              context,
+                htmlToPlainText(q['question']?.toString() ?? ""),widget.paperData['batch_id'].toString() // pass your batch id here
+            );
+          //  submitDoubt(htmlToPlainText(q['question']?.toString() ?? ""),widget.paperData['batch_id'].toString());
 
 
           },
-            child: Container(
+            child:  Container(
+              height: 30,
+              decoration: BoxDecoration(
+                  color: Colors.green,borderRadius: BorderRadius.circular(10)
+              ),
               child: Row(
                 children: [
-                  Text("Raise Doubt"),
-                  Icon(Icons.question_mark)
+                  Text("  Raise Doubt",style: TextStyle(color: Colors.white),),
+                  Icon(Icons.question_mark,color: Colors.white,size: 20,)
                 ],
               ),
             ),
@@ -590,7 +662,7 @@ class _ExamScreenState extends State<ExamScreen> {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: Image.network(
-                    "https://testora.codeeratech.in/${q['answer_value']}",
+                    "https://truescoreedu.com/${q['answer_value']}",
                     height: 200,
                     fit: BoxFit.contain,
                     errorBuilder: (_, __, ___) => Container(
@@ -692,7 +764,7 @@ class _ExamScreenState extends State<ExamScreen> {
 //
 //     try {
 //       final response = await http.post(
-//         Uri.parse("https://testora.codeeratech.in/api/submit-paper"),
+//         Uri.parse("https://truescoreedu.com/api/submit-paper"),
 //         headers: {
 //           "Content-Type": "application/x-www-form-urlencoded",
 //         },

@@ -35,7 +35,7 @@ class _ResultScreenState extends State<ResultScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse("https://testora.codeeratech.in/api/answer-sheet"),
+        Uri.parse("https://truescoreedu.com/api/answer-sheet"),
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },

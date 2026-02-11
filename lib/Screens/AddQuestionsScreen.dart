@@ -1,8 +1,11 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../servcies.dart';
 import 'GetQues.dart';
 
 class AddQuestionScreen extends StatefulWidget {
@@ -31,7 +34,12 @@ class _AddQuestionScreenState extends State<AddQuestionScreen>
   // Dropdowns
   dynamic selectedSubject;
   dynamic selectedChapter;
-  String answerType = "text"; // text, link, image
+  String answerType = "text"; // text | link | image
+
+  final TextEditingController answerTextCtr = TextEditingController();
+  final TextEditingController answerLinkCtr = TextEditingController();
+
+  File? selectedImage;
 
   List<dynamic> subjects = [];
   List<dynamic> chapters = [];
@@ -56,7 +64,7 @@ class _AddQuestionScreenState extends State<AddQuestionScreen>
     setState(() => isLoadingBatches = true);
     try {
       final response = await http.get(
-        Uri.parse('https://testora.codeeratech.in/api/get-active-batches'),
+        Uri.parse('https://truescoreedu.com/api/get-active-batches'),
       );
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
@@ -128,6 +136,22 @@ class _AddQuestionScreenState extends State<AddQuestionScreen>
       'name': prefs.getString('selected_subject_name'),
     };
   }
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> pickImage(ImageSource source) async {
+    final XFile? image = await _picker.pickImage(
+      source: source,
+      imageQuality: 80,
+    );
+
+    if (image != null) {
+      setState(() {
+        selectedImage = File(image.path);
+      });
+    }
+  }
+
+
 
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
@@ -159,6 +183,8 @@ class _AddQuestionScreenState extends State<AddQuestionScreen>
   @override
   void initState() {
     super.initState();
+    SecureScreen.enable();
+
     selectedQuestionType = questionTypes.first; // MCQ default
 
     get();
@@ -174,6 +200,8 @@ class _AddQuestionScreenState extends State<AddQuestionScreen>
 
   @override
   void dispose() {
+    SecureScreen.disable();
+
     _fadeController.dispose();
     questionCtr.dispose();
     option1Ctr.dispose();
@@ -188,7 +216,7 @@ class _AddQuestionScreenState extends State<AddQuestionScreen>
   Future<void> fetchSubjects() async {
     setState(() => isLoadingSubjects = true);
     try {
-      final response = await http.get(Uri.parse('https://testora.codeeratech.in/api/get-subjects'));
+      final response = await http.get(Uri.parse('https://truescoreedu.com/api/get-subjects'));
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
         print('sub');
@@ -217,7 +245,7 @@ class _AddQuestionScreenState extends State<AddQuestionScreen>
 
     try {
       final response = await http.post(
-        Uri.parse('https://testora.codeeratech.in/api/get-chapters'),
+        Uri.parse('https://truescoreedu.com/api/get-chapters'),
         body: {"subject_id": subjectId},
       );
 
@@ -238,13 +266,16 @@ class _AddQuestionScreenState extends State<AddQuestionScreen>
 
   // Submit Question
   Future<void> _submitQuestion() async {
-    if (!_formKey.currentState!.validate()) return;
-    if (selectedSubject == null || selectedChapter == null) {
-      _showSnackBar("Please select subject and chapter", isError: true);
+   // if (!_formKey.currentState!.validate()) return;
+
+    if (selectedSubject == null ||
+        selectedBatch == null) {
+      _showSnackBar("Please select all required fields", isError: true);
       return;
     }
-    if (selectedBatch == null) {
-      _showSnackBar("Please select batch", isError: true);
+
+    if (answerType == "image" && selectedImage == null) {
+      _showSnackBar("Please select an image", isError: true);
       return;
     }
 
@@ -252,47 +283,96 @@ class _AddQuestionScreenState extends State<AddQuestionScreen>
 
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? '';
-    print("token$token");
+    print('iddis${selectedBatch["id"].toString()}');
+    var id =selectedBatch["id"].toString();
 
     try {
-      final response = await http.post(
-        Uri.parse('https://testora.codeeratech.in/api/add-questions'),
-        headers: {"Content-Type": "application/x-www-form-urlencoded"},
-        body: {
-          "apiToken": token.toString(),
+      // 🖼 IMAGE → MULTIPART
+      if (answerType == "image") {
+        var request = http.MultipartRequest(
+          "POST",
+          Uri.parse("https://truescoreedu.com/api/add-questions"),
+        );
+
+        request.fields.addAll({
+          "apiToken": token,
           "question": questionCtr.text.trim(),
           "subject_id": selectedSubject['id'].toString(),
-          "chapter_id": selectedChapter['id'].toString(),
-          "course_id":selectedBatch.toString(),
-          "question_type":selectedQuestionType?["id"].toString() ,
+          "chapter_id":
+          selectedChapter?['id']?.toString() ?? "",
+          "course_id": id.toString(),
+          "question_type": selectedQuestionType?["id"].toString() ?? "",
           "option1": option1Ctr.text.trim(),
           "option2": option2Ctr.text.trim(),
           "option3": option3Ctr.text.trim(),
           "option4": option4Ctr.text.trim(),
-          "answer":correctAnswer.toString(),
+          "answer": correctAnswer.toString(),
+          "answer_type": "image",
+        });
 
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            "answer_value",
+            selectedImage!.path,
+          ),
+        );
 
+        final res = await request.send();
+        final respStr = await res.stream.bytesToString();
+        final json = jsonDecode(respStr);
+        print(json);
+
+        if (res.statusCode == 200 || res.statusCode == 201) {
+          _showSnackBar(json['msg'], isError: false);
+        } else {
+          _showSnackBar(json['msg'], isError: true);
+        }
+      }
+
+      // 🔤 TEXT / 🔗 LINK → NORMAL POST
+      else {
+        Map body={
+          "apiToken": token,
+          "question": questionCtr.text.trim(),
+          "subject_id": selectedSubject['id'].toString(),
+           "chapter_id": "",
+          "course_id": id.toString(),
+          "question_type": selectedQuestionType?["id"].toString() ?? "",
+          "option1": option1Ctr.text.trim(),
+          "option2": option2Ctr.text.trim(),
+          "option3": option3Ctr.text.trim(),
+          "option4": option4Ctr.text.trim(),
+          "answer": correctAnswer.toString(),
           "answer_type": answerType,
           "answer_value": answerType == "text"
-              ? option1Ctr.text.trim() // or correct answer logic
-              : answerValueCtr.text.trim(),
-        },
-      );
+              ? answerTextCtr.text.trim()
+              : answerLinkCtr.text.trim(),
 
-      final json = jsonDecode(response.body);
-      print(json);
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        _showSnackBar(json['message'] ?? "Question added successfully!", isError: false);
-        // Navigator.push(
-        //   context,
-        //   MaterialPageRoute(builder: (_) => const QuestionListScreen()),
-        // );
-        //_resetForm();
-      } else {
-        _showSnackBar(json['message'] ?? "Failed to add question", isError: true);
+        };
+        print(body);
+        final response = await http.post(
+          Uri.parse('https://truescoreedu.com/api/add-questions'),
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body:
+          body,
+        );
+
+        final json = jsonDecode(response.body);
+        print(json);
+        print(response.statusCode);
+
+        if (response.statusCode == 200 ||
+            response.statusCode == 201) {
+          _showSnackBar(json['msg'], isError: false);
+        } else {
+          _showSnackBar(json['msg'], isError: true);
+        }
       }
     } catch (e) {
-      _showSnackBar("Network error: $e", isError: true);
+      print(e);
+      //_showSnackBar("Network error: $e", isError: true);
     } finally {
       setState(() => isSubmitting = false);
     }
@@ -327,7 +407,8 @@ class _AddQuestionScreenState extends State<AddQuestionScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return
+      Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.blue.shade700,
@@ -465,25 +546,100 @@ class _AddQuestionScreenState extends State<AddQuestionScreen>
 
 
                       // Answer Type
-                      _buildDropdown(
-                        value: answerType,
-                        items: const ["text", "link", "image"],
-                        itemBuilder: (type) => type[0].toUpperCase() + type.substring(1),
-                        onChanged: (val) => setState(() => answerType = val!),
-                        label: "Answer Type",
-                        icon: Icons.check_circle_outline,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DropdownButtonFormField<String>(
+                  value: answerType,
+                  decoration: const InputDecoration(labelText: "Answer Type"),
+                  items: const [
+                    DropdownMenuItem(value: "text", child: Text("Text")),
+                    DropdownMenuItem(value: "link", child: Text("Link")),
+                    DropdownMenuItem(value: "image", child: Text("Image")),
+                  ],
+                  onChanged: (val) {
+                    setState(() {
+                      answerType = val!;
+                      answerTextCtr.clear();
+                      answerLinkCtr.clear();
+                      selectedImage = null;
+                    });
+                  },
+                ),
+
+                const SizedBox(height: 12),
+
+                // 🔤 TEXT
+                if (answerType == "text")
+                  TextFormField(
+                    controller: answerTextCtr,
+                    decoration: const InputDecoration(
+                      labelText: "Answer Text",
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (v) =>
+                    v == null || v.isEmpty ? "Required" : null,
+                  ),
+
+                // 🔗 LINK
+                if (answerType == "link")
+                  TextFormField(
+                    controller: answerLinkCtr,
+                    decoration: const InputDecoration(
+                      labelText: "Answer Link",
+                      hintText: "https://...",
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (v) =>
+                    v == null || v.isEmpty ? "Required" : null,
+                  ),
+
+                // 🖼 IMAGE
+                if (answerType == "image")
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () => pickImage(ImageSource.gallery),
+                              icon: const Icon(Icons.photo),
+                              label: const Text("Gallery"),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () => pickImage(ImageSource.camera),
+                              icon: const Icon(Icons.camera_alt),
+                              label: const Text("Camera"),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 20),
 
-                      // Answer Value (if link/image)
-                      if (answerType != "text")
-                        _buildTextField(
-                          answerValueCtr,
-                          answerType == "link" ? "Answer Link (PDF/URL)" : "Answer Image URL",
-                          answerType == "link" ? Icons.link : Icons.image,
+                      if (selectedImage != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.file(
+                              selectedImage!,
+                              height: 120,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
                         ),
+                    ],
+                  ),
 
-                      const SizedBox(height: 30),
+              ],
+            ),
+
+
+            const SizedBox(height: 30),
 
                       // Submit Button
                       SizedBox(

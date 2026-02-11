@@ -60,7 +60,7 @@ class _QueryScreenState extends State<QueryScreen> {
       }
 
       final uri =
-      Uri.parse('https://testora.codeeratech.in/api/add-help-query');
+      Uri.parse('https://truescoreedu.com/api/add-help-query');
 
       /// 🔹 x-www-form-urlencoded POST
       final response = await http.post(

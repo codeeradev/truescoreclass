@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 
+import '../servcies.dart';
 import 'Details/detailScreen.dart';
 import 'Student/carddeatils.dart';
 
@@ -23,9 +24,18 @@ class _CourseSearchScreenState extends State<CourseSearchScreen> {
 
   // Debounce timer
   Timer? _debounce;
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    SecureScreen.enable();
+
+  }
 
   @override
   void dispose() {
+    SecureScreen.disable();
+
     _searchController.dispose();
     _debounce?.cancel();
     super.dispose();
@@ -50,7 +60,7 @@ class _CourseSearchScreenState extends State<CourseSearchScreen> {
       String? token = prefs.getString('token');
 
       final response = await http.post(
-        Uri.parse("https://testora.codeeratech.in/api/search-courses"),
+        Uri.parse("https://truescoreedu.com/api/search-courses"),
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: {
           "key": query.trim(),
@@ -236,7 +246,7 @@ class _CourseSearchScreenState extends State<CourseSearchScreen> {
                   borderRadius: BorderRadius.circular(16),
 
                 ),
-                child: Image.network('https://testora.codeeratech.in/uploads/batch_image/${imageUrl}'),
+                child: Image.network('https://truescoreedu.com/uploads/batch_image/${imageUrl}'),
               ):Container(
               width: 80,
               height: 80,

@@ -42,7 +42,7 @@ class _HelpSupportScreenstudentState extends State<HelpSupportScreenstudent> {
       }
 
       final response = await http.get(
-        Uri.parse("https://testora.codeeratech.in/api/get-help-contacts"),
+        Uri.parse("https://truescoreedu.com/api/get-help-contacts"),
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
        // body: {"apiToken": token},
       );

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
-
 import 'Details/detailScreen.dart';
 import 'Student/carddeatils.dart';
 import 'Student/videos.dart';
@@ -32,7 +31,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
       final token = prefs.getString('token');
 
       final response = await http.post(
-        Uri.parse("https://testora.codeeratech.in/api/get-batches"),
+        Uri.parse("https://truescoreedu.com/api/get-batches"),
         body: {
           if (token != null) "apiToken": token,
           "type": "free",
@@ -40,7 +39,6 @@ class _CoursesScreenState extends State<CoursesScreen> {
       );
 
       final decoded = jsonDecode(response.body);
-
       if (!mounted) return;
 
       if (decoded is Map && decoded["data"] != null) {
@@ -67,44 +65,58 @@ class _CoursesScreenState extends State<CoursesScreen> {
   Widget build(BuildContext context) {
     if (loading) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        body: Center(child: CircularProgressIndicator(color: Colors.blue)),
       );
     }
 
     final categories = apiData?["categories"] ?? [];
-    final videoLectures = apiData?["videoLectures"] ?? [];
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF8F9FF),
       body: RefreshIndicator(
         onRefresh: fetchCourses,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-
-              /// 🔹 Categories
-              const Padding(
-                padding: EdgeInsets.all(12),
+        color: Colors.deepPurple,
+        child: CustomScrollView(
+          slivers: [
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(20, 40, 20, 16),
                 child: Text(
-                  "Categories",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  "Explore Courses",
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.deepPurple,
+                  ),
                 ),
               ),
+            ),
 
-              if (categories.isNotEmpty)
-                SizedBox(
-                  height: 160,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: categories.length,
-                    itemBuilder: (context, index) {
-                      final cat = categories[index] ?? {};
-                      final name = cat["name"]?.toString() ?? "Category";
-                      final id = cat["id"]?.toString() ?? "";
+            // Categories
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: const Text(
+                  "Categories",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 140,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  itemCount: categories.length,
+                  itemBuilder: (context, index) {
+                    final cat = categories[index] ?? {};
+                    final name = cat["name"]?.toString() ?? "Category";
+                    final id = cat["id"]?.toString() ?? "";
 
-                      return InkWell(
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 16),
+                      child: InkWell(
                         onTap: id.isEmpty
                             ? null
                             : () {
@@ -121,139 +133,54 @@ class _CoursesScreenState extends State<CoursesScreen> {
                         },
                         child: Column(
                           children: [
-                            Material(
-                              elevation: 2,
-                              shape: const CircleBorder(),
-                              child: Container(
-                                margin: const EdgeInsets.symmetric(horizontal: 10),
-                                height: 80,
-                                width: 80,
-                                decoration: const BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.blueAccent,
+                            Container(
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: const LinearGradient(
+                                  colors: [Colors.blue, Colors.blueGrey],
                                 ),
-                                child: const Icon(Icons.menu_book,
-                                    color: Colors.white, size: 32),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.purple.withOpacity(0.3),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 6),
+                                  ),
+                                ],
                               ),
+                              child: const Icon(Icons.category_rounded, color: Colors.white, size: 36),
                             ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: 8),
                             SizedBox(
                               width: 80,
                               child: Text(
                                 name,
                                 textAlign: TextAlign.center,
                                 maxLines: 2,
-                                style: const TextStyle(fontSize: 12),
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                               ),
                             ),
                           ],
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    );
+                  },
                 ),
+              ),
+            ),
 
-              const SizedBox(height: 20),
-
-              /// 🔹 Video Lectures
-              //videoLecturesSection(videoLectures),
-            ],
-          ),
+            // You can add video lectures or other sections here if needed
+            // SliverToBoxAdapter(child: videoLecturesSection(videoLectures)),
+          ],
         ),
       ),
     );
   }
 
-  /// 🎥 SAFE VIDEO SECTION
-  Widget videoLecturesSection(List videos) {
-    if (videos.isEmpty) return const SizedBox();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.all(12),
-          child: Text(
-            "Video Lectures",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-        ),
-        SizedBox(
-          height: 240,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: videos.length,
-            itemBuilder: (context, index) {
-              final video = videos[index] ?? {};
-              final String url = video["url"]?.toString() ?? "";
-              final String title = video["title"]?.toString() ?? "Video";
-              final String subject = video["subject"]?.toString() ?? "";
-
-              final String videoId =
-                  YoutubePlayer.convertUrlToId(url) ?? "";
-
-              if (videoId.isEmpty) return const SizedBox();
-
-              return Padding(
-                padding: const EdgeInsets.only(left: 12),
-                child: InkWell(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => VideoPlayerScreen(
-                          videoTitle: title,
-                          youtubeUrl: url,
-                        ),
-                      ),
-                    );
-                  },
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
-                          "https://img.youtube.com/vi/$videoId/0.jpg",
-                          width: 280,
-                          height: 160,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            width: 280,
-                            height: 160,
-                            color: Colors.black12,
-                            child: const Icon(Icons.play_circle,
-                                size: 60, color: Colors.white),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        width: 280,
-                        child: Text(
-                          title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style:
-                          const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                      if (subject.isNotEmpty)
-                        Text(
-                          subject,
-                          style: TextStyle(
-                              color: Colors.grey.shade600, fontSize: 12),
-                        ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
+// Keep your videoLecturesSection if you want to show global videos
+// ...
 }
 
 class CategoryDetailScreen extends StatelessWidget {
@@ -268,106 +195,136 @@ class CategoryDetailScreen extends StatelessWidget {
     required this.allData,
   });
 
+  List<dynamic> _getCoursesByType(String type) {
+    final List courses = [
+      ...(allData["$type"] ?? []),
+    ].where((e) => e["cat_id"] == categoryId).toList();
+    return courses;
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+    final int crossAxisCount = screenWidth < 400 ? 2 : 3;
 
-    /// ✅ Responsive grid count
-    final int crossAxisCount = screenWidth < 360
-        ? 2
-        : screenWidth < 600
-        ? 2
-        : 3;
-
-    final List courses = [
-      ...(allData["trendingCourses"] ?? []),
-      ...(allData["freeCourses"] ?? []),
-      ...(allData["newCourses"] ?? []),
-    ].where((e) => e["cat_id"] == categoryId).toList();
+    final trending = _getCoursesByType("trendingCourses");
+    final free = _getCoursesByType("freeCourses");
+    final newCourses = _getCoursesByType("newCourses");
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: const Color(0xFFF8F9FF),
       appBar: AppBar(
         title: Text(categoryName),
         centerTitle: true,
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            /// 🔹 Header Banner
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  height: 180,
-                  width: double.infinity,
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.orange,Colors.orangeAccent],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+      body: CustomScrollView(
+        slivers: [
+          // Hero banner
+          SliverToBoxAdapter(
+            child: Container(
+              height: 160,
+              margin: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                gradient: const LinearGradient(
+                  colors: [Colors.blue, Colors.blueAccent],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.purple.withOpacity(0.25),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
                   ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.school_rounded,
-                      size: 70,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
+                ],
+              ),
+              child: const Center(
+                child: Icon(Icons.school_rounded, size: 80, color: Colors.white70),
               ),
             ),
+          ),
 
-            /// 🔹 Courses title
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text(
-                "Courses",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey.shade800,
-                ),
-              ),
-            ),
-
-            /// 🔹 Courses Grid
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: courses.length,
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: crossAxisCount,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 0.72,
-                ),
-                itemBuilder: (context, index) {
-                  return _courseCard(courses[index], context);
-                },
-              ),
-            ),
-
-            const SizedBox(height: 20),
-            Container(height: 1000,child: Videos(),)
+          // Trending Courses
+          if (trending.isNotEmpty) ...[
+            _buildSectionHeader("Trending Courses 🔥"),
+            _buildCourseGrid(trending, crossAxisCount, "Trending"),
           ],
+
+          // Free Courses
+          if (free.isNotEmpty) ...[
+            _buildSectionHeader("Free Courses 🎁"),
+            _buildCourseGrid(free, crossAxisCount, "Free"),
+          ],
+
+          // New Courses
+          if (newCourses.isNotEmpty) ...[
+            _buildSectionHeader("New Courses ✨"),
+            _buildCourseGrid(newCourses, crossAxisCount, "New"),
+          ],
+
+          if (trending.isEmpty && free.isEmpty && newCourses.isEmpty)
+            const SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(
+                child: Text(
+                  "No courses available in this category yet.",
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  SliverToBoxAdapter _buildSectionHeader(String title) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+        child: Text(
+          title,
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: Colors.deepPurple,
+          ),
         ),
       ),
     );
   }
 
-  /// 🔹 Course Card
-  Widget _courseCard(dynamic item, BuildContext context) {
+  SliverPadding _buildCourseGrid(List courses, int crossAxisCount, String type) {
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      sliver: SliverGrid(
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: crossAxisCount,
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
+          childAspectRatio: 0.68,
+        ),
+        delegate: SliverChildBuilderDelegate(
+              (context, index) => _courseCard(courses[index], context, type),
+          childCount: courses.length,
+        ),
+      ),
+    );
+  }
+
+  Widget _courseCard(dynamic item, BuildContext context, String type) {
     final String imageUrl = item["batch_image"]?.toString() ?? "";
+    final Color badgeColor = type == "Trending"
+        ? Colors.orange
+        : type == "Free"
+        ? Colors.green
+        : Colors.blueAccent;
 
     return InkWell(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(20),
       onTap: () {
         Navigator.push(
           context,
@@ -379,46 +336,63 @@ class CategoryDetailScreen extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 10,
-              offset: const Offset(0, 6),
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            /// 🔹 Image
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-              child: imageUrl.isNotEmpty
-                  ? Image.network(
-                'https://testora.codeeratech.in/uploads/batch_image/$imageUrl',
-                height: 120,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Container(
-                    height: 120,
-                    color: Colors.grey.shade200,
-                    child: const Center(
-                      child: CircularProgressIndicator(strokeWidth: 2),
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                  child: imageUrl.isNotEmpty
+                      ? Image.network(
+                    'https://truescoreedu.com/uploads/batch_image/$imageUrl',
+                    height: 140,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Container(
+                        height: 140,
+                        color: Colors.grey.shade200,
+                        child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                      );
+                    },
+                    errorBuilder: (_, __, ___) => _imagePlaceholder(),
+                  )
+                      : _imagePlaceholder(),
+                ),
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: badgeColor,
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                  );
-                },
-                errorBuilder: (_, __, ___) =>
-                    _imagePlaceholder(),
-              )
-                  : _imagePlaceholder(),
+                    child: Text(
+                      type,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-
-            /// 🔹 Text
             Padding(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -426,20 +400,14 @@ class CategoryDetailScreen extends StatelessWidget {
                     item["batch_name"]?.toString() ?? "Course",
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     item["sub_cat_name"]?.toString() ?? "",
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                    ),
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
                   ),
                 ],
               ),
@@ -452,10 +420,10 @@ class CategoryDetailScreen extends StatelessWidget {
 
   Widget _imagePlaceholder() {
     return Container(
-      height: 120,
-      color: Colors.blue.shade50,
+      height: 140,
+      color: Colors.deepPurple.shade50,
       child: const Center(
-        child: Icon(Icons.school, size: 40, color: Colors.blue),
+        child: Icon(Icons.school_rounded, size: 50, color: Colors.deepPurple),
       ),
     );
   }

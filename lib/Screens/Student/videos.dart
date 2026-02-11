@@ -8,7 +8,8 @@ import '../Youtubeplayer.dart';
 import 'getnotes.dart'; // VideoPlayerScreen
 
 class Videos extends StatefulWidget {
-  const Videos({super.key});
+  final String id;
+   Videos({super.key,required this.id});
 
   @override
   State<Videos> createState() => _VideosState();
@@ -22,6 +23,8 @@ class _VideosState extends State<Videos> {
 
   List<dynamic> mockPapers = [];
   List<dynamic> practicePapers = [];
+  List<dynamic>pyq = [];
+
   bool isLoadingPapers = true;
   String errorMsg = "";
 
@@ -33,7 +36,7 @@ class _VideosState extends State<Videos> {
   }
   Widget testoraBannerCard() {
     return InkWell(onTap: (){
-      Navigator.push(context, MaterialPageRoute(builder: (context)=>GetNotesScreen()));
+      //Navigator.push(context, MaterialPageRoute(builder: (context)=>GetNotesScreen()));
     },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
@@ -144,6 +147,7 @@ class _VideosState extends State<Videos> {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? apiToken = prefs.getString("token");
+      print(apiToken);
 
       if (apiToken == null || apiToken.isEmpty) {
         setState(() {
@@ -154,9 +158,10 @@ class _VideosState extends State<Videos> {
       }
 
       final response = await http.post(
-        Uri.parse("https://testora.codeeratech.in/api/get-active-questions"),
+        Uri.parse("https://truescoreedu.com/api/get-active-questions"),
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
-        body: {"apiToken": apiToken},
+        body: {"apiToken": apiToken,
+        "courseid":widget.id.toString()},
       );
       print(response.body);
 
@@ -168,6 +173,8 @@ class _VideosState extends State<Videos> {
           setState(() {
             mockPapers = data.where((e) => e['paper_type'] == "1").toList();
             practicePapers = data.where((e) => e['paper_type'] == "2").toList();
+           // pyq = data.where((e) => e['paper_type'] == "3").toList();
+
             isLoadingPapers = false;
           });
         } else {
@@ -195,7 +202,7 @@ class _VideosState extends State<Videos> {
     final token = preferences.getString('token');
 
     final response = await http.post(
-      Uri.parse("https://testora.codeeratech.in/api/get-batches"),
+      Uri.parse("https://truescoreedu.com/api/get-batches"),
       body: {"apiToken": token, "type": "free"},
     );
 
@@ -386,13 +393,13 @@ class _VideosState extends State<Videos> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      // appBar: AppBar(
-      //   title: const Text("My Courses", style: TextStyle(fontWeight: FontWeight.bold)),
-      //   elevation: 0,
-      //   backgroundColor: Colors.transparent,
-      //   foregroundColor: Colors.black87,
-      //   centerTitle: true,
-      // ),
+      appBar: AppBar(
+        title: const Text("Practice paper", style: TextStyle(fontWeight: FontWeight.bold)),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.black87,
+        centerTitle: true,
+      ),
       body: loder == false
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
@@ -405,9 +412,9 @@ class _VideosState extends State<Videos> {
           child: Column(
             children: [
               // Video Lectures Section
-              if (apiData != null) videoLecturesSection(apiData!["videoLectures"] ?? []),
-              SizedBox(height: 20,),
-              testoraBannerCard(),
+              //if (apiData != null) videoLecturesSection(apiData!["videoLectures"] ?? []),
+              // SizedBox(height: 20,),
+              // testoraBannerCard(),
               SizedBox(height: 20,),
 
 
@@ -460,6 +467,20 @@ class _VideosState extends State<Videos> {
                             ),
                           ),
                         ),
+                        const SizedBox(height: 24),
+
+                        // _buildPaperCard(
+                        //   title: "Pyq Papers",
+                        //   count: pyq.length,
+                        //   color:  Colors.yellow,
+                        //   icon: Icons.menu_book,
+                        //   onTap: () => Navigator.push(
+                        //     context,
+                        //     MaterialPageRoute(
+                        //       builder: (_) => PapersListScreen(papers: pyq, title: "Pyq Papers"),
+                        //     ),
+                        //   ),
+                        // ),
                       ],
 
                     const SizedBox(height: 40),

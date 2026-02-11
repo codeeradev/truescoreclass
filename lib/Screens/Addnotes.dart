@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart';
 
+import '../servcies.dart';
+
 class AddNotesScreen extends StatefulWidget {
   final int? noteId; // null = add new, not null = update
   final String? initialTitle;
@@ -49,6 +51,8 @@ class _AddNotesScreenState extends State<AddNotesScreen> {
   @override
   void initState() {
     super.initState();
+    SecureScreen.enable();
+
     _titleController.text = widget.initialTitle ?? '';
 
     fetchSubjects();
@@ -71,7 +75,7 @@ class _AddNotesScreenState extends State<AddNotesScreen> {
     setState(() => isLoadingSubjects = true);
     try {
       final response = await http.get(
-        Uri.parse('https://testora.codeeratech.in/api/get-subjects'),
+        Uri.parse('https://truescoreedu.com/api/get-subjects'),
       );
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
@@ -106,7 +110,7 @@ class _AddNotesScreenState extends State<AddNotesScreen> {
     });
     try {
       final response = await http.post(
-        Uri.parse('https://testora.codeeratech.in/api/get-chapters'),
+        Uri.parse('https://truescoreedu.com/api/get-chapters'),
         body: {"subject_id": subjectId},
       );
       if (response.statusCode == 200) {
@@ -135,7 +139,7 @@ class _AddNotesScreenState extends State<AddNotesScreen> {
     setState(() => isLoadingBatches = true);
     try {
       final response = await http.get(
-        Uri.parse('https://testora.codeeratech.in/api/get-active-batches'),
+        Uri.parse('https://truescoreedu.com/api/get-active-batches'),
       );
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
@@ -188,7 +192,7 @@ class _AddNotesScreenState extends State<AddNotesScreen> {
       return;
     }
 
-    var uri = Uri.parse('https://testora.codeeratech.in/api/add-notes');
+    var uri = Uri.parse('https://truescoreedu.com/api/add-notes');
     var request = http.MultipartRequest('POST', uri);
     print(selectedBatch['id'].toString());
     print(selectedSubject['id'].toString());
@@ -226,7 +230,7 @@ class _AddNotesScreenState extends State<AddNotesScreen> {
       if (response.statusCode == 200 || response.statusCode == 201) {
         print(response.body);
         final json = jsonDecode(response.body);
-        if (json['status'] == true || json['success'] == true) {
+        if (json['status'] == 1 || json['success'] == true) {
           _showSnackBar("Notes ${widget.noteId == null ? 'added' : 'updated'} successfully!", Colors.green);
           Navigator.pop(context, true); // Return true to indicate success
         } else {
@@ -282,6 +286,7 @@ class _AddNotesScreenState extends State<AddNotesScreen> {
           : (v) => v == null ? "Required" : null,
     );
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -435,6 +440,8 @@ class _AddNotesScreenState extends State<AddNotesScreen> {
 
   @override
   void dispose() {
+    SecureScreen.disable();
+
     _titleController.dispose();
     super.dispose();
   }

@@ -11,6 +11,7 @@ class NotificationScreen1 extends StatefulWidget {
 }
 
 class _NotificationScreen1State extends State<NotificationScreen1> {
+
   bool isLoading = false;
   List<dynamic> notices = [];
 
@@ -28,7 +29,7 @@ class _NotificationScreen1State extends State<NotificationScreen1> {
 
     try {
       final response = await http.post(
-        Uri.parse("https://testora.codeeratech.in/api/active-notices"),
+        Uri.parse("https://truescoreedu.com/api/active-notices"),
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: {"apiToken": apiToken},
       );

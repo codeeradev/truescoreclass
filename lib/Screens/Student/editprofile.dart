@@ -5,6 +5,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+import '../../servcies.dart';
+
 class UpdateProfileScreen extends StatefulWidget {
  // final String? currentName;
  // final File? currentImage;
@@ -35,19 +37,22 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
   @override
   void initState() {
     super.initState();
+    SecureScreen.enable();
+
     _loadUserData();
     // if (widget.currentImage != null) {
     //   profileImage = widget.currentImage;
     // }
+
   }
 
   Future<void> _loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       nameController.text =  prefs.getString('studentname') ?? '';
-      phoneController.text = prefs.getString('number') ?? '';
-      emailController.text = prefs.getString('email') ?? '';
-      image = prefs.getString('profileimage') ?? '';
+      phoneController.text = prefs.getString('studentph') ?? '';
+      emailController.text = prefs.getString('studentmail') ?? '';
+      image = prefs.getString('studentimage') ?? '';
 
     });
     print('s');
@@ -65,7 +70,9 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
       setState(() {
         profileImage = File(pickedFile.path);
       });
+      print(profileImage!.path.toString());
     }
+
   }
 
   Future<void> _saveProfile() async {
@@ -87,7 +94,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
 
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('https://testora.codeeratech.in/api/update-student-profile'),
+        Uri.parse('https://truescoreedu.com/api/update-student-profile'),
       );
 
       // Add text fields
@@ -99,9 +106,9 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
       });
 
       // Add password only if filled
-      if (passwordController.text.trim().isNotEmpty) {
-        request.fields['password'] = passwordController.text.trim();
-      }
+      // if (passwordController.text.trim().isNotEmpty) {
+      //   request.fields['password'] = passwordController.text.trim();
+      // }
 
       // Add image if selected
       if (profileImage != null) {
@@ -121,8 +128,8 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
         print(responseData);
         // Save name locally
         await prefs.setString('studentname', json["name"].toString());
-        await prefs.setString('email', json["email"].toString());
-        await prefs.setString('number', json["contact_no"].toString());
+        await prefs.setString('studentmail', json["email"].toString());
+        await prefs.setString('studentph', json["contact_no"].toString());
         //await prefs.setString('profile_image', profileImage!.path);
 
 
@@ -130,7 +137,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
 
         // Optionally save image path if you want to show it immediately
         if (profileImage != null) {
-          await prefs.setString('profileimage',json["image"].toString());
+          await prefs.setString('studentimage',json["image"].toString());
         }
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -158,6 +165,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -184,11 +192,25 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
                 child: Stack(
                   alignment: Alignment.bottomRight,
                   children: [
-                    CircleAvatar(
+                    profileImage != null?
+                CircleAvatar(
+                radius: 60,
+                  backgroundColor: Colors.grey.shade200,
+                  backgroundImage: profileImage != null
+                      ? FileImage(profileImage!)
+                      : null,
+                  child: profileImage == null
+                      ? const Icon(
+                    Icons.person_rounded,
+                    size: 60,
+                    color: Colors.grey,
+                  )
+                      : null,
+                ): CircleAvatar(
                       radius: 60,
                       backgroundColor: Colors.grey.shade200,
                       backgroundImage:
-                      image.isNotEmpty ? NetworkImage("https://testora.codeeratech.in/uploads/students/${image}"): null,
+                      image.isNotEmpty ? NetworkImage("https://truescoreedu.com/uploads/students/${image}"): null,
                       child: image.isEmpty == null
                           ? const Icon(Icons.person_rounded, size: 60, color: Colors.grey)
                           : null,
@@ -339,6 +361,8 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
 
   @override
   void dispose() {
+    SecureScreen.disable();
+
     nameController.dispose();
     phoneController.dispose();
     emailController.dispose();

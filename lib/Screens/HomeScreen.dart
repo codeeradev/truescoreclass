@@ -123,7 +123,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> fetchCourses() async {
     final response = await http.post(
-      Uri.parse("https://testora.codeeratech.in/api/get-batches"),
+      Uri.parse("https://truescoreedu.com/api/get-batches"),
       body: {
         "apiToken":
         "42065ca57e8859475dc0ceb6c1df197d53041adef155fb1097142aa053cea519",

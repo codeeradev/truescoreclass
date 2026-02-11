@@ -25,7 +25,7 @@ class _McqScreenState extends State<McqScreen> {
 
   fetchQuestions() async {
     final response = await http.get(
-      Uri.parse("https://testora.codeeratech.in/api/get-active-questions"),
+      Uri.parse("https://truescoreedu.com/api/get-active-questions"),
     );
 
     if (response.statusCode == 200) {
@@ -140,7 +140,7 @@ class _McqScreenState extends State<McqScreen> {
 
             if (q["answer_type"] == "file"&& showResult)
               selectedOption == q["right_answer"]?SizedBox():   Image.network(
-                "https://testora.codeeratech.in/${q["answer_value"]}",
+                "https://truescoreedu.com/${q["answer_value"]}",
                 height: 150,
               ),
 

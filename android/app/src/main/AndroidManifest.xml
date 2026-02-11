@@ -2,10 +2,13 @@
 
     <!-- Add the INTERNET permission here -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+
 
     <application
         android:usesCleartextTraffic="true"
-        android:label="Truescore"
+        android:label="TrueScore Class"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

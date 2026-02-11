@@ -1,9 +1,7 @@
 import 'dart:async';
 import 'dart:math';
+
 import 'package:flutter/material.dart';
-import 'package:online_classes/Screens/Auth/OtpScreen.dart';
-import 'package:online_classes/Screens/Auth/signupScreen.dart';
-import 'package:online_classes/widgets/BottomNavigationBar.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -11,7 +9,11 @@ import 'dart:convert';
 import '../../Splash/Signature.dart';
 import '../../ThemeConstent/themeData.dart';
 import '../Student/DasgBoradScreen.dart';
+import '../Student/forgetpassword.dart';
 import '../Teachers/screens/TeacherDashboardScreen.dart';
+import 'asktype.dart';
+import 'OtpScreen.dart';
+import 'signupScreen.dart';
 
 class TeacherSigninScreen extends StatefulWidget {
   const TeacherSigninScreen({super.key});
@@ -23,343 +25,310 @@ class TeacherSigninScreen extends StatefulWidget {
 class _TeacherSigninScreenState extends State<TeacherSigninScreen> with TickerProviderStateMixin {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  final PageController _imageController = PageController(viewportFraction: 0.45);
 
   bool _obscurePassword = true;
-  bool _showParticles = false;
-  int _currentPage = 0;
-  late AnimationController _particleController;
-  late AnimationController _fieldController;
-  late AnimationController _buttonController;
-  List<Offset> _particles = [];
-  Random _random = Random();
+  bool isLoading = false;
 
+  final PageController _imageController = PageController(viewportFraction: 0.52);
+  int _currentPage = 0;
 
   final List<String> _imageUrls = [
-    "https://images.unsplash.com/photo-1588072432836-e10032774350", // Kids classroom learning
-    "https://images.unsplash.com/photo-1529070538774-1843cb3265df", // Teacher helping student
-    "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f", // Students studying in library
-    "https://images.unsplash.com/photo-1588072432836-e10032774350", // Online teaching laptop student
-    "https://images.unsplash.com/photo-1517849845537-4d257902454a", // Classroom writing work
-    "https://images.unsplash.com/photo-1509062522246-3755977927d7", // Teacher reading to kids
+    "https://images.unsplash.com/photo-1588072432836-e10032774350",
+    "https://images.unsplash.com/photo-1529070538774-1843cb3265df",
+    "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f",
+    "https://images.unsplash.com/photo-1517849845537-4d257902454a",
+    "https://images.unsplash.com/photo-1509062522246-3755977927d7",
   ];
-
-
-  Future<void> loginUser() async {
-    SharedPreferences preferences = await SharedPreferences.getInstance();
-
-
-    if (emailController.text.trim().isEmpty || passwordController.text.isEmpty) {
-      // _showSnackBar("Please fill all fields", isError: true);
-      return;
-    }
-
-    // setState(() => isLoading = true);
-
-    try {
-      final response = await http.post(
-        Uri.parse('https://testora.codeeratech.in/api/user-login'),
-        headers: {        "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: {
-          "username": emailController.text.trim(), // Accepts mobile or email
-          "password": passwordController.text,
-          "role":"3"
-        },
-      );
-
-      final data = json.decode(response.body);
-      print(response.body);
-      print(response.statusCode);
-
-      if (response.statusCode == 200) {
-        showSnack(context,data['msg'].toString());
-
-
-        // _showSnackBar("Login Successful! Welcome back", isError: false);
-        await preferences.setString('id', data['data']['id'].toString());
-        await preferences.setString('token', data['data']['apiToken'].toString());
-        await preferences.setString('type', 'teacher');
-        await preferences.setString('teachername', data['data']['name'].toString());
-        await preferences.setString('teachermail', data['data']['email'].toString());
-        await preferences.setString('teacherno', data['data']['phone'].toString());
-
-
-
-
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => TeacherDashboardScreen()),
-        );
-
-
-        // Navigate to HomeScreen after successful login
-        // Navigator.pushReplacement(
-        //   context,
-        //   MaterialPageRoute(builder: (context) => const HomeScreen()),
-        // );
-      } else {
-        showSnack(context,data['message'] ?? "Invalid credentials");
-      }
-    } catch (e) {
-      // _showSnackBar("Network error. Please try again.", isError: true);
-    } finally {
-      // setState(() => isLoading = false);
-    }
-  }
-  void showSnack(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: Duration(seconds: 2),
-      ),
-    );
-  }
-
-
-  Future<void> signin() async {
-    SharedPreferences preferences = await SharedPreferences.getInstance();
-
-    final response = await http.post(
-      Uri.parse('https://testora.codeeratech.in/api/login'),
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: {
-        "username": emailController.text.trim(),
-        "password": passwordController.text.trim(),
-        "token": "sadfsa",
-        "versionCode": "1",
-      },
-    );
-
-    //print(response.body);
-    final data = jsonDecode(response.body);
-    print(data);
-
-    if (response.statusCode == 200) {
-      await preferences.setString("studentData", data['studentData']['enrollmentId']);
-      await preferences.setString("token", data['studentData']['apiToken']);
-
-      print(data['studentData']['enrollmentId']);
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => StudentDashboardScreen()),
-      );
-    }
-  }
-
-
-
 
   @override
   void initState() {
     super.initState();
-
-    _fieldController = AnimationController(vsync: this, duration: const Duration(milliseconds: 800))..repeat(reverse: true);
-    _buttonController = AnimationController(vsync: this, duration: const Duration(seconds: 2))..repeat(reverse: true);
-
-    Timer.periodic(const Duration(seconds: 2), (timer) {
+    Timer.periodic( Duration(seconds: 3), (timer) {
       if (_imageController.hasClients) {
         _currentPage = (_currentPage + 1) % _imageUrls.length;
         _imageController.animateToPage(
           _currentPage,
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.easeInOut,
+          duration: const Duration(milliseconds: 900),
+          curve: Curves.easeInOutCubic,
         );
       }
     });
   }
 
-
   @override
   void dispose() {
     _imageController.dispose();
-    _particleController.dispose();
-    _fieldController.dispose();
-    _buttonController.dispose();
+    emailController.dispose();
+    passwordController.dispose();
     super.dispose();
   }
 
-  void _onSignIn() {
-
-    final email = emailController.text.trim();
-    final password = passwordController.text.trim();
-    if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter all fields")),
-      );
+  Future<void> _loginTeacher() async {
+    if (emailController.text.trim().isEmpty || passwordController.text.isEmpty) {
+      _showError("Please enter username and password");
       return;
     }
-    loginUser();
 
+    setState(() => isLoading = true);
+
+    try {
+      final response = await http.post(
+        Uri.parse('https://truescoreedu.com/api/user-login'),
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        body: {
+          "username": emailController.text.trim(),
+          "password": passwordController.text.trim(),
+          "role": "3", // Teacher role
+        },
+      );
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200 && data['data'] != null) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('id', data['data']['id'].toString());
+        await prefs.setString('token', data['data']['apiToken'].toString());
+        await prefs.setString('type', 'teacher');
+        await prefs.setString('teachername', data['data']['name']?.toString() ?? '');
+        await prefs.setString('teachermail', data['data']['email']?.toString() ?? '');
+        await prefs.setString('teacherno', data['data']['phone']?.toString() ?? '');
+
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const TeacherDashboardScreen()),
+        );
+      } else {
+        _showError(data['message'] ?? "Invalid credentials");
+      }
+    } catch (e) {
+      _showError("Something went wrong. Please try again.");
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
   }
 
-  void _startParticles() {
-    setState(() {
-      _showParticles = true;
-      _particles = List.generate(200, (_) => Offset(_random.nextDouble() * MediaQuery.of(context).size.width, _random.nextDouble() * MediaQuery.of(context).size.height));
-    });
-    _particleController.forward(from: 0);
-    Future.delayed(const Duration(seconds: 2), () {
-      setState(() => _showParticles = false);
-    });
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red.shade700,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body:
-      SignatureBackground(
-        opacity: 0.25,
-        useDarkWaves: false,
-        gradientColors: [AppTheme.primeryColor, Colors.teal],
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFFE8F0FE), // very soft blue
+              Color(0xFFF5F9FF),
+              Color(0xFFFFFFFF),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 8),
 
-        child: Stack(
-          children: [
-            SafeArea(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const SizedBox(height: 24),
-
-                    const Text('Welcome to Testora', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 123),
-                    ScaleTransition(
-                      scale: Tween(begin: 1.0, end: 1.03).animate(CurvedAnimation(parent: _fieldController, curve: Curves.easeInOut)),
-                      child: Material(
-                        elevation: 3,
-                        shadowColor: Colors.grey,
-                        borderRadius: BorderRadius.circular(20),
-                        child: TextField(
-                          controller: emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          decoration: const InputDecoration(
-                            labelText: 'Username',
-                            border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(20))),
-                          ),
-                        ),
-                      ),
+                // Back button
+                InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AskType()),
+                    );
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: Icon(
+                      Icons.arrow_back_rounded,
+                      size: 32,
+                      color: Color(0xFF1E40AF),
                     ),
-                    const SizedBox(height: 24),
-                    ScaleTransition(
-                      scale: Tween(begin: 1.0, end: 1.03).animate(CurvedAnimation(parent: _fieldController, curve: Curves.easeInOut)),
-                      child: Material(
-                        elevation: 3,
-                        shadowColor: Colors.grey,
-                        borderRadius: BorderRadius.circular(20),
-                        child: TextField(
-                          controller: passwordController,
-                          obscureText: _obscurePassword,
-                          decoration: InputDecoration(
-                            labelText: 'Password',
-                            border: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(20))),
-                            suffixIcon: IconButton(
-                              icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
-                              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    // Align(
-                    //   alignment: Alignment.centerRight,
-                    //   child: TextButton(
-                    //     onPressed: () {},
-                    //     child: const Text('Forgot Password?'),
-                    //   ),
-                    // ),
-                    const SizedBox(height: 46),
-                    ScaleTransition(
-                      scale: Tween(begin: 1.0, end: 1.05).animate(CurvedAnimation(parent: _buttonController, curve: Curves.easeInOut)),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _onSignIn,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primeryColor,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                          ),
-                          child: const Text('Sign In', style: TextStyle(color: Colors.black, fontSize: 16)),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 100),
-                    SizedBox(
-                      height: 170, // Increased from 140 to avoid clipping
-                      child: PageView.builder(
-                        controller: _imageController,
-                        itemCount: _imageUrls.length,
-                        clipBehavior: Clip.none, // 👈 Prevents clipping of translated widgets
-                        itemBuilder: (context, index) {
-                          return AnimatedBuilder(
-                            animation: _imageController,
-                            builder: (context, child) {
-                              double value = 0.0;
-                              if (_imageController.position.haveDimensions) {
-                                value = _imageController.page! - index;
-                              }
-
-                              final scale = (1 - value.abs() * 0.3).clamp(0.7, 1.0);
-                              final yOffset = value.abs() < 0.5 ? 20.0 : -10.0;
-
-                              return Transform.translate(
-                                offset: Offset(0, yOffset),
-                                child: Transform.scale(
-                                  scale: scale,
-                                  alignment: Alignment.center,
-                                  child: child,
-                                ),
-                              );
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 6.0),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(20),
-                                child: Image.network(
-                                  _imageUrls[index],
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-
-
-
-                    const SizedBox(height: 20),
-                    // Row(
-                    //   mainAxisAlignment: MainAxisAlignment.center,
-                    //   children: [
-                    //     const Text("Don't have an account?"),
-                    //     TextButton(
-                    //       onPressed: () {
-                    //         Navigator.push(
-                    //           context,
-                    //           MaterialPageRoute(builder: (context) => const RegisterScreen()),
-                    //         );
-                    //       },
-                    //       child: const Text('Sign up now'),
-                    //     ),
-                    //   ],
-                    // ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
 
-          ],
+                const SizedBox(height: 32),
+
+                const Text(
+                  "Welcome Teacher",
+                  style: TextStyle(
+                    fontSize: 34,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF1E40AF),
+                    letterSpacing: -0.4,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "Sign in to manage your classes",
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+
+                const SizedBox(height: 48),
+
+                // Main card
+                Container(
+                  padding: const EdgeInsets.all(28),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(32),
+                    border: Border.all(color: Colors.blue.shade100, width: 1.2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.blue.shade200.withOpacity(0.18),
+                        blurRadius: 32,
+                        offset: const Offset(0, 16),
+                      ),
+                      BoxShadow(
+                        color: Colors.white.withOpacity(0.7),
+                        blurRadius: 20,
+                        offset: const Offset(-8, -8),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      _buildTextField(
+                        controller: emailController,
+                        hint: "Username or Email",
+                        icon: Icons.alternate_email_rounded,
+                      ),
+                      const SizedBox(height: 16),
+
+                      _buildTextField(
+                        controller: passwordController,
+                        hint: "Password",
+                        icon: Icons.lock_outline_rounded,
+                        obscureText: _obscurePassword,
+                        isPassword: true,
+                        onVisibilityTap: () => setState(() => _obscurePassword = !_obscurePassword),
+                      ),
+
+                      const SizedBox(height: 32),
+
+                      SizedBox(
+                        width: double.infinity,
+                        height: 58,
+                        child: ElevatedButton(
+                          onPressed: isLoading ? null : _loginTeacher,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF2563EB),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                            elevation: 8,
+                            shadowColor: Colors.blue.shade400.withOpacity(0.5),
+                          ),
+                          child: isLoading
+                              ? const SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 3,
+                            ),
+                          )
+                              : const Text(
+                            "Sign In as Teacher",
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (context)=>ForgotPasswordScreen()));
+                          },
+                          child: const Text(
+                            "Forgot Password?",
+                            style: TextStyle(color: Colors.blue),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 48),
+
+                // Image carousel
+
+
+                const SizedBox(height: 40),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+    bool obscureText = false,
+    bool isPassword = false,
+    VoidCallback? onVisibilityTap,
+  }) {
+    return TextField(
+      controller: controller,
+      obscureText: obscureText,
+      style: const TextStyle(
+        color: Color(0xFF1E3A8A),
+        fontSize: 16,
+        fontWeight: FontWeight.w500,
+      ),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 15),
+        prefixIcon: Icon(icon, color: const Color(0xFF3B82F6)),
+        suffixIcon: isPassword
+            ? IconButton(
+          icon: Icon(
+            obscureText ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+            color: const Color(0xFF3B82F6),
+          ),
+          onPressed: onVisibilityTap,
+        )
+            : null,
+        filled: true,
+        fillColor: const Color(0xFFF0F7FF),
+        contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: BorderSide(color: Colors.blue.shade100),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.8),
         ),
       ),
     );
   }
 }
-
-

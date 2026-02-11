@@ -133,7 +133,7 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
   // Fetch States (unchanged)
   Future<void> fetchStates() async {
     try {
-      final response = await http.get(Uri.parse('https://testora.codeeratech.in/api/geo-full'));
+      final response = await http.get(Uri.parse('https://truescoreedu.com/api/geo-full'));
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);
         final List<dynamic> stateList = jsonResponse['states'] ?? [];
@@ -151,7 +151,7 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
   Future<void> fetchSubjects() async {
     setState(() => isLoadingSubjects = true);
     try {
-      final response = await http.get(Uri.parse('https://testora.codeeratech.in/api/get-subjects'));
+      final response = await http.get(Uri.parse('https://truescoreedu.com/api/get-subjects'));
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
         setState(() {
@@ -192,7 +192,7 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
 
   getlist() async {
     final response = await http.get(
-      Uri.parse('https://testora.codeeratech.in/api/get-roles'),
+      Uri.parse('https://truescoreedu.com/api/get-roles'),
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
       },
@@ -266,7 +266,7 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
       print("📤 FINAL BODY SENT → $body");
 
       final response = await http.post(
-        Uri.parse('https://testora.codeeratech.in/api/register-user'),
+        Uri.parse('https://truescoreedu.com/api/register-user'),
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
@@ -364,7 +364,7 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
         foregroundColor: Colors.white,
         flexibleSpace: Container(
           decoration:  BoxDecoration(
-           color: Colors.blue.shade200
+           color: Colors.blue.shade800
           ),
         ),
       ),
@@ -404,7 +404,7 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: Colors.blue.shade200,
+                      color: Colors.blue.shade800,
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(color: Colors.white.withOpacity(0.2)),
                       boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 20)],
@@ -429,27 +429,7 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
 
                           const SizedBox(height: 20),
 
-                          // DOB Picker
-                          InkWell(
-                            onTap: () => _selectDate(context),
-                            child: InputDecorator(
-                              decoration: InputDecoration(
-                                labelText: "Date of Birth",
-                                labelStyle: const TextStyle(color: Colors.white70),
-                                filled: true,
-                                fillColor: Colors.white.withOpacity(0.1),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Colors.white, width: 2)),
-                                prefixIcon: const Icon(Icons.calendar_today, color: Colors.white70),
-                              ),
-                              child: Text(
-                                selectedDob == null
-                                    ? "Select DOB"
-                                    : DateFormat('dd-MM-yyyy').format(selectedDob!),
-                                style: TextStyle(color: selectedDob == null ? Colors.white54 : Colors.white),
-                              ),
-                            ),
-                          ),
+
                           const SizedBox(height: 20),
 
                           // Multi-Select Subjects (Only for Teacher)
@@ -461,7 +441,7 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
                               isExpanded: true,
                               decoration: InputDecoration(
                                 labelText: "Select Subjects (Hold to select multiple)",
-                                labelStyle: const TextStyle(color: Colors.white70),
+                                labelStyle: const TextStyle(color: Colors.white),
                                 filled: true,
                                 fillColor: Colors.white.withOpacity(0.1),
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
@@ -490,7 +470,7 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
                                           children: [
                                             Icon(
                                               isSelected ? Icons.check_box : Icons.check_box_outline_blank,
-                                              color: isSelected ? Colors.green : Colors.white70,
+                                              color: isSelected ? Colors.green : Colors.white,
                                             ),
                                             const SizedBox(width: 10),
                                             Text(sub['subject_name'], style: const TextStyle(color: Colors.white)),
@@ -506,11 +486,45 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
                                 selectedSubjects.isEmpty
                                     ? "Choose subjects"
                                     : "${selectedSubjects.length} subject(s) selected",
-                                style: const TextStyle(color: Colors.white70),
+                                style: const TextStyle(color: Colors.white),
                               ),
                             ),
                             const SizedBox(height: 20),
                           ],
+
+                          //const SizedBox(height: 25),
+
+                          // Rest of your fields (unchanged)
+                          _buildTextField(nameCtr, "Full Name", Icons.person),
+                          _buildTextField(fatherCtr, "Father/Husband Name", Icons.family_restroom),
+                          // DOB Picker
+                          InkWell(
+                            onTap: () => _selectDate(context),
+                            child: InputDecorator(
+                              decoration: InputDecoration(
+                                labelText: "Date of Birth",
+                                labelStyle: const TextStyle(color: Colors.white),
+                                filled: true,
+                                fillColor: Colors.white.withOpacity(0.1),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Colors.white, width: 2)),
+                                prefixIcon: const Icon(Icons.calendar_today, color: Colors.white),
+                              ),
+                              child: Text(
+                                selectedDob == null
+                                    ? "Select DOB"
+                                    : DateFormat('dd-MM-yyyy').format(selectedDob!),
+                                style: TextStyle(color: selectedDob == null ? Colors.white54 : Colors.white),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 15,),
+
+
+                          _buildTextField(houseCtr, "House No.", Icons.home),
+                          _buildTextField(streetCtr, "Street / Village / City", Icons.location_on),
+                          _buildTextField(pinCtr, "Pin Code", Icons.pin, keyboardType: TextInputType.number),
+
                           isLoadingStates
                               ? const LinearProgressIndicator(backgroundColor: Colors.white24)
                               : _buildGlassDropdown(
@@ -546,23 +560,17 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
                             onChanged: cities.isEmpty ? null : (city) => setState(() => selectedCity = city),
                             label: "Select City / Tehsil",
                           ),
-                          const SizedBox(height: 25),
+                          const SizedBox(height: 15),
+                          _buildTextField(mobileCtr, "Mobile Number", Icons.phone, keyboardType: TextInputType.phone),
+                          _buildTextField(emailCtr, "Email Address", Icons.email, keyboardType: TextInputType.emailAddress),
+                          _buildTextField(passwordCtr, "Password", Icons.lock, obscure: true),
 
-                          // Rest of your fields (unchanged)
-                          _buildTextField(nameCtr, "Full Name", Icons.person),
-                          _buildTextField(fatherCtr, "Father/Husband Name", Icons.family_restroom),
-                          _buildTextField(houseCtr, "House No.", Icons.home),
-                          _buildTextField(streetCtr, "Street / Village / City", Icons.location_on),
-                          _buildTextField(pinCtr, "Pin Code", Icons.pin, keyboardType: TextInputType.number),
                           const SizedBox(height: 25),
-                          const Text("Details", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                         // const Text("Details", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                           const SizedBox(height: 15),
 
 
 
-                          _buildTextField(mobileCtr, "Mobile Number", Icons.phone, keyboardType: TextInputType.phone),
-                          _buildTextField(emailCtr, "Email Address", Icons.email, keyboardType: TextInputType.emailAddress),
-                          _buildTextField(passwordCtr, "Password", Icons.lock, obscure: true),
 
                           const SizedBox(height: 30),
 
@@ -606,8 +614,8 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
         style: const TextStyle(color: Colors.white),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: const TextStyle(color: Colors.white70),
-          prefixIcon: Icon(icon, color: Colors.white70),
+          labelStyle: const TextStyle(color: Colors.white),
+          prefixIcon: Icon(icon, color: Colors.white),
           filled: true,
           fillColor: Colors.white.withOpacity(0.1),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
@@ -635,7 +643,7 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: Colors.white70),
+        labelStyle: const TextStyle(color: Colors.white),
         filled: true,
         fillColor: Colors.white.withOpacity(0.1),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
@@ -661,7 +669,7 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: Colors.white70),
+        labelStyle: const TextStyle(color: Colors.white),
         filled: true,
         fillColor: Colors.white.withOpacity(0.1),
         border: OutlineInputBorder(
@@ -692,7 +700,7 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w500)),
+        Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
         const SizedBox(height: 8),
         GestureDetector(
           onTap: () => pickImage(onPick),
@@ -704,7 +712,7 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
               border: Border.all(color: Colors.white.withOpacity(0.3)),
             ),
             child: file == null
-                ? const Center(child: Icon(Icons.add_a_photo, color: Colors.white70, size: 36))
+                ? const Center(child: Icon(Icons.add_a_photo, color: Colors.white, size: 36))
                 : ClipRRect(borderRadius: BorderRadius.circular(16), child: Image.file(file, fit: BoxFit.cover)),
           ),
         ),

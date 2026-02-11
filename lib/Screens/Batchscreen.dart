@@ -20,7 +20,7 @@ class _FreeCoursesScreenState extends State<FreeCoursesScreen> {
   }
 
   Future<void> fetchFreeCourses() async {
-    final url = Uri.parse("https://testora.codeeratech.in/api/get-batches");
+    final url = Uri.parse("https://truescoreedu.com/api/get-batches");
 
     try {
       final response = await http.post(
@@ -103,7 +103,7 @@ class _FreeCoursesScreenState extends State<FreeCoursesScreen> {
                       image: course["batch_image"] != ""
                           ? DecorationImage(
                         image: NetworkImage(
-                            "https://testora.codeeratech.in/${course["batch_image"]}"),
+                            "https://truescoreedu.com/${course["batch_image"]}"),
                         fit: BoxFit.cover,
                       )
                           : null,

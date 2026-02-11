@@ -2,7 +2,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'AddQuestionsScreen.dart'; // Adjust path if needed
+import '../servcies.dart';
+import 'AddQuestionsScreen.dart';
+import 'Student/editquestion.dart'; // Make sure path is correct
 
 class QuestionListScreen extends StatefulWidget {
   const QuestionListScreen({super.key});
@@ -23,9 +25,12 @@ class _QuestionListScreenState extends State<QuestionListScreen>
   @override
   void initState() {
     super.initState();
+    SecureScreen.enable();
     fetchQuestions();
-
-    _animationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
@@ -35,6 +40,7 @@ class _QuestionListScreenState extends State<QuestionListScreen>
   @override
   void dispose() {
     _animationController.dispose();
+    SecureScreen.disable();
     super.dispose();
   }
 
@@ -47,7 +53,7 @@ class _QuestionListScreenState extends State<QuestionListScreen>
 
     try {
       final response = await http.post(
-        Uri.parse('https://testora.codeeratech.in/api/get-questions'),
+        Uri.parse('https://truescoreedu.com/api/get-questions'),
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: {"apiToken": token},
       );
@@ -88,7 +94,8 @@ class _QuestionListScreenState extends State<QuestionListScreen>
         elevation: 0,
         title: const Text(
           "My Questions",
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 22),
+          style: TextStyle(
+              fontWeight: FontWeight.bold, color: Colors.white, fontSize: 22),
         ),
         centerTitle: true,
         actions: [
@@ -105,7 +112,8 @@ class _QuestionListScreenState extends State<QuestionListScreen>
           color: Colors.blue.shade700,
           child: isLoading
               ? const Center(
-            child: CircularProgressIndicator(color: Colors.blue, strokeWidth: 3),
+            child: CircularProgressIndicator(
+                color: Colors.blue, strokeWidth: 3),
           )
               : errorMessage != null
               ? _buildErrorState()
@@ -116,8 +124,9 @@ class _QuestionListScreenState extends State<QuestionListScreen>
             itemCount: questions.length,
             itemBuilder: (context, index) {
               final q = questions[index];
-              final options = List<String>.from(q['options'] ?? []);
-              final String? rightAnswer = q['right_answer']; // "A", "B", "C", "D" or null
+              final options =
+              List<String>.from(q['options'] ?? []);
+              final String? rightAnswer = q['right_answer'];
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 16),
@@ -132,118 +141,222 @@ class _QuestionListScreenState extends State<QuestionListScreen>
                     ),
                   ],
                 ),
-                child: ExpansionTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.blue.shade600,
-                    child: Text(
-                      "${index + 1}",
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  title: Text(
-                    q['question'] ?? "No question",
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
-                  ),
-                  subtitle: Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Row(
+                child: Stack(
+                  children: [
+                    ExpansionTile(
+                      leading: CircleAvatar(
+                        backgroundColor: Colors.blue.shade600,
+                        child: Text(
+                          "${index + 1}",
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      title: Text(
+                        q['question'] ?? "No question",
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Colors.black87),
+                      ),
+                      subtitle: Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Row(
+                          children: [
+                            Icon(Icons.book,
+                                size: 16,
+                                color: Colors.blue.shade600),
+                            const SizedBox(width: 4),
+                            Text(
+                                "Subject ID: ${q['subject_id']}",
+                                style: TextStyle(
+                                    color: Colors.grey.shade700,
+                                    fontSize: 13)),
+                            const SizedBox(width: 12),
+                            Icon(Icons.menu_book,
+                                size: 16,
+                                color: Colors.blue.shade600),
+                            const SizedBox(width: 4),
+                            Text(
+                                "Chapter ID: ${q['chapter_id']}",
+                                style: TextStyle(
+                                    color: Colors.grey.shade700,
+                                    fontSize: 13)),
+                          ],
+                        ),
+                      ),
                       children: [
-                        Icon(Icons.book, size: 16, color: Colors.blue.shade600),
-                        const SizedBox(width: 4),
-                        Text("Subject ID: ${q['subject_id']}", style: TextStyle(color: Colors.grey.shade700, fontSize: 13)),
-                        const SizedBox(width: 12),
-                        Icon(Icons.menu_book, size: 16, color: Colors.blue.shade600),
-                        const SizedBox(width: 4),
-                        Text("Chapter ID: ${q['chapter_id']}", style: TextStyle(color: Colors.grey.shade700, fontSize: 13)),
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment:
+                            CrossAxisAlignment.start,
+                            children: [
+                              const Text("Options:",
+                                  style: TextStyle(
+                                      fontWeight:
+                                      FontWeight.bold)),
+                              const SizedBox(height: 12),
+                              ...options.asMap().entries.map(
+                                    (entry) {
+                                  int idx = entry.key;
+                                  String option = entry.value;
+                                  String optionLetter =
+                                  String.fromCharCode(
+                                      65 + idx);
+                                  bool isCorrect =
+                                      rightAnswer == optionLetter;
+
+                                  return Padding(
+                                    padding: const EdgeInsets
+                                        .symmetric(vertical: 8),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          isCorrect
+                                              ? Icons.check_circle
+                                              : Icons
+                                              .radio_button_unchecked,
+                                          color: isCorrect
+                                              ? Colors.green
+                                              .shade600
+                                              : Colors
+                                              .grey.shade500,
+                                          size: 22,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          "$optionLetter. ",
+                                          style: const TextStyle(
+                                              fontWeight:
+                                              FontWeight.bold,
+                                              fontSize: 15),
+                                        ),
+                                        Expanded(
+                                          child: Text(
+                                            option,
+                                            style: TextStyle(
+                                              fontWeight: isCorrect
+                                                  ? FontWeight
+                                                  .bold
+                                                  : FontWeight
+                                                  .normal,
+                                              color: isCorrect
+                                                  ? Colors.green
+                                                  .shade700
+                                                  : Colors
+                                                  .black87,
+                                              fontSize: 15,
+                                            ),
+                                          ),
+                                        ),
+                                        if (isCorrect)
+                                          Container(
+                                            padding:
+                                            const EdgeInsets
+                                                .symmetric(
+                                                horizontal:
+                                                10,
+                                                vertical: 4),
+                                            decoration:
+                                            BoxDecoration(
+                                              color: Colors.green
+                                                  .shade100,
+                                              borderRadius:
+                                              BorderRadius
+                                                  .circular(
+                                                  20),
+                                            ),
+                                            child: const Text(
+                                              "Correct Answer",
+                                              style: TextStyle(
+                                                  color: Colors
+                                                      .green,
+                                                  fontSize: 11,
+                                                  fontWeight:
+                                                  FontWeight
+                                                      .bold),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                              const SizedBox(height: 16),
+                              if (q['answer_type'] != 'text' &&
+                                  q['answer_value']
+                                      ?.toString()
+                                      .isNotEmpty ==
+                                      true)
+                                Container(
+                                  width: double.infinity,
+                                  padding:
+                                  const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.shade50,
+                                    borderRadius:
+                                    BorderRadius.circular(16),
+                                    border: Border.all(
+                                        color:
+                                        Colors.blue.shade200),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        q['answer_type'] ==
+                                            'link'
+                                            ? Icons.link
+                                            : Icons.image,
+                                        color:
+                                        Colors.blue.shade700,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
+                                          "Answer: ${q['answer_value']}",
+                                          style: TextStyle(
+                                              color: Colors.blue
+                                                  .shade900,
+                                              fontWeight:
+                                              FontWeight
+                                                  .w600),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
-                  ),
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text("Options:", style: TextStyle(fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 12),
-
-                          // Display Options with A/B/C/D
-                          ...options.asMap().entries.map((entry) {
-                            int idx = entry.key;
-                            String option = entry.value;
-                            String optionLetter = String.fromCharCode(65 + idx); // A=65, B=66...
-                            bool isCorrect = rightAnswer == optionLetter;
-
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    isCorrect ? Icons.check_circle : Icons.radio_button_unchecked,
-                                    color: isCorrect ? Colors.green.shade600 : Colors.grey.shade500,
-                                    size: 22,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Text(
-                                    "$optionLetter. ",
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                                  ),
-                                  Expanded(
-                                    child: Text(
-                                      option,
-                                      style: TextStyle(
-                                        fontWeight: isCorrect ? FontWeight.bold : FontWeight.normal,
-                                        color: isCorrect ? Colors.green.shade700 : Colors.black87,
-                                        fontSize: 15,
-                                      ),
-                                    ),
-                                  ),
-                                  if (isCorrect)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: Colors.green.shade100,
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: const Text(
-                                        "Correct Answer",
-                                        style: TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            );
-                          }).toList(),
-
-                          const SizedBox(height: 16),
-
-                          // Show Link/Image Answer if not text
-                          if (q['answer_type'] != 'text' && q['answer_value']?.toString().isNotEmpty == true)
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: Colors.blue.shade50,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: Colors.blue.shade200),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    q['answer_type'] == 'link' ? Icons.link : Icons.image,
-                                    color: Colors.blue.shade700,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      "Answer: ${q['answer_value']}",
-                                      style: TextStyle(color: Colors.blue.shade900, fontWeight: FontWeight.w600),
-                                    ),
-                                  ),
-                                ],
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: IconButton(
+                        icon: const Icon(
+                          Icons.edit,
+                          color: Colors.orange,
+                          size: 28,
+                        ),
+                        onPressed: () {
+                          int m =int.parse(q['id'].toString());
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => AddQuestionScreenedit(
+                                id: m,
+                                initialQuestion: q,
                               ),
                             ),
-                        ],
+                          ).then((value) {
+                            if (value == true) {
+                              fetchQuestions(refresh: true);
+                            }
+                          });
+                        },
                       ),
                     ),
                   ],
@@ -273,15 +386,25 @@ class _QuestionListScreenState extends State<QuestionListScreen>
         children: [
           Icon(Icons.quiz_outlined, size: 80, color: Colors.grey.shade400),
           const SizedBox(height: 20),
-          const Text("No Questions Yet", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87)),
+          const Text("No Questions Yet",
+              style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87)),
           const SizedBox(height: 10),
-          const Text("Start adding questions for your students!", style: TextStyle(color: Colors.grey)),
+          const Text("Start adding questions for your students!",
+              style: TextStyle(color: Colors.grey)),
           const SizedBox(height: 20),
           ElevatedButton.icon(
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddQuestionScreen())),
+            onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const AddQuestionScreen())),
             icon: const Icon(Icons.add),
             label: const Text("Add First Question"),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue.shade700, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue.shade700,
+                foregroundColor: Colors.white),
           ),
         ],
       ),
@@ -295,15 +418,20 @@ class _QuestionListScreenState extends State<QuestionListScreen>
         children: [
           Icon(Icons.error_outline, size: 80, color: Colors.red.shade400),
           const SizedBox(height: 20),
-          const Text("Oops! Something went wrong", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text("Oops! Something went wrong",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
-          Text(errorMessage!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey)),
+          Text(errorMessage!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.grey)),
           const SizedBox(height: 20),
           ElevatedButton.icon(
             onPressed: () => fetchQuestions(refresh: true),
             icon: const Icon(Icons.refresh),
             label: const Text("Try Again"),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue.shade700, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue.shade700,
+                foregroundColor: Colors.white),
           ),
         ],
       ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:online_classes/Screens/AddQuestionsScreen.dart';
 import 'package:online_classes/Screens/HomeScreen.dart';
 import 'package:online_classes/Screens/Teachers/screens/TeacherDashboardScreen.dart';
+import 'package:online_classes/servcies.dart';
 import 'package:online_classes/widgets/BottomNavigationBar.dart';
 import 'package:provider/provider.dart';
 import 'package:online_classes/Splash/splashScreen.dart';
@@ -20,6 +21,8 @@ void main() {
       child: const MyApp(),
     ),
   );
+  SecureScreen.enable();
+
 }
 
 class MyApp extends StatelessWidget {

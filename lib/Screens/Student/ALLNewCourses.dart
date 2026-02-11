@@ -30,7 +30,7 @@ class _AllCoursesScreenState extends State<AllCoursesScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse("https://testora.codeeratech.in/api/get-batches"),
+        Uri.parse("https://truescoreedu.com/api/get-batches"),
         body: {
           "apiToken": token,
           "type": "free",
@@ -40,6 +40,7 @@ class _AllCoursesScreenState extends State<AllCoursesScreen> {
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
         final data = json["data"];
+        print(data);
 
         List<dynamic> combined = [
           ...?data["trendingCourses"] as List?,
@@ -149,117 +150,130 @@ class _AllCoursesScreenState extends State<AllCoursesScreen> {
   }
 
   Widget _courseCard(dynamic item) {
-    print(item);
     final String title = item["batch_name"] ?? "Untitled Course";
     final String category = item["cat_name"] ?? "";
     final String subCategory = item["sub_cat_name"] ?? "";
     final String imageUrl = item["batch_image"]?.toString() ?? "";
-    print(imageUrl);
 
-    return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => CourseDetailScreen2(courseData: item),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool isSmallCard = constraints.maxWidth < 170;
+
+        final double titleFont = isSmallCard ? 13 : 15;
+        final double metaFont = isSmallCard ? 11 : 12.5;
+        final double iconSize = isSmallCard ? 16 : 18;
+
+        return InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => CourseDetailScreen2(courseData: item),
+              ),
+            );
+          },
+          child: Card(
+            elevation: 6,
+            shadowColor: Colors.blue.withOpacity(0.12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                /// IMAGE (flexible height)
+                ClipRRect(
+                  borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(20)),
+                  child: AspectRatio(
+                    aspectRatio: 1.5,
+                    child: imageUrl.isNotEmpty
+                        ? Image.network(
+                      'https://truescoreedu.com/uploads/batch_image/$imageUrl',
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _imageFallback(),
+                    )
+                        : _imageFallback(),
+                  ),
+                ),
+
+                /// CONTENT
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      /// TITLE
+                      Text(
+                        title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: titleFont,
+                          fontWeight: FontWeight.bold,
+                          height: 1.25,
+                        ),
+                      ),
+
+                      const SizedBox(height: 6),
+
+                      /// CATEGORY
+                      Text(
+                        "$category${subCategory.isNotEmpty ? " • $subCategory" : ""}",
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: metaFont,
+                          color: Colors.grey.shade800,
+                        ),
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      /// FOOTER
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.play_circle_outline,
+                            size: iconSize,
+                            color: Colors.blue.shade600,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              "Lessons available",
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: metaFont,
+                                color: Colors.blue.shade700,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
-      borderRadius: BorderRadius.circular(20),
-      child: Card(
-        elevation: 8,
-        shadowColor: Colors.blue.withOpacity(0.15),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Course Image
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-              child: AspectRatio(
-                aspectRatio: 1.4, // Consistent image height
-                child: imageUrl.isNotEmpty
-                    ? Image.network(
-                  'https://testora.codeeratech.in/uploads/batch_image/${imageUrl}',
-                  fit: BoxFit.cover,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Container(
-                      color: Colors.blue.shade50,
-                      child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                    );
-                  },
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      color: Colors.blue.shade50,
-                      child: const Icon(Icons.menu_book, size: 50, color: Colors.blue),
-                    );
-                  },
-                )
-                    : Container(
-                  color: Colors.blue.shade50,
-                  child: const Icon(Icons.menu_book, size: 50, color: Colors.blue),
-                ),
-              ),
-            ),
+    );
+  }
 
-            // Course Details
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Title
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        height: 1.3,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    // Category & Subcategory
-                    Text(
-                      "$category${subCategory.isNotEmpty ? " • $subCategory" : ""}",
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        color: Colors.black87,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // Lessons indicator
-                    Row(
-                      children: [
-                        Icon(Icons.play_circle_outline, size: 18, color: Colors.blue.shade600),
-                        const SizedBox(width: 6),
-                        Text(
-                          "Lessons available",
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.blue.shade700,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+  /// Image fallback widget
+  Widget _imageFallback() {
+    return Container(
+      color: Colors.blue.shade50,
+      child: const Center(
+        child: Icon(Icons.menu_book, size: 42, color: Colors.blue),
       ),
     );
   }
+
 }

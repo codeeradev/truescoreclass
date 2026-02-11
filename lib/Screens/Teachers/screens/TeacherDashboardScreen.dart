@@ -45,12 +45,14 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
     getname();
   }
 
+
   Future<void> getname() async {
     SharedPreferences preferences = await SharedPreferences.getInstance();
     setState(() {
       name = preferences.getString('teachername') ?? 'Teacher';
     });
   }
+
 
   void _navigateToScreen(String label) {
     Widget? targetScreen;

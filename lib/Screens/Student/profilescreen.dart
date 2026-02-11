@@ -1,21 +1,20 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:online_classes/Screens/Student/purchasedcourses.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import '../../servcies.dart';
 import '../Auth/asktype.dart';
 import 'Mydoubtsscreen.dart';
 import 'Querystudent.dart';
 import 'editprofile.dart';
 import 'helps.dart';
-
 class ProfileScreen1 extends StatefulWidget {
   const ProfileScreen1({super.key});
 
   @override
   State<ProfileScreen1> createState() => _ProfileScreen1State();
+
 }
 
 class _ProfileScreen1State extends State<ProfileScreen1> {
@@ -26,8 +25,11 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
   @override
   void initState() {
     super.initState();
+    SecureScreen.enable();
+
     _loadProfileData();
   }
+
 
   /// 🔹 Load Name & Image
   Future<void> _loadProfileData() async {
@@ -36,7 +38,7 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
     setState(() {
       userName = prefs.getString('studentname') ?? "Student Name";
 
-       image = prefs.getString('profileimage').toString();
+       image = prefs.getString('studentimage').toString();
       // if (imgPath != null) {
       //   profileImage = File(imgPath);
       // }
@@ -57,6 +59,14 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
         profileImage = File(image.path);
       });
     }
+  }
+
+  @override
+  void dispose() {
+    SecureScreen.disable();
+
+    // TODO: implement dispose
+    super.dispose();
   }
 
   @override
@@ -97,7 +107,7 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
                       radius: 55,
                       backgroundColor: Colors.grey.shade200,
                       backgroundImage:
-                      image.isNotEmpty ? NetworkImage("https://testora.codeeratech.in/uploads/students/${image}"): null,
+                      image.isNotEmpty ? NetworkImage("https://truescoreedu.com/uploads/students/${image}"): null,
                       child: image.isEmpty
                           ? const Icon(Icons.person, size: 55, color: Colors.grey)
                           : null,
@@ -134,7 +144,7 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
               title: "Purchased Courses",
               onTap: () {
                 Navigator.push(
-                    context, MaterialPageRoute(builder: (context) => purchasedcourses()));
+                    context, MaterialPageRoute(builder: (context) => MyOnlyPurchased()));
                 // Navigate to Doubts Screen
               },
             ),
@@ -180,10 +190,8 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
               title: "Logout",
               isLogout: true,
               onTap: () async{
-                SharedPreferences pref = await SharedPreferences.getInstance();
-                await pref.clear();
-                Navigator.pushReplacement(
-                    context, MaterialPageRoute(builder: (context) => AskType()));
+                showLogoutWarningDialog(context);
+
                 // logout logic
               },
             ),
@@ -192,6 +200,113 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
       ),
     );
   }
+  void showLogoutWarningDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          contentPadding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              /// ICON
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.warning_amber_rounded,
+                  color: Colors.red,
+                  size: 34,
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              /// TITLE
+              const Text(
+                "Logout Warning",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              /// MESSAGE
+              const Text(
+                "If you logout, all your course progress and saved data will be permanently removed.\n\nDo you want to continue?",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.black54,
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              /// ACTION BUTTONS
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        side: const BorderSide(color: Colors.grey),
+                      ),
+                      child: const Text("Cancel"),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () async {
+                        /// CLEAR DATA
+                        SharedPreferences pref =
+                        await SharedPreferences.getInstance();
+                        await pref.clear();
+
+                        /// NAVIGATE
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const AskType(),
+                          ),
+                              (_) => false,
+                        );
+                      },
+                      child: const Text(
+                        "Yes, Logout",
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
 
   /// 🔹 Profile Card Widget
   Widget _profileCard({

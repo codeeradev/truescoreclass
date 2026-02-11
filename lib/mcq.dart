@@ -27,7 +27,7 @@ class _McqScreen1State extends State<McqScreen1> {
     SharedPreferences preferences = await SharedPreferences.getInstance();
     final token = preferences.getString('token');
     final url =
-        "https://testora.codeeratech.in/api/questions?exam_type=mock_test&class_id=1";
+        "https://truescoreedu.com/api/questions?exam_type=mock_test&class_id=1";
 
     final res = await http.get(Uri.parse(url),headers: {
       "Content-Type": "application/json",
@@ -230,7 +230,7 @@ class _McqScreen1State extends State<McqScreen1> {
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: Image.network(
-              "https://testora.codeeratech.in/${q["right_answer_document"]}",
+              "https://truescoreedu.com/${q["right_answer_document"]}",
               height: 180,
               fit: BoxFit.cover,
             ),

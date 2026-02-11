@@ -55,7 +55,7 @@ class _MyDoubtsScreenState extends State<MyDoubtsScreen>
 
     try {
       final response = await http.post(
-        Uri.parse('https://testora.codeeratech.in/api/get-doubts'),
+        Uri.parse('https://truescoreedu.com/api/get-doubts'),
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: {"apiToken": token},
       );

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../servcies.dart';
+
 class TeacherProfileScreen extends StatefulWidget {
   const TeacherProfileScreen({super.key});
 
@@ -17,6 +19,8 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
   @override
   void initState() {
     super.initState();
+    SecureScreen.enable();
+
     _loadTeacherData();
   }
 
@@ -29,6 +33,13 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
       teacherPhone = prefs.getString('teacherno') ?? "N/A";
       isLoading = false;
     });
+  }
+  @override
+  void dispose() {
+    SecureScreen.disable();
+
+    // TODO: implement dispose
+    super.dispose();
   }
 
   @override

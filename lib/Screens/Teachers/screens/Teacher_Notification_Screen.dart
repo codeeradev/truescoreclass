@@ -28,7 +28,7 @@ class _NoticesScreenState extends State<NoticesScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse("https://testora.codeeratech.in/api/active-notices"),
+        Uri.parse("https://truescoreedu.com/api/active-notices"),
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: {"apiToken": apiToken},
       );

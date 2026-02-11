@@ -25,7 +25,7 @@ android {
         applicationId = "com.testora.student"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 23
+        minSdk = flutter.minSdkVersion
         targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -34,8 +34,16 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+            // Enable code shrinking, obfuscation and optimization (uses R8 by default)
+            isMinifyEnabled = true
+            isShrinkResources = true  // Optional but recommended – removes unused resources
+
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+
+            // Keep using debug signing for now (change to release signing when uploading to Play Store)
             signingConfig = signingConfigs.getByName("debug")
         }
     }

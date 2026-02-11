@@ -4,14 +4,20 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
+import '../../servcies.dart';
+
 class GetNotesScreen extends StatefulWidget {
-  const GetNotesScreen({super.key});
+  final String batchid;
+   GetNotesScreen({super.key,required this.batchid});
 
   @override
   State<GetNotesScreen> createState() => _GetNotesScreenState();
+
+
 }
 
 class _GetNotesScreenState extends State<GetNotesScreen> {
+
   bool isLoading = true;
   List<dynamic> notes = [];
   String? errorMessage;
@@ -19,8 +25,11 @@ class _GetNotesScreenState extends State<GetNotesScreen> {
   @override
   void initState() {
     super.initState();
+    SecureScreen.enable();
+
     fetchNotes();
   }
+
 
   Future<void> fetchNotes() async {
     setState(() {
@@ -41,11 +50,14 @@ class _GetNotesScreenState extends State<GetNotesScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse("https://testora.codeeratech.in/api/get-notes"),
+        Uri.parse("https://truescoreedu.com/api/get-notes"),
         body: {
           "apiToken": token,
+          "course_id":widget.batchid.toString()
         },
       );
+      print(response.body);
+      print(response.statusCode);
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
@@ -59,7 +71,9 @@ class _GetNotesScreenState extends State<GetNotesScreen> {
             errorMessage = json['message'] ?? "No notes found";
             isLoading = false;
           });
+
         }
+
       } else {
         throw Exception("Server error");
       }
@@ -78,6 +92,14 @@ class _GetNotesScreenState extends State<GetNotesScreen> {
         builder: (context) => PdfViewerScreen(pdfUrl: url, title: title),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    SecureScreen.disable();
+
+    // TODO: implement dispose
+    super.dispose();
   }
 
   @override

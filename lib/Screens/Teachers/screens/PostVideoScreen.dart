@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../servcies.dart';
+
 class PostVideoScreen extends StatefulWidget {
   const PostVideoScreen({super.key});
 
@@ -33,12 +35,16 @@ class _PostVideoScreenState extends State<PostVideoScreen> {
   @override
   void initState() {
     super.initState();
+    SecureScreen.enable();
+
     fetchSubjects();
     fetchBatches();
   }
 
   @override
   void dispose() {
+    SecureScreen.disable();
+
     _titleController.dispose();
     _descriptionController.dispose();
     _youtubeUrlController.dispose();
@@ -54,7 +60,7 @@ class _PostVideoScreenState extends State<PostVideoScreen> {
     setState(() => isLoadingSubjects = true);
     try {
       final response = await http.get(
-        Uri.parse('https://testora.codeeratech.in/api/get-subjects'),
+        Uri.parse('https://truescoreedu.com/api/get-subjects'),
       );
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
@@ -78,7 +84,7 @@ class _PostVideoScreenState extends State<PostVideoScreen> {
   //   });
   //   try {
   //     final response = await http.post(
-  //       Uri.parse('https://testora.codeeratech.in/api/get-chapters'),
+  //       Uri.parse('https://truescoreedu.com/api/get-chapters'),
   //       body: {"subject_id": subjectId},
   //     );
   //     if (response.statusCode == 200) {
@@ -99,7 +105,7 @@ class _PostVideoScreenState extends State<PostVideoScreen> {
     setState(() => isLoadingBatches = true);
     try {
       final response = await http.get(
-        Uri.parse('https://testora.codeeratech.in/api/get-active-batches'),);
+        Uri.parse('https://truescoreedu.com/api/get-active-batches'),);
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
         setState(() {
@@ -161,7 +167,7 @@ class _PostVideoScreenState extends State<PostVideoScreen> {
         "url": _youtubeUrlController.text.trim(),};
       print(data);
       final response = await http.post(
-        Uri.parse('https://testora.codeeratech.in/api/add-teacher-video'),
+        Uri.parse('https://truescoreedu.com/api/add-teacher-video'),
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },

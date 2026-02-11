@@ -1,13 +1,20 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../../servcies.dart';
 
 class TeacherDoubtsScreen extends StatefulWidget {
   const TeacherDoubtsScreen({super.key});
 
   @override
   State<TeacherDoubtsScreen> createState() => _TeacherDoubtsScreenState();
+
+
 }
 
 class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
@@ -22,6 +29,8 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
   @override
   void initState() {
     super.initState();
+    SecureScreen.enable();
+
     fetchTeacherDoubts();
 
     _fadeController = AnimationController(
@@ -32,10 +41,17 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
       CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
     );
     _fadeController.forward();
+
   }
+
+  File? selectedFile; // image or pdf
+  String? selectedFileType; // "image" | "pdf"
+
 
   @override
   void dispose() {
+    SecureScreen.disable();
+
     _fadeController.dispose();
     super.dispose();
   }
@@ -55,19 +71,34 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
 
     try {
       final response = await http.post(
-        Uri.parse('https://testora.codeeratech.in/api/get-teacher-doubts'),
+        Uri.parse('https://truescoreedu.com/api/get-teacher-doubts'),
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: {"apiToken": token},
       );
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
+
         print(json);
         if (json['status'] == 1) {
           final List data = json['data'] ?? [];
-          setState(() {
-            doubts = data.cast<Map<String, dynamic>>();
+          final List<Map<String, dynamic>> sorted = data.cast<Map<String, dynamic>>();
+
+          sorted.sort((a, b) {
+            final aAnswer = (a['teacher_description'] ?? '').toString().trim();
+            final bAnswer = (b['teacher_description'] ?? '').toString().trim();
+
+            // unanswered first
+            if (aAnswer.isEmpty && bAnswer.isNotEmpty) return -1;
+            if (aAnswer.isNotEmpty && bAnswer.isEmpty) return 1;
+
+            return 0; // keep relative order otherwise
           });
+
+          setState(() {
+            doubts = sorted;
+          });
+
         } else {
           _showSnackBar(json['msg'] ?? "No doubts found", isError: false);
         }
@@ -81,6 +112,7 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
 
   // Teacher replies to a doubt
   Future<void> replyToDoubt(String doubtId, String reply) async {
+    print('yes');
     if (reply.trim().isEmpty) {
       _showSnackBar("Please write a reply", isError: true);
       return;
@@ -92,27 +124,50 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
     final token = prefs.getString('token') ?? '';
 
     try {
-      final response = await http.post(
-        Uri.parse('https://testora.codeeratech.in/api/update-teacher-doubts'),
-        headers: {"Content-Type": "application/x-www-form-urlencoded"},
-        body: {
-          "apiToken": token,
-          "doubt_id": doubtId,
-          "description": reply.trim(),
-        },
+      final req = http.MultipartRequest(
+        'POST',
+        Uri.parse('https://truescoreedu.com/api/update-teacher-doubts'),
       );
+      req.headers.addAll({
+        "Accept": "application/json",
+        // If backend uses apiToken in body (already), Authorization may be optional
+        // Use ONLY if backend expects it:
+        // "Authorization": "Bearer $token",
+      });
 
+      req.fields.addAll({
+        "apiToken": token,
+        "doubt_id": doubtId,
+        "description": reply.trim(),
+      });
+
+      // 🔹 FILE UPLOAD (image or pdf)
+      if (selectedFile != null) {
+        req.files.add(
+          await http.MultipartFile.fromPath(
+            "file", // 🔑 backend file key
+            selectedFile!.path,
+          ),
+        );
+      }
+
+      final streamed = await req.send();
+      final response = await http.Response.fromStream(streamed);
       final json = jsonDecode(response.body);
       print(json);
-      print(response.statusCode);
+      print(response.body);
 
       if (response.statusCode == 200 && json['status'] == 1) {
         _showSnackBar("Reply submitted successfully!", isError: false);
-        fetchTeacherDoubts(); // Refresh list
+        selectedFile = null;
+        selectedFileType = null;
+       // r.clear();
+        fetchTeacherDoubts();
       } else {
         _showSnackBar(json['msg'] ?? "Failed to submit reply", isError: true);
       }
     } catch (e) {
+      print(e);
       _showSnackBar("Network error. Try again.", isError: true);
     } finally {
       setState(() => isSubmitting = false);
@@ -126,20 +181,113 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text("Reply to Student", style: TextStyle(fontWeight: FontWeight.bold)),
-        content: TextField(
-          controller: replyController,
-          maxLines: 6,
-          decoration: InputDecoration(
-            hintText: "Write your explanation here...",
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: Colors.blue, width: 2),
-            ),
-          ),
+        title: const Text(
+          "Reply to Student",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: StatefulBuilder(
+          builder: (context, setDialogState) {
+            return SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: replyController,
+                    maxLines: 5,
+                    decoration: InputDecoration(
+                      hintText: "Write your explanation here...",
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // 🔹 FILE PICK BUTTONS
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.image),
+                          label: const Text("Image"),
+                          onPressed: () async {
+                            final picker = ImagePicker();
+                            final picked =
+                            await picker.pickImage(source: ImageSource.gallery);
+                            if (picked != null) {
+                              setDialogState(() {
+                                selectedFile = File(picked.path);
+                                selectedFileType = "image";
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.picture_as_pdf),
+                          label: const Text("PDF"),
+                          onPressed: () async {
+                            final result = await FilePicker.platform.pickFiles(
+                              type: FileType.custom,
+                              allowedExtensions: ['pdf'],
+                            );
+                            if (result != null) {
+                              setDialogState(() {
+                                selectedFile = File(result.files.single.path!);
+                                selectedFileType = "pdf";
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // 🔹 FILE PREVIEW
+                  if (selectedFile != null)
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            selectedFileType == "pdf"
+                                ? Icons.picture_as_pdf
+                                : Icons.image,
+                            color: Colors.blue,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              selectedFile!.path.split('/').last,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.red),
+                            onPressed: () {
+                              setDialogState(() {
+                                selectedFile = null;
+                                selectedFileType = null;
+                              });
+                            },
+                          )
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
         ),
         actions: [
           TextButton(
@@ -150,20 +298,31 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
             onPressed: isSubmitting
                 ? null
                 : () {
-              Navigator.pop(context);
-              replyToDoubt(doubt['doubt_id'].toString(), replyController.text);
+             // Navigator.pop(context);
+              replyToDoubt(
+                doubt['doubt_id'].toString(),
+                replyController.text,
+              );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.blue.shade700,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             child: isSubmitting
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Text("Submit Reply", style: TextStyle(color: Colors.white)),
+                ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: Colors.white),
+            )
+                : const Text("Submit Reply",
+                style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
     );
+
   }
 
   String _getStatusText(String status) => status == "0" ? "Pending" : "Resolved";
@@ -228,14 +387,18 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
+                                  "At: ${doubt['created_at'] ?? ''}",
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                ),
+                                Text(
                                   "From: ${student['name'] ?? 'Unknown Student'}",
                                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                                 ),
                                 const SizedBox(height: 4),
-                                Text(
-                                  "Subject: ${subject['name'] ?? 'Unknown'}",
-                                  style: const TextStyle(color: Colors.grey),
-                                ),
+                                // Text(
+                                //   "Subject: ${subject['name'] ?? 'Unknown'}",
+                                //   style: const TextStyle(color: Colors.grey),
+                                // ),
                               ],
                             ),
                           ),
@@ -257,6 +420,7 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
                           ),
                         ],
                       ),
+
                       const Divider(height: 30),
 
                       // Student's Doubt

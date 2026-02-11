@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
+import '../servcies.dart';
+
 class VideoPlayerScreen extends StatefulWidget {
   final String videoTitle;
   final String youtubeUrl;
@@ -22,6 +24,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   @override
   void initState() {
     super.initState();
+    SecureScreen.enable();
+
 
     final videoId = getYoutubeVideoId(widget.youtubeUrl);
 
@@ -39,6 +43,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   @override
   void dispose() {
     _controller?.dispose();
+    SecureScreen.disable();
+
     super.dispose();
   }
 

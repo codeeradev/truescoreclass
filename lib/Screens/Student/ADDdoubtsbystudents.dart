@@ -62,7 +62,7 @@ class _CreateDoubtScreenState extends State<CreateDoubtScreen>
     setState(() => isLoadingSubjects = true);
     try {
       final response = await http.get(
-        Uri.parse('https://testora.codeeratech.in/api/get-subjects'),
+        Uri.parse('https://truescoreedu.com/api/get-subjects'),
       );
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
@@ -113,7 +113,7 @@ class _CreateDoubtScreenState extends State<CreateDoubtScreen>
     );
     try {
       final response = await http.post(
-        Uri.parse('https://testora.codeeratech.in/api/get-teachers'),
+        Uri.parse('https://truescoreedu.com/api/get-teachers'),
         body: {"subject_id": subjectId},
       );
       if (response.statusCode == 200) {
@@ -137,7 +137,7 @@ class _CreateDoubtScreenState extends State<CreateDoubtScreen>
   //   setState(() => isLoadingChapters = true);
   //   try {
   //     final response = await http.post(
-  //       Uri.parse('https://testora.codeeratech.in/api/get-chapters'),
+  //       Uri.parse('https://truescoreedu.com/api/get-chapters'),
   //       body: {"subject_id": subjectId},
   //     );
   //     if (response.statusCode == 200) {
@@ -184,7 +184,7 @@ class _CreateDoubtScreenState extends State<CreateDoubtScreen>
       // }
 
       final response = await http.post(
-        Uri.parse('https://testora.codeeratech.in/api/add-doubt'),
+        Uri.parse('https://truescoreedu.com/api/add-doubt'),
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: body,
       );
