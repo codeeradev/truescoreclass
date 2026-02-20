@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -109,6 +110,85 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
       setState(() => isLoading = false);
     }
   }
+  void showSuccessDialog(BuildContext context, {String message = "Successfully Submitted"}) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+
+                /// ✅ SUCCESS ICON
+                Container(
+                  height: 70,
+                  width: 70,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFE8F5E9),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.check_circle,
+                    color: Colors.green,
+                    size: 50,
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                /// TITLE
+                const Text(
+                  "Success",
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                /// MESSAGE
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: Colors.black87,
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                /// OK BUTTON
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xff8cff22),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    child: const Text("OK"),
+                  ),
+                )
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
 
   // Teacher replies to a doubt
   Future<void> replyToDoubt(String doubtId, String reply) async {
@@ -163,6 +243,10 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
         selectedFileType = null;
        // r.clear();
         fetchTeacherDoubts();
+
+        Navigator.pop(context);
+        showSuccessDialog(context);
+
       } else {
         _showSnackBar(json['msg'] ?? "Failed to submit reply", isError: true);
       }
@@ -339,6 +423,43 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
       ),
     );
   }
+  Widget buildMathText(
+      String text, {
+        double fontSize = 15,
+        FontWeight fontWeight = FontWeight.normal,
+      }) {
+    bool isMath(String t) {
+      return t.contains(r"\frac") ||
+          t.contains("^") ||
+          t.contains("_") ||
+          t.contains(r"\sqrt") ||
+          t.contains(r"\sum");
+    }
+
+    /// 🧮 IF MATH → horizontal scroll
+    if (isMath(text)) {
+      return SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Math.tex(
+          text,
+          textStyle: TextStyle(
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+          ),
+        ),
+      );
+    }
+
+    /// 🔤 NORMAL TEXT
+    return Text(
+      text,
+      style: TextStyle(
+        fontSize: fontSize,
+        height: 1.5,
+      ),
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -426,7 +547,9 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
                       // Student's Doubt
                       const Text("Student's Doubt:", style: TextStyle(fontWeight: FontWeight.w600)),
                       const SizedBox(height: 8),
-                      Text(doubt['description'] ?? 'No description'),
+                      buildMathText(
+                        doubt['description'] ?? 'No description',
+                      ),
 
                       const SizedBox(height: 16),
 
@@ -436,6 +559,7 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
                         const SizedBox(height: 8),
                         Text(doubt['teacher_description'], style: const TextStyle(fontStyle: FontStyle.italic)),
                         const SizedBox(height: 16),
+
                       ],
 
                       // Reply Button

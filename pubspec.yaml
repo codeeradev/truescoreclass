@@ -49,6 +49,8 @@ dependencies:
   phonepe_payment_sdk: ^3.0.2
   webview_flutter: ^4.7.0
   webview_flutter_android: ^3.15.0
+  flutter_math_fork: ^0.7.2
+
 
   image_picker: ^1.1.2
   share_plus: ^11.0.0

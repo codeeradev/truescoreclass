@@ -8,6 +8,8 @@ class PhonePeWebViewScreen extends StatefulWidget {
   final String transactionId;
   final String orderId;
   final String apiToken;
+  final String gateway;
+
 
   const PhonePeWebViewScreen({
     super.key,
@@ -15,6 +17,7 @@ class PhonePeWebViewScreen extends StatefulWidget {
     required this.transactionId,
     required this.orderId,
     required this.apiToken,
+    required this.gateway
   });
 
   @override
@@ -34,26 +37,76 @@ class _PhonePeWebViewScreenState extends State<PhonePeWebViewScreen> {
       ..setNavigationDelegate(
         NavigationDelegate(
           onNavigationRequest: (request) {
+
+            print('yes');
+            print(request.url);
+            Uri uri = Uri.parse(request.url);
+
+
             if (request.url.contains(
                 "https://truescoreedu.com/api/payment/callback")) {
-              _handleCallback();
+
+              print('set');
+
+              /// ✅ Parse Full URL
+
+              /// ✅ Extract Razorpay Params
+              String? paymentId =
+              uri.queryParameters['razorpay_payment_id'];
+
+              String? signature =
+              uri.queryParameters['razorpay_signature'];
+
+              String? paymentStatus =
+              uri.queryParameters['razorpay_payment_link_status'];
+
+              String? referenceId =
+              uri.queryParameters['razorpay_payment_link_reference_id'];
+
+              print("Payment ID => $paymentId");
+              print("Signature => $signature");
+              print("Status => $paymentStatus");
+              print("Reference => $referenceId");
+
+              /// 🔥 call your function and pass variables
+              _handleCallback(
+                paymentId.toString(),
+                signature.toString(),
+                paymentStatus.toString(),
+                referenceId.toString(),
+              );
+
               return NavigationDecision.prevent;
             }
+
             return NavigationDecision.navigate;
           },
+
         ),
       )
       ..loadRequest(Uri.parse(widget.redirectUrl));
   }
 
-  Future<void> _handleCallback() async {
+  Future<void> _handleCallback(String  paymentId,
+      String
+      signature,String
+      paymentStatus,
+      String
+      referenceId,) async {
     if (_verifying) return;
     _verifying = true;
 
     Navigator.pop(context); // close webview
     _showBlockingLoader();
 
-    await _verifyPayment();
+    await _verifyPayment(
+        paymentId,
+
+      signature,
+      paymentStatus,
+
+      referenceId,
+    );
   }
 
   void _showBlockingLoader() {
@@ -64,7 +117,12 @@ class _PhonePeWebViewScreenState extends State<PhonePeWebViewScreen> {
     );
   }
 
-  Future<void> _verifyPayment() async {
+  Future<void> _verifyPayment(String  paymentId,
+      String
+      signature,String
+      paymentStatus,
+      String
+      referenceId,) async {
     final response = await http.post(
       Uri.parse("https://truescoreedu.com/api/payment/verify"),
       headers: {
@@ -75,6 +133,13 @@ class _PhonePeWebViewScreenState extends State<PhonePeWebViewScreen> {
         "merchantOrderId": widget.transactionId,
         "orderid": widget.orderId,
         "apiToken": widget.apiToken,
+        "gateway":widget.gateway.toString(),
+        "paymentid":paymentId.toString(),
+        "signature":signature.toString(),
+        "paymentStatus":paymentStatus.toString(),
+        "referenceId":referenceId.toString()
+
+
       },
     );
     print('datais${response.body}');
@@ -221,7 +286,7 @@ class _PhonePeWebViewScreenState extends State<PhonePeWebViewScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("PhonePe Payment")),
+      appBar: AppBar(title:  Text(widget.gateway.toString())),
       body: WebViewWidget(controller: _controller),
     );
   }

@@ -451,6 +451,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:expandable_text/expandable_text.dart';
+import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
@@ -571,6 +572,45 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
       ),
     );
   }
+  Widget buildMathText(
+      String text, {
+        double fontSize = 16,
+        FontWeight fontWeight = FontWeight.normal,
+      }) {
+    bool isMath(String t) {
+      return t.contains(r"\frac") ||
+          t.contains("^") ||
+          t.contains("_") ||
+          t.contains(r"\sqrt") ||
+          t.contains(r"\sum");
+    }
+
+    /// 🧮 MATH → HORIZONTAL SCROLL
+    if (isMath(text)) {
+      return SingleChildScrollView(
+        scrollDirection: Axis.horizontal, // ⭐ KEY FIX
+        child: Math.tex(
+          text,
+          textStyle: TextStyle(
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+          ),
+        ),
+      );
+    }
+
+    /// 🔤 NORMAL TEXT
+    return Text(
+      text,
+      style: TextStyle(
+        fontSize: fontSize,
+        height: 1.5,
+        fontWeight: fontWeight,
+      ),
+    );
+  }
+
+
 
   // ================== CARD ==================
 
@@ -651,13 +691,11 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
                   ),
                   const SizedBox(height: 6),
 
-                  Text(
+                  buildMathText(
                     question,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      height: 1.5,
-                    ),
+                    fontSize: 15,
                   ),
+
 
                   if (hasAnswer) ...[
                     const SizedBox(height: 14),
@@ -723,16 +761,13 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
                     const SizedBox(height: 8),
 
                     GestureDetector(
-                      onTap: () =>
-                          _showFullAnswerBottomSheet(context, answer),
-                      child: ExpandableText(
+                      onTap: () => _showFullAnswerBottomSheet(context, answer),
+                      child: buildMathText(
                         answer,
-                        maxLines: 2,
-                        expandText: 'read more',
-                        collapseText: 'show less',
-                        linkColor: Colors.blue.shade700,
+                        fontSize: 14,
                       ),
                     ),
+
                   ],
                 ],
               ),
@@ -753,23 +788,100 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
           url.toLowerCase().endsWith(".jpg") ||
           url.toLowerCase().endsWith(".jpeg") ||
           url.toLowerCase().endsWith(".webp");
-
   void _showFullAnswerBottomSheet(BuildContext context, String answer) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: SingleChildScrollView(
-          child: Text(
-            answer,
-            style: const TextStyle(fontSize: 16, height: 1.5),
-          ),
-        ),
-      ),
+      backgroundColor: Colors.transparent,
+      builder: (_) {
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.50,
+          maxChildSize: 0.95,
+          minChildSize: 0.4,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(24),
+                ),
+              ),
+              child: SafeArea(
+                top: false,
+                child: Column(
+                  children: [
+
+                    /// 🔘 Drag Handle
+                    Container(
+                      margin: const EdgeInsets.only(top: 10, bottom: 6),
+                      height: 5,
+                      width: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+
+                    /// 🔹 HEADER
+                    Padding(
+                      padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Row(
+                        children: [
+
+                          /// Title
+                          const Expanded(
+                            child: Text(
+                              "Your Answer",
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+
+                          /// ❌ Close Button
+                          InkWell(
+                            borderRadius: BorderRadius.circular(50),
+                            onTap: () => Navigator.pop(context),
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.close, size: 20),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const Divider(height: 1),
+
+                    /// 📄 ANSWER CONTENT
+                    Expanded(
+                      child: SingleChildScrollView(
+                        controller: scrollController,
+                        padding: const EdgeInsets.all(20),
+                        child: SelectableText(
+                          answer,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            height: 1.6,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 

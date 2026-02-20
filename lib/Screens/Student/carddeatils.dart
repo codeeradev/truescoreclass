@@ -452,6 +452,10 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
       final redirectUrl = data['data']['redirect_url'];
       final transactionId = data['data']['transaction_id'];
       final orderId = data['data']['order_id'];
+      final type = data['data']['gateway'];
+      print(transactionId);
+      print(orderId);
+
 
       Navigator.push(
         context,
@@ -461,6 +465,7 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
             transactionId: transactionId,
             orderId: orderId,
             apiToken: token!,
+            gateway: type.toString(),
           ),
         ),
       ).then((s){

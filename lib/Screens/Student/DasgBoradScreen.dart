@@ -43,6 +43,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   List<dynamic> notices = [];
 
   Future<void> fetchNotices() async {
+
     setState(() => isLoading = true);
 
     SharedPreferences pref = await SharedPreferences.getInstance();

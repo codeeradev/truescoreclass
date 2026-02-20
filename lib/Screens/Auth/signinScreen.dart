@@ -140,7 +140,7 @@ class _SigninScreenState extends State<SigninScreen> with TickerProviderStateMix
         child: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            child: Container(height: double.maxFinite,
+            child: Container(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

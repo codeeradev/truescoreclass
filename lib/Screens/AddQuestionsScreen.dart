@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -284,6 +285,7 @@ class _AddQuestionScreenState extends State<AddQuestionScreen>
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? '';
     print('iddis${selectedBatch["id"].toString()}');
+    print("chapter${ selectedChapter?['id']?.toString()}");
     var id =selectedBatch["id"].toString();
 
     try {
@@ -571,15 +573,59 @@ class _AddQuestionScreenState extends State<AddQuestionScreen>
 
                 // 🔤 TEXT
                 if (answerType == "text")
-                  TextFormField(
-                    controller: answerTextCtr,
-                    decoration: const InputDecoration(
-                      labelText: "Answer Text",
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (v) =>
-                    v == null || v.isEmpty ? "Required" : null,
+                  StatefulBuilder(
+                    builder: (context, setLocalState) {
+
+                      bool isMath(String text) {
+                        return text.contains(r"\frac") ||
+                            text.contains("^") ||
+                            text.contains("_") ||
+                            text.contains(r"\sqrt") ||
+                            text.contains(r"\sum");
+                      }
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+
+                          /// 🔤 ANSWER INPUT
+                          TextFormField(
+                            controller: answerTextCtr,
+                            maxLines: null,
+                            onChanged: (_) => setLocalState(() {}),
+                            decoration: InputDecoration(
+                              labelText: "Answer Text",
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            validator: (v) =>
+                            v == null || v.isEmpty ? "Required" : null,
+                          ),
+
+                          /// 🧮 LIVE MATH PREVIEW
+                          if (isMath(answerTextCtr.text.trim()))
+                            Container(
+                              width: double.infinity,
+                              margin: const EdgeInsets.only(top: 10),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.green.shade50,
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: SingleChildScrollView(
+                                scrollDirection: Axis.horizontal, // ⭐ prevent cut
+                                child: Math.tex(
+                                  answerTextCtr.text,
+                                  textStyle: const TextStyle(fontSize: 20),
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
                   ),
+
 
                 // 🔗 LINK
                 if (answerType == "link")
@@ -671,20 +717,71 @@ class _AddQuestionScreenState extends State<AddQuestionScreen>
   }
 
   // Modern Blue & White TextField
-  Widget _buildTextField(TextEditingController controller, String label, IconData icon, {int maxLines = 1}) {
-    return TextFormField(
-      controller: controller,
-      maxLines: maxLines,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, color: Colors.blue.shade600),
-        filled: true,
-        fillColor: Colors.grey.shade50,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.blue, width: 2)),
-      ),
-      validator: (v) => v!.trim().isEmpty ? "Required" : null,
+  Widget _buildTextField(
+      TextEditingController controller,
+      String label,
+      IconData icon, {
+        int maxLines = 1,
+      }) {
+    return StatefulBuilder(
+      builder: (context, setLocalState) {
+
+        bool isMath(String text) {
+          return text.contains(r"\frac") ||
+              text.contains("^") ||
+              text.contains("_") ||
+              text.contains(r"\sqrt") ||
+              text.contains(r"\sum");
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+
+            /// 🔤 INPUT FIELD
+            TextFormField(
+              controller: controller,
+              maxLines: null, // auto expand
+              onChanged: (_) => setLocalState(() {}),
+              decoration: InputDecoration(
+                labelText: label,
+                prefixIcon: Icon(icon, color: Colors.blue.shade600),
+                filled: true,
+                fillColor: Colors.grey.shade50,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: Colors.blue, width: 2),
+                ),
+              ),
+              validator: (v) => v!.trim().isEmpty ? "Required" : null,
+            ),
+
+            /// 🧮 LIVE MATH PREVIEW (AUTO SHOW)
+            if (isMath(controller.text.trim()))
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(top: 10),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50.withOpacity(0.4),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Math.tex(
+                  controller.text,
+                  textStyle: const TextStyle(fontSize: 20),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 
