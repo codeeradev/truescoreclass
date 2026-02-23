@@ -253,14 +253,19 @@ My problem: ${problemController.text.trim()}
     }
 
     /// 🔤 Normal text
-    return Text(
-      question,
-      style: const TextStyle(
+    return
+      Text(formatQuestion(question),style:    const TextStyle(
         fontSize: 18,
         fontWeight: FontWeight.bold,
-      ),
-    );
+      ));
   }
+  String formatQuestion(String text) {
+    text = text.trim();
+    if (text.isEmpty) return text;
+
+    return text[0].toUpperCase() + text.substring(1);
+  }
+
 
   Widget buildOptionText(String option) {
     bool isMath(String text) {
@@ -282,10 +287,9 @@ My problem: ${problemController.text.trim()}
     }
 
     /// 🔤 Normal text
-    return Text(
-      option,
-      style: const TextStyle(fontSize: 16),
-    );
+    return Text(formatQuestion(option),style:    const TextStyle(
+      fontSize: 16,
+    ));
   }
 
   @override

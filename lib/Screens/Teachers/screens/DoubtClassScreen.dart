@@ -257,6 +257,13 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
       setState(() => isSubmitting = false);
     }
   }
+  bool _isMath(String text) {
+    return text.contains(r"\frac") ||
+        text.contains("^") ||
+        text.contains("_") ||
+        text.contains(r"\sqrt") ||
+        text.contains(r"\sum");
+  }
 
   void _showReplyDialog(Map<String, dynamic> doubt) {
     final TextEditingController replyController = TextEditingController();
@@ -278,14 +285,41 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  TextField(
-                    controller: replyController,
-                    maxLines: 5,
-                    decoration: InputDecoration(
-                      hintText: "Write your explanation here...",
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16)),
-                    ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+
+                      TextField(
+                        controller: replyController,
+                        maxLines: null,
+                        onChanged: (_) => setDialogState(() {}), // ⭐ refresh preview
+                        decoration: InputDecoration(
+                          hintText: "Write your explanation here...",
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16)),
+                        ),
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      /// 🧮 LIVE MATH PREVIEW
+                      if (_isMath(replyController.text))
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Math.tex(
+                              replyController.text,
+                              textStyle: const TextStyle(fontSize: 20),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 16),
 

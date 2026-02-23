@@ -777,6 +777,39 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
       ),
     );
   }
+  Widget buildMathAnswer(String text) {
+
+    bool isMath(String t) {
+      return t.contains(r"\frac") ||
+          t.contains("^") ||
+          t.contains("_") ||
+          t.contains(r"\sqrt") ||
+          t.contains(r"\sum");
+    }
+
+    /// 🧮 IF MATH
+    if (isMath(text)) {
+      return SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Math.tex(
+          text,
+          textStyle: const TextStyle(
+            fontSize: 18,
+          ),
+        ),
+      );
+    }
+
+    /// 🔤 NORMAL TEXT
+    return SelectableText(
+      text,
+      style: const TextStyle(
+        fontSize: 16,
+        height: 1.6,
+        color: Colors.black87,
+      ),
+    );
+  }
 
   // ================== HELPERS ==================
 
@@ -788,6 +821,7 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
           url.toLowerCase().endsWith(".jpg") ||
           url.toLowerCase().endsWith(".jpeg") ||
           url.toLowerCase().endsWith(".webp");
+
   void _showFullAnswerBottomSheet(BuildContext context, String answer) {
     showModalBottomSheet(
       context: context,
@@ -865,14 +899,7 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
                       child: SingleChildScrollView(
                         controller: scrollController,
                         padding: const EdgeInsets.all(20),
-                        child: SelectableText(
-                          answer,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            height: 1.6,
-                            color: Colors.black87,
-                          ),
-                        ),
+                        child: buildMathAnswer(answer),
                       ),
                     ),
                   ],
