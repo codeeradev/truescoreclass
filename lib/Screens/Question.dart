@@ -200,6 +200,7 @@ class PapersListScreen extends StatefulWidget {
 }
 
 class _PapersListScreenState extends State<PapersListScreen> {
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -357,6 +358,8 @@ class _ExamScreenState extends State<ExamScreen> {
           "time_duration": widget.paperData['time_duration'].toString(),
         },
       );
+      print(response.body);
+      print(response.statusCode);
 
       if (!mounted) return;
 

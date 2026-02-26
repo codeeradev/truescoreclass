@@ -344,7 +344,8 @@ class _VideosState extends State<Videos> {
   {
     final bool isEnabled = count > 0 && onTap != null;
 
-    return Opacity(
+    return
+      Opacity(
       opacity: isEnabled ? 1.0 : 0.6,
       child: InkWell(
         onTap: isEnabled ? onTap : null,

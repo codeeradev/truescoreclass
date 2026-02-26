@@ -426,6 +426,9 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
     _razorpay.clear();
     super.dispose();
   }
+  String orderids='';
+  String mecrhant='';
+
   Future<void> addPhonePay(BuildContext context, String batchId) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
@@ -453,26 +456,38 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
       final transactionId = data['data']['transaction_id'];
       final orderId = data['data']['order_id'];
       final type = data['data']['gateway'];
+      final key = data['data']['key'];
+      final amt = data['data']['amount'];
+      setState(() {
+        orderids=orderId.toString();
+        mecrhant=transactionId.toString();
+      });
+
+      double d = double.parse(amt);
+      startPayment(d,orderId.toString(),key.toString());
+
+
+
       print(transactionId);
       print(orderId);
 
 
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => PhonePeWebViewScreen(
-            redirectUrl: redirectUrl,
-            transactionId: transactionId,
-            orderId: orderId,
-            apiToken: token!,
-            gateway: type.toString(),
-          ),
-        ),
-      ).then((s){
-        checkPurchaseStatus();
-
-
-      });
+      // Navigator.push(
+      //   context,
+      //   MaterialPageRoute(
+      //     builder: (_) => PhonePeWebViewScreen(
+      //       redirectUrl: redirectUrl,
+      //       transactionId: transactionId,
+      //       orderId: orderId,
+      //       apiToken: token!,
+      //       gateway: type.toString(),
+      //     ),
+      //   ),
+      // ).then((s){
+      //   checkPurchaseStatus();
+      //
+      //
+      // });
     }
   }
 
@@ -606,10 +621,11 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
 
 
 
-  void startPayment(double total) {
+  void startPayment(double total,String orderid,String Key) {
     var options = {
-      'key': 'rzp_test_RTEcMq4cjicldH',
+      'key': Key,
       'amount': total * 100,
+      'order_id': orderid.toString(),
       'name': 'Truescore Student Courses',
       'description': 'Buy Courses',
       'prefill': {'contact': '9123456789', 'email': 'example@domain.com'},
@@ -621,8 +637,68 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
     }
   }
 
+  Future<void> _verifyPayment(
+      String
+      signature
+      ) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final response = await http.post(
+      Uri.parse("https://truescoreedu.com/api/payment/verify"),
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: {
+        "merchantOrderId": mecrhant,
+        "orderid": orderids,
+        "apiToken": token.toString(),
+        "gateway":"RAZORPAY",
+        "signature":signature.toString(),
+        "paymentStatus":"paid",
+
+
+      },
+    );
+    print('datais${response.body}');
+    checkPurchaseStatus();
+
+   // Navigator.pop(context);
+    // close loader
+
+
+    final data = jsonDecode(response.body);
+    print(data)
+    ;
+    //showPaymentResultPopup(context, data);
+
+    // showDialog(
+    //   context: context,
+    //   builder: (_) => AlertDialog(
+    //     title: Text(data['status'] == 1
+    //         ? "Payment Successful"
+    //         : "Payment Failed"),
+    //     content: Text(data['message'] ?? ""),
+    //     actions: [
+    //       TextButton(
+    //         onPressed: () {
+    //           Navigator.pop(context);
+    //           Navigator.pop(context); // back to previous screen
+    //         },
+    //         child: const Text("OK"),
+    //       ),
+    //     ],
+    //   ),
+    // );
+  }
+
+
   Future<void> _handlePaymentSuccess(PaymentSuccessResponse response) async {
-    await Assignbatch('offline', Id, prices.toString(), response.paymentId.toString());
+    print("Payment success: ${response.paymentId}");
+    print("Order ID: ${response.orderId}");
+    print("Signature: ${response.signature}");
+    _verifyPayment(response.signature.toString());
+   // await Assignbatch('offline', Id, prices.toString(), response.paymentId.toString());
     //Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Videos()));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text("Payment Successful: ${response.paymentId}")),

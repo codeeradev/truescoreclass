@@ -151,7 +151,7 @@ class _PhonePeWebViewScreenState extends State<PhonePeWebViewScreen> {
     final data = jsonDecode(response.body);
     print(data)
 ;
-    showPaymentResultPopup(context, data);
+    //showPaymentResultPopup(context, data);
 
     // showDialog(
     //   context: context,

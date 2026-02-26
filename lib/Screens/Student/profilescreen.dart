@@ -137,6 +137,14 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
             ),
 
             const SizedBox(height: 24),
+            _profileCard(
+              icon: Icons.person,
+              title: "Edit Profile",
+              onTap: () {
+                Navigator.push(
+                    context, MaterialPageRoute(builder: (context) => UpdateProfileScreen()));
+              },
+            ),
 
             /// 🔹 MENU CARDS
             _profileCard(
@@ -146,6 +154,16 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
                 Navigator.push(
                     context, MaterialPageRoute(builder: (context) => MyOnlyPurchased()));
                 // Navigate to Doubts Screen
+              },
+            ),
+            _profileCard(
+              icon: Icons.document_scanner,
+              title: "My Doubts",
+              onTap: () {
+
+                Navigator.push(
+                    context, MaterialPageRoute(builder: (context) => GetDoubtsScreenstudent()));
+
               },
             ),
             _profileCard(
@@ -159,14 +177,7 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
                 // Navigate to Help Screen
               },
             ),
-            _profileCard(
-              icon: Icons.person,
-              title: "Edit Profile",
-              onTap: () {
-                Navigator.push(
-                    context, MaterialPageRoute(builder: (context) => UpdateProfileScreen()));
-              },
-            ),
+
             _profileCard(
               icon: Icons.help,
               title: "Any Query",
@@ -175,16 +186,7 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
                     context, MaterialPageRoute(builder: (context) => QueryScreen()));
               },
             ),
-            _profileCard(
-              icon: Icons.document_scanner,
-              title: "My Doubts",
-              onTap: () {
 
-                Navigator.push(
-                    context, MaterialPageRoute(builder: (context) => GetDoubtsScreenstudent()));
-
-                },
-            ),
             _profileCard(
               icon: Icons.logout_rounded,
               title: "Logout",
