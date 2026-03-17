@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:online_classes/Screens/Student/profilescreen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../servcies.dart';
 import '../All Courses.dart';
 import '../ProfileScreen.dart';
@@ -21,22 +22,18 @@ class ModernBottomNav extends StatefulWidget {
 class _ModernBottomNavState extends State<ModernBottomNav> {
   int selectedIndex = 0;
 
-  bool isLoading = true;
   List<dynamic> doubts = [];
-  String? errorMessage;
+  int unreadCount = 0;
 
   final List<Widget> pages = [
-    StudentDashboardScreen(), // 0
-    MyOnlyPurchased(),        // 1
-    CourseSearchScreen(),     // 2
-    GetDoubtsScreenstudent(), // 3
-    ProfileScreen1(),         // 4
+    StudentDashboardScreen(),
+    MyOnlyPurchased(),
+    CourseSearchScreen(),
+    GetDoubtsScreenstudent(),
+    ProfileScreen1(),
   ];
 
-  // ✅ FAB visible only on Home & Purchased
   bool get showFab => selectedIndex == 0 || selectedIndex == 1;
-
-  // ✅ Bottom bar hidden on Search (optional)
   bool get showBottomBar => selectedIndex != 2;
 
   @override
@@ -44,11 +41,6 @@ class _ModernBottomNavState extends State<ModernBottomNav> {
     super.initState();
     SecureScreen.enable();
     fetchDoubts();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
   }
 
   //---------------- FETCH DOUBTS ----------------//
@@ -66,11 +58,26 @@ class _ModernBottomNavState extends State<ModernBottomNav> {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
+
         if (json['status'] == 1) {
-          setState(() => doubts = json['data'] ?? []);
+          final data = json['data'] ?? [];
+
+          /// 🔥 GET SAVED SEEN COUNT
+          int seenCount = prefs.getInt("seen_doubts_count") ?? 0;
+
+          /// 🔥 CALCULATE UNREAD
+          int newUnread = data.length - seenCount;
+          if (newUnread < 0) newUnread = 0;
+
+          setState(() {
+            doubts = data;
+            unreadCount = newUnread;
+          });
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint("Error fetching doubts: $e");
+    }
   }
 
   //---------------- UI ----------------//
@@ -85,37 +92,29 @@ class _ModernBottomNavState extends State<ModernBottomNav> {
         resizeToAvoidBottomInset: false,
         backgroundColor: Colors.white,
 
-        // ✅ IndexedStack keeps state & prevents FAB bugs
         body: IndexedStack(
           index: selectedIndex,
           children: pages,
         ),
 
-        // ✅ FAB CONTROL
+        /// FAB
         floatingActionButton: isKeyboardOpen
             ? null
-            : Visibility(
-          visible: true,
-          maintainState: true,
-          maintainAnimation: true,
-          maintainSize: true,
-          child: FloatingActionButton(
-            backgroundColor: Colors.black,
-            elevation: 8,
-            onPressed: () {
-              setState(() => selectedIndex = 2);
-            },
-            child: const Icon(Icons.search, color: Colors.white, size: 28),
-          ),
+            : FloatingActionButton(
+          backgroundColor: Colors.black,
+          elevation: 8,
+          onPressed: () {
+            setState(() => selectedIndex = 2);
+          },
+          child: const Icon(Icons.search,
+              color: Colors.white, size: 28),
         ),
-
 
         floatingActionButtonLocation:
         FloatingActionButtonLocation.centerDocked,
 
-        // ✅ BOTTOM BAR CONTROL
-        bottomNavigationBar:
-        isKeyboardOpen || !showBottomBar
+        /// BOTTOM BAR
+        bottomNavigationBar: isKeyboardOpen || !showBottomBar
             ? const SizedBox.shrink()
             : BottomAppBar(
           color: Colors.white,
@@ -146,10 +145,22 @@ class _ModernBottomNavState extends State<ModernBottomNav> {
   //---------------- NAV ITEM ----------------//
   Widget _navItem(IconData icon, String label, int index) {
     final bool isSelected = selectedIndex == index;
-    final bool showRedDot = index == 3 && doubts.isNotEmpty;
+    final bool showBadge = index == 3 && unreadCount > 0;
 
     return InkWell(
-      onTap: () => setState(() => selectedIndex = index),
+      onTap: () async {
+        /// 🔥 RESET COUNT WHEN OPEN DOUBTS
+        if (index == 3) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setInt("seen_doubts_count", doubts.length);
+
+          setState(() {
+            unreadCount = 0;
+          });
+        }
+
+        setState(() => selectedIndex = index);
+      },
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -161,16 +172,33 @@ class _ModernBottomNavState extends State<ModernBottomNav> {
                 color: isSelected ? Colors.blue : Colors.grey,
                 size: 24,
               ),
-              if (showRedDot)
+
+              /// 🔴 NUMBER BADGE
+              if (showBadge)
                 Positioned(
-                  top: -2,
-                  right: -2,
+                  top: -6,
+                  right: -10,
                   child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
                       color: Colors.red,
-                      shape: BoxShape.circle,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 18,
+                      minHeight: 18,
+                    ),
+                    child: Text(
+                      unreadCount > 99
+                          ? "99+"
+                          : unreadCount.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
                 ),

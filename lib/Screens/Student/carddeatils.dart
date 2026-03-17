@@ -426,6 +426,7 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
     _razorpay.clear();
     super.dispose();
   }
+
   String orderids='';
   String mecrhant='';
 
@@ -451,25 +452,31 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
     print(data);
 
     if (response.statusCode == 200 && data['status'] == 1) {
-      print('ok');
-      final redirectUrl = data['data']['redirect_url'];
-      final transactionId = data['data']['transaction_id'];
-      final orderId = data['data']['order_id'];
-      final type = data['data']['gateway'];
-      final key = data['data']['key'];
-      final amt = data['data']['amount'];
-      setState(() {
-        orderids=orderId.toString();
-        mecrhant=transactionId.toString();
-      });
+      if(data['message'].toString()=="Free course payment recorded successfully."){
+        checkPurchaseStatus();
 
-      double d = double.parse(amt);
-      startPayment(d,orderId.toString(),key.toString());
+      }else{
+        print('ok');
+        final redirectUrl = data['data']['redirect_url'];
+        final transactionId = data['data']['transaction_id'];
+        final orderId = data['data']['order_id'];
+        final type = data['data']['gateway'];
+        final key = data['data']['key'];
+        final amt = data['data']['amount'];
+        setState(() {
+          orderids=orderId.toString();
+          mecrhant=transactionId.toString();
+        });
+
+        double d = double.parse(amt);
+        startPayment(d,orderId.toString(),key.toString());
 
 
 
-      print(transactionId);
-      print(orderId);
+        print(transactionId);
+        print(orderId);
+
+      }
 
 
       // Navigator.push(
@@ -668,8 +675,7 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
 
 
     final data = jsonDecode(response.body);
-    print(data)
-    ;
+    print(data);
     //showPaymentResultPopup(context, data);
 
     // showDialog(
@@ -866,10 +872,14 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
   }
 
   Widget courseDescription(String description) {
+
+    String formattedDescription = description
+        .replaceAll("\n", "<br>"); // convert newline to HTML break
+
     return Html(
-      data: description.isEmpty
+      data: formattedDescription.isEmpty
           ? "<p>No description available for this course.</p>"
-          : description,
+          : formattedDescription,
       style: {
         "body": Style(
           fontSize: FontSize(15),
@@ -985,8 +995,20 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
                     const SizedBox(height: 30),
                     InkWell(
                       onTap: (){
-                        Navigator.push(context, MaterialPageRoute(builder: (context)=>CourseProgressScreen(batchId: widget.courseData["id"].toString(),)));
-                      },
+                        final mcqQuestions = allQuestions.where((q) => q['question_type'] == "1").toList();
+                        final caQuestions = allQuestions.where((q) => q['question_type'] == "2").toList();
+                        final pyqQuestions = allQuestions.where((q) => q['question_type'] == "3").toList();
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => CourseProgressScreen(
+                              batchId: widget.courseData["id"].toString(),
+                              mcqQuestions: mcqQuestions,
+                              caQuestions: caQuestions,
+                              pyqQuestions: pyqQuestions,
+                            ),
+                          ),
+                        );                        },
                       child: Container(decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(20),color: Colors.blueAccent
                       ),height: 50,child: Center(child: Text("Progress",style: TextStyle(color: Colors.white),))
@@ -1031,6 +1053,7 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
 
                         },
                       ),
+
                     ],
                   ),
                     const SizedBox(height: 30),
@@ -1126,8 +1149,11 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
                     // ],
 
                     const SizedBox(height: 40),
+
                   ],
+
                 ),
+
               ),
             ],
           ),
@@ -1408,11 +1434,14 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
                         //   });
 
                        if (rawPrice.isEmpty) {
-                         await Assignbatch('online', id, "00", "");
+                         addPhonePay(context,id);
+
+                         // await Assignbatch('online', id, "00", "");
                           // Navigator.pushReplacement(
                           //   context,
                           //   MaterialPageRoute(builder: (_) => Videos(id: widget.courseData["id"].toString(),)),
                           // );
+
                         }else if(rawPrice.isNotEmpty){
                           double d = parsedOfferPrice;
                           setState(() {

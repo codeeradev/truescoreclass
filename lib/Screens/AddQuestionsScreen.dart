@@ -331,6 +331,7 @@ class _AddQuestionScreenState extends State<AddQuestionScreen>
         final res = await request.send();
         final respStr = await res.stream.bytesToString();
         final json = jsonDecode(respStr);
+        print(json);
         if (res.statusCode == 200 || res.statusCode == 201) {
           _showSnackBar(json['msg'] ?? "Question added", isError: false);
         } else {

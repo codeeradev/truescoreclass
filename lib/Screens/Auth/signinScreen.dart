@@ -63,7 +63,8 @@ class _SigninScreenState extends State<SigninScreen> with TickerProviderStateMix
   }
 
   Future<void> signin() async {
-    print('st');
+    print('start');
+
     SharedPreferences preferences = await SharedPreferences.getInstance();
 
     final response = await http.post(
@@ -86,27 +87,36 @@ class _SigninScreenState extends State<SigninScreen> with TickerProviderStateMix
 
 
     if (response.statusCode == 200) {
+      if(data['status'].toString()=="false"){
+        print('yes');
+        _showError("Check ID-Password");
+
+
+      }else{
+        await preferences.setString("studentData", data['studentData']['enrollmentId']);
+        await preferences.setString("token", data['studentData']['apiToken']);
+        await preferences.setString('type', 'student');
+        await preferences.setString("studentname", data['studentData']['fullName']);
+        await preferences.setString("studentimage", data['studentData']['image'].toString());
+        await preferences.setString("studentmail", data['studentData']['userEmail'].toString());
+        await preferences.setString("studentph", data['studentData']['mobile'].toString());
+
+
+
+
+
+        print(data['studentData']['enrollmentId']);
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => ModernBottomNav()),
+        );
+      }
     //  showSnack(context,data['msg'].toString());
 
-      await preferences.setString("studentData", data['studentData']['enrollmentId']);
-      await preferences.setString("token", data['studentData']['apiToken']);
-      await preferences.setString('type', 'student');
-      await preferences.setString("studentname", data['studentData']['fullName']);
-      await preferences.setString("studentimage", data['studentData']['image'].toString());
-      await preferences.setString("studentmail", data['studentData']['userEmail'].toString());
-      await preferences.setString("studentph", data['studentData']['mobile'].toString());
 
-
-
-
-
-      print(data['studentData']['enrollmentId']);
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => ModernBottomNav()),
-      );
     }else{
+      _showError("Check ID-Password");
     }
   }
 

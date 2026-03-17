@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_html/flutter_html.dart';
@@ -26,6 +27,7 @@ class _PaperTypeScreenState extends State<PaperTypeScreen> {
   void initState() {
     super.initState();
     fetchPapers();
+
   }
 
   Future<void> fetchPapers() async {
@@ -384,6 +386,7 @@ class _ExamScreenState extends State<ExamScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
     }
   }
+
   void openDoubtDialog(BuildContext context, String des, String batchId) {
     final TextEditingController problemController = TextEditingController();
 
@@ -482,6 +485,7 @@ class _ExamScreenState extends State<ExamScreen> {
     } finally {
     }
   }
+
   void _showSnackBar(String message, {required bool isError}) {
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -495,12 +499,80 @@ class _ExamScreenState extends State<ExamScreen> {
     );
 
   }
+
   String htmlToPlainText(String html) {
     return html
         .replaceAll(RegExp(r'<[^>]*>'), '')
         .replaceAll('&nbsp;', ' ')
         .trim();
   }
+  Widget buildContent(String text) {
+    bool isMath(String t) {
+      return t.contains(r"\frac") ||
+          t.contains(r"\sqrt") ||
+          t.contains(r"\sum") ||
+          t.contains("^") ||
+          t.contains("_");
+    }
+
+    /// Math equation
+    if (isMath(text)) {
+      return Math.tex(
+        text,
+        textStyle: const TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+      );
+    }
+
+    /// HTML content
+    if (text.contains("<")) {
+      return Html(data: text);
+    }
+
+    /// Normal text
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.bold,
+      ),
+    );
+  }
+
+  Widget buildContenttext(String text, {double fontSize = 16}) {
+
+    bool isMath(String t) {
+      return t.contains(r"\frac") ||
+          t.contains(r"\sqrt") ||
+          t.contains(r"\sum") ||
+          t.contains("^") ||
+          t.contains("_");
+    }
+
+    /// Math equation
+    if (isMath(text)) {
+      return Math.tex(
+        text,
+        textStyle: TextStyle(
+          fontSize: fontSize,
+        ),
+      );
+    }
+
+    /// HTML content
+    if (text.contains("<")) {
+      return Html(data: text);
+    }
+
+    /// Normal text
+    return Text(
+      text,
+      style: TextStyle(fontSize: fontSize),
+    );
+  }
+
 
 
 
@@ -514,6 +586,7 @@ class _ExamScreenState extends State<ExamScreen> {
     final q = questions[currentIndex];
     String? selectedOption = selectedAnswers[q['id'].toString()];
     bool isCorrect = selectedOption == q['right_answer'].toString().toUpperCase();
+   // print(q['answer_value'].toString());
 
     return Scaffold(
       appBar: AppBar(
@@ -561,6 +634,7 @@ class _ExamScreenState extends State<ExamScreen> {
         padding: const EdgeInsets.all(16.0),
         child: ListView(
           children: [
+
             LinearProgressIndicator(value: (currentIndex + 1) / questions.length),
             const SizedBox(height: 8),
             Text("Question ${currentIndex + 1} / ${questions.length}",
@@ -571,7 +645,7 @@ class _ExamScreenState extends State<ExamScreen> {
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: Html(data: q['question'].toString()),
+                child: buildContent(q['question'].toString()),
               ),
             ),
             const SizedBox(height: 20),
@@ -586,7 +660,7 @@ class _ExamScreenState extends State<ExamScreen> {
                     ? (isCorrect ? Colors.green.shade100 : Colors.red.shade100)
                     : null,
                 child: RadioListTile<String>(
-                  title: Html(data: optionText),
+                  title: buildContent(optionText),
                   value: optionKey,
                   groupValue: selectedOption,
                   onChanged: selectedOption == null
@@ -633,9 +707,9 @@ class _ExamScreenState extends State<ExamScreen> {
 
             if (showResult && !isCorrect) ...[
               const SizedBox(height: 20),
-              const Text("Explanation:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              q['answer_value'].toString()=="No explanation required"?SizedBox(): const Text("Explanation:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               const SizedBox(height: 10),
-              if (q['answer_type'] == "link" && q['answer_value'].toString().isNotEmpty)
+              if (q['answer_type'] == "link" && (q['answer_value'].toString().isNotEmpty||q['answer_value'].toString()!="null"))
                 GestureDetector(
                   onTap: () async {
                     final url = q['answer_value'].toString();
@@ -643,7 +717,7 @@ class _ExamScreenState extends State<ExamScreen> {
                       await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
                     }
                   },
-                  child: Container(
+                  child: q['answer_value'].toString()=="No explanation required"?SizedBox():Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
                       color: Colors.blue.shade50,
@@ -661,10 +735,10 @@ class _ExamScreenState extends State<ExamScreen> {
                     ),
                   ),
                 ),
-              if (q['answer_type'] == "file" && q['answer_value'].toString().isNotEmpty)
+              if (q['answer_type'] == "file" ||q['answer_type'] == "image")
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: Image.network(
+                  child:q['answer_value'].toString()=="null"?SizedBox(): Image.network(
                     "https://truescoreedu.com/${q['answer_value']}",
                     height: 200,
                     fit: BoxFit.contain,
@@ -683,7 +757,7 @@ class _ExamScreenState extends State<ExamScreen> {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.orange),
                   ),
-                  child: Text(q['answer_value'], style: const TextStyle(fontSize: 15)),
+                  child: buildContenttext(q['answer_value'].toString(), fontSize: 15),
                 ),
             ],
 

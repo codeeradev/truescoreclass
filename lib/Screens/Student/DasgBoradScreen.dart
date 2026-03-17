@@ -42,6 +42,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   bool loading = true;
   List<dynamic> notices = [];
 
+
   Future<void> fetchNotices() async {
 
     setState(() => isLoading = true);
@@ -77,6 +78,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   @override
   void initState() {
     super.initState();
+    checkNoticeUpdate();
+
     SecureScreen.enable();
 
     fetchDashboardData();
@@ -162,6 +165,47 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
       setState(() => isLoading = false);
     }
   }
+  bool hasNewNotice = false;
+  int newNoticeCount = 0;
+
+
+  Future<void> checkNoticeUpdate() async {
+
+    SharedPreferences pref = await SharedPreferences.getInstance();
+    String apiToken = pref.getString("token") ?? "";
+
+    int savedCount = pref.getInt("last_notice_count") ?? 0;
+
+    try {
+
+      final response = await http.post(
+        Uri.parse("https://truescoreedu.com/api/active-notices"),
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        body: {"apiToken": apiToken},
+      );
+
+      if (response.statusCode == 200) {
+
+        final data = jsonDecode(response.body);
+
+        if (data["status"] == 1) {
+
+          List notices = data["data"];
+
+          int apiCount = notices.length;
+
+          setState(() {
+            newNoticeCount = apiCount > savedCount ? apiCount - savedCount : 0;
+          });
+
+        }
+
+      }
+
+    } catch (e) {
+      print(e);
+    }
+  }
 
   @override
   void dispose() {
@@ -193,33 +237,46 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         actions: [
           Stack(
             children: [
+
               IconButton(
                 icon: const Icon(
                   Ionicons.notifications_outline,
                   color: Colors.white,
                 ),
-                onPressed: () {
-                  Navigator.push(
+                onPressed: () async {
+
+                  await Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => NotificationScreen1()),
+                    MaterialPageRoute(
+                      builder: (context) => const NotificationScreen1(),
+                    ),
                   );
+
+                  checkNoticeUpdate();
                 },
               ),
 
-              // 🔴 Red Dot
-              if (notices.isNotEmpty)
+              if (newNoticeCount > 0)
                 Positioned(
-                  right: 8,
-                  top: 8,
+                  right: 6,
+                  top: 6,
                   child: Container(
-                    width: 10,
-                    height: 10,
-                    decoration: const BoxDecoration(
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
                       color: Colors.red,
-                      shape: BoxShape.circle,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      "$newNoticeCount",
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
+
             ],
           ),
 

@@ -563,7 +563,7 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
                           const SizedBox(height: 15),
                           _buildTextField(mobileCtr, "Mobile Number", Icons.phone, keyboardType: TextInputType.phone),
                           _buildTextField(emailCtr, "Email Address", Icons.email, keyboardType: TextInputType.emailAddress),
-                          _buildTextField(passwordCtr, "Password", Icons.lock, obscure: true),
+                          //_buildTextField(passwordCtr, "Password", Icons.lock, obscure: true),
 
                           const SizedBox(height: 25),
                          // const Text("Details", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),

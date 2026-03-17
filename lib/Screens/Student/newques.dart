@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 
 /// ================= HTML CLEANER =================
 String removeHtml(String html) {
@@ -233,6 +235,92 @@ My problem: ${problemController.text.trim()}
   }
 
   Widget buildQuestionText(String question) {
+
+    bool hasMath(String text) {
+      return text.contains(r"\frac") ||
+          text.contains(r"\sqrt") ||
+          text.contains(r"\sum") ||
+          text.contains("^") ||
+          text.contains("_");
+    }
+
+    bool hasHtml(String text) {
+      return text.contains("<") && text.contains(">");
+    }
+
+    /// 🔥 CASE 1: PURE MATH (no html, only latex)
+    if (hasMath(question) && !hasHtml(question)) {
+      return Math.tex(
+        question,
+        textStyle: const TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+      );
+    }
+
+    /// 🔥 CASE 2: HTML (with or without math inside)
+    if (hasHtml(question)) {
+      return Html(
+        data: question,
+
+        style: {
+          "*": Style(
+            fontSize: FontSize(18),
+            fontWeight: FontWeight.bold,
+          ),
+        },
+
+        /// 👇 handle math inside html
+        extensions: [
+          TagExtension(
+            tagsToExtend: {"math"},
+            builder: (context) {
+              final tex = context.element?.text ?? "";
+              return Math.tex(
+                tex,
+                textStyle: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              );
+            },
+          ),
+
+          /// 👇 AUTO detect latex inside normal html text
+          TagExtension(
+            tagsToExtend: {"span", "p", "div"},
+            builder: (context) {
+              final text = context.element?.text ?? "";
+
+              if (hasMath(text)) {
+                return Math.tex(
+                  text,
+                  textStyle: const TextStyle(fontSize: 20),
+                );
+              }
+
+              return Text(
+                text,
+                style: const TextStyle(fontSize: 18),
+              );
+            },
+          ),
+        ],
+      );
+    }
+
+    /// 🔥 CASE 3: NORMAL TEXT
+    return Text(
+      formatQuestion(question),
+      style: const TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.bold,
+      ),
+    );
+  }
+  Widget buildQuestionWidget(String question) {
+
     bool isMath(String text) {
       return text.contains(r"\frac") ||
           text.contains("^") ||
@@ -241,7 +329,7 @@ My problem: ${problemController.text.trim()}
           text.contains(r"\sum");
     }
 
-    /// 🧮 If math → render formatted equation
+    /// If math equation
     if (isMath(question)) {
       return Math.tex(
         question,
@@ -252,12 +340,19 @@ My problem: ${problemController.text.trim()}
       );
     }
 
-    /// 🔤 Normal text
-    return
-      Text(formatQuestion(question),style:    const TextStyle(
+    /// If HTML content exists
+    if (question.contains("<")) {
+      return Html(data: question);
+    }
+
+    /// Normal text
+    return Text(
+      formatQuestion(question),
+      style: const TextStyle(
         fontSize: 18,
         fontWeight: FontWeight.bold,
-      ));
+      ),
+    );
   }
   String formatQuestion(String text) {
     text = text.trim();
@@ -291,17 +386,63 @@ My problem: ${problemController.text.trim()}
       fontSize: 16,
     ));
   }
+  Widget buildOptionWidget(String option) {
 
+    bool isMath(String text) {
+      return text.contains(r"\frac") ||
+          text.contains("^") ||
+          text.contains("_") ||
+          text.contains(r"\sqrt") ||
+          text.contains(r"\sum");
+    }
+
+    if (isMath(option)) {
+      return Math.tex(
+        option,
+        textStyle: const TextStyle(
+          fontSize: 18,
+        ),
+      );
+    }
+
+    if (option.contains("<")) {
+      return Html(data: option);
+    }
+
+    return Text(
+      option,
+      style: const TextStyle(fontSize: 16),
+    );
+  }
+
+  @override
   @override
   Widget build(BuildContext context) {
     final q = widget.questions[currentIndex];
-    final question = removeHtml(q['question']?.toString() ?? "");
+
+    final question = q['question']?.toString() ?? "";
     String image = q['question_image'] ?? "";
+
     final options =
     (q['options'] as List).map((e) => removeHtml(e.toString())).toList();
-    final correctIndex = "ABCD".indexOf(q['right_answer']?.toString() ?? "");
+
+    final correctIndex =
+    "ABCD".indexOf(q['right_answer']?.toString() ?? "");
+
     final answerType = q['answer_type'];
     final answerValue = q['answer_value'];
+
+    bool isCorrect = selectedIndex == correctIndex;
+    // final q = widget.questions[currentIndex];
+    // final question = removeHtml(q['question']?.toString() ?? "");
+    // String image = q['question_image'] ?? "";
+    // final options =
+    // (q['options'] as List).map((e) => removeHtml(e.toString())).toList();
+    // final correctIndex = "ABCD".indexOf(q['right_answer']?.toString() ?? "");
+    // final answerType = q['answer_type'];
+    // final answerValue = q['answer_value'];
+   // print(answerValue);
+
 
     return Scaffold(
       appBar: AppBar(
@@ -310,7 +451,12 @@ My problem: ${problemController.text.trim()}
         actions: [
           InkWell(
             onTap: () {
-              openDoubtDialog(context, question, widget.batchId.toString(), options);
+              openDoubtDialog(
+                context,
+                question,
+                widget.batchId.toString(),
+                options,
+              );
             },
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -321,104 +467,396 @@ My problem: ${problemController.text.trim()}
               ),
               child: const Row(
                 children: [
-                  Text("Raise Doubt", style: TextStyle(color: Colors.white)),
+                  Text("Raise Doubt",
+                      style: TextStyle(color: Colors.white)),
                   SizedBox(width: 6),
-                  Icon(Icons.question_mark, color: Colors.white, size: 18),
+                  Icon(Icons.question_mark,
+                      color: Colors.white, size: 18),
                 ],
               ),
             ),
           ),
         ],
       ),
+
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
+
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Question ${currentIndex + 1}/${widget.questions.length}"),
-            const SizedBox(height: 8),
-            buildQuestionText(question),
+            LinearProgressIndicator(value: (currentIndex + 1) / widget.questions.length),
+            SizedBox(height: 5,),
+
+
+            /// QUESTION INDEX
+            Text(
+              "Question ${currentIndex + 1}/${widget.questions.length}",
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            /// QUESTION CARD
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: buildQuestionWidget(question),
+                ),
+              ),
+            ),
+
+            /// QUESTION IMAGE
             if (image.isNotEmpty) ...[
               const SizedBox(height: 16),
+
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Image.network(
                   "https://truescoreedu.com/$image",
-                  fit: BoxFit.cover,
-                  height: 180,
+                  height: 200,
                   width: double.infinity,
-                  errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, size: 80),
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) =>
+                  const Icon(Icons.broken_image, size: 80),
                 ),
               ),
             ],
-            const SizedBox(height: 24),
+
+            const SizedBox(height: 20),
+
+            /// OPTIONS
             ...List.generate(options.length, (index) {
-              final isSelected = selectedIndex == index;
-              final isCorrect = index == correctIndex;
-              Color border = Colors.grey.shade300;
+
+              bool isSelected = selectedIndex == index;
+              bool isOptionCorrect = index == correctIndex;
+
+              Color? cardColor;
+
               if (submitted) {
-                if (isCorrect) border = Colors.green;
-                else if (isSelected) border = Colors.red;
-              } else if (isSelected) {
-                border = Colors.blue;
+                if (isOptionCorrect) {
+                  cardColor = Colors.green.shade100;
+                } else if (isSelected) {
+                  cardColor = Colors.red.shade100;
+                }
               }
-              return InkWell(
-                onTap: submitted ? null : () => setState(() => selectedIndex = index),
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: border, width: 1.5),
-                  ),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 16,
-                        backgroundColor: border,
-                        child: Text(
-                          String.fromCharCode(65 + index),
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: buildOptionText(options[index]),
-                      ),
-                    ],
-                  ),
+
+              return
+                Card(
+                color: cardColor,
+                margin: const EdgeInsets.only(bottom: 12),
+
+                child: RadioListTile<int>(
+                  title:  buildOptionWidget(options[index].toString()),
+
+                  value: index,
+                  groupValue: selectedIndex,
+
+                  onChanged: submitted
+                      ? null
+                      : (val) {
+                    setState(() {
+                      selectedIndex = val;
+                    });
+                  },
+
+                  activeColor:
+                  isCorrect ? Colors.green : Colors.deepPurple,
                 ),
               );
             }),
+
             const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              height: 54,
-              child: ElevatedButton(
-                onPressed: selectedIndex == null
-                    ? null
-                    : () async {
-                  if (!submitted) {
-                    await _markAsAttempted();
-                    setState(() => submitted = true);
-                  } else {
-                    await _nextQuestion();
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+
+            /// RESULT MESSAGE
+            if (submitted)
+              Container(
+                padding: const EdgeInsets.all(16),
+
+                decoration: BoxDecoration(
+                  color: isCorrect
+                      ? Colors.green.shade50
+                      : Colors.red.shade50,
+
+                  borderRadius: BorderRadius.circular(12),
+
+                  border: Border.all(
+                    color: isCorrect
+                        ? Colors.green
+                        : Colors.red,
+                  ),
                 ),
-                child: Text(submitted ? "Next" : "Submit", style: const TextStyle(fontSize: 17)),
+
+                child: Row(
+                  children: [
+
+                    Icon(
+                      isCorrect
+                          ? Icons.check_circle
+                          : Icons.cancel,
+                      color: isCorrect
+                          ? Colors.green
+                          : Colors.red,
+                      size: 32,
+                    ),
+
+                    const SizedBox(width: 12),
+
+                    Text(
+                      isCorrect
+                          ? "Correct Answer!"
+                          : "Wrong Answer!",
+
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: isCorrect
+                            ? Colors.green.shade700
+                            : Colors.red.shade700,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            if (submitted && selectedIndex != correctIndex)
-              _buildExplanation(answerType, answerValue),
+
+            /// EXPLANATION
+            if (submitted && selectedIndex != correctIndex) ...[
+
+              const SizedBox(height: 20),
+
+              answerValue.toString()=="No explanation required"?SizedBox(): Text(
+                "Explanation",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              /// LINK
+              if (answerType == "link" &&
+                  (answerValue.toString().isNotEmpty||answerValue!=null))
+
+                GestureDetector(
+                  onTap: () async {
+
+                    final url = answerValue.toString();
+
+                    if (await canLaunchUrl(Uri.parse(url))) {
+                      await launchUrl(
+                        Uri.parse(url),
+                        mode: LaunchMode.externalApplication,
+                      );
+                    }
+
+                  },
+
+                  child: answerValue.toString()=="No explanation required"?SizedBox():Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.blue),
+                    ),
+
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+
+                        Icon(Icons.link, color: Colors.blue),
+
+                        SizedBox(width: 8),
+
+                        Text(
+                          "View Detailed Open Url",
+                          style: TextStyle(
+                            color: Colors.blue,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+              /// IMAGE
+              if ((answerType == "image" ||answerType == "file")
+                  &&
+                  answerValue.toString().isNotEmpty
+              )
+
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+
+                  child: answerValue==null?SizedBox():Image.network(
+                    "https://truescoreedu.com/$answerValue",
+                    height: 200,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+
+              /// TEXT
+              if (answerType == "text" &&
+                  answerValue.toString().isNotEmpty)
+
+                Container(
+                  padding: const EdgeInsets.all(16),
+
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.orange),
+                  ),
+
+                  child:buildQuestionText(answerValue.toString())
+                  // Text(
+                  //   answerValue.toString(),
+                  //   style: const TextStyle(fontSize: 15),
+                  // ),
+                ),
+            ],
+
+            const SizedBox(height: 40),
+
+            /// NEXT BUTTON
+            ///
+            ///
+
+            // SizedBox(
+            //   width: double.infinity,
+            //   height: 54,
+            //
+            //   child: ElevatedButton(
+            //
+            //     onPressed: selectedIndex == null
+            //         ? null
+            //         : () async {
+            //
+            //       if (!submitted) {
+            //
+            //         await _markAsAttempted();
+            //
+            //         setState(() {
+            //           submitted = true;
+            //         });
+            //
+            //       } else {
+            //
+            //         await _nextQuestion();
+            //
+            //       }
+            //
+            //     },
+            //
+            //     style: ElevatedButton.styleFrom(
+            //       shape: RoundedRectangleBorder(
+            //         borderRadius: BorderRadius.circular(12),
+            //       ),
+            //     ),
+            //
+            //     child: Text(
+            //       submitted ? "Next Question" : "Submit",
+            //       style: const TextStyle(fontSize: 16),
+            //     ),
+            //   ),
+            // ),
+            Row(
+              children: [
+
+                /// PREVIOUS BUTTON
+                Expanded(
+                  child: SizedBox(
+                    height: 54,
+                    child: ElevatedButton(
+                      onPressed: currentIndex == 0 ? null : () async {
+                        await _previousQuestion();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.shade400,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        "Previous",
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 10),
+
+                /// SUBMIT / NEXT BUTTON
+                Expanded(
+                  child: SizedBox(
+                    height: 54,
+                    child: ElevatedButton(
+                      onPressed: selectedIndex == null
+                          ? null
+                          : () async {
+
+                        if (!submitted) {
+
+                          await _markAsAttempted();
+
+                          setState(() {
+                            submitted = true;
+                          });
+
+                        } else {
+
+                          await _nextQuestion();
+
+                        }
+
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green.shade400,
+
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        submitted ? "Next Question" : "Submit",
+                        style:  TextStyle(fontSize: 16,color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ),
+
+              ],
+            )
           ],
         ),
       ),
     );
   }
+  Future<void> _previousQuestion() async {
+    if (currentIndex > 0) {
+      setState(() {
+        currentIndex--;
+        selectedIndex = null;
+        submitted = false;
+      });
 
+      await _saveProgress();
+    }
+  }
   Future<void> _nextQuestion() async {
     if (currentIndex < widget.questions.length - 1) {
       setState(() {

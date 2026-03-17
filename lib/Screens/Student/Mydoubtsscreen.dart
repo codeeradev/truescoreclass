@@ -513,6 +513,8 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
             doubts = json['data'] ?? [];
             isLoading = false;
           });
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setInt("seen_doubts_count", doubts.length);
         } else {
           setState(() {
             errorMessage = json['msg'] ?? "No doubts found";

@@ -516,8 +516,20 @@ class _PurchasedCourseVideosScreenState extends State<PurchasedCourseVideosScree
                   const SizedBox(height: 30),
                   InkWell(
                     onTap: (){
-                      Navigator.push(context, MaterialPageRoute(builder: (context)=>CourseProgressScreen(batchId: widget.courseId.toString(),)));
-                    },
+                      final mcqQuestions = allQuestions.where((q) => q['question_type'] == "1").toList();
+                      final caQuestions = allQuestions.where((q) => q['question_type'] == "2").toList();
+                      final pyqQuestions = allQuestions.where((q) => q['question_type'] == "3").toList();
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => CourseProgressScreen(
+                            batchId: widget.courseId,
+                            mcqQuestions: mcqQuestions,
+                            caQuestions: caQuestions,
+                            pyqQuestions: pyqQuestions,
+                          ),
+                        ),
+                      );                 },
                     child: Container(decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(20),color: Colors.blueAccent
                     ),height: 50,child: Center(child: Text("Progress",style: TextStyle(color: Colors.white),))

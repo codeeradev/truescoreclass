@@ -149,7 +149,15 @@ class _ResultScreenState extends State<ResultScreen> {
             ),
             const SizedBox(height: 10),
 
-            ...resultData["question_answer"].entries.map((e) {
+            ...resultData["question_answer"].entries
+                .toList()
+                .asMap()
+                .entries
+                .map((entry) {
+
+              int index = entry.key;                 // index number
+              var e = entry.value;
+
               String qid = e.key;
               String ans = e.value;
 
@@ -161,17 +169,27 @@ class _ResultScreenState extends State<ResultScreen> {
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: Colors.grey.shade300),
                 ),
+
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text("Q$qid",
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 16)),
+
+                    /// Question index
+                    Text(
+                      "Q${index + 1}",
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
 
                     Row(
                       children: [
-                        const Text("Your Answer: ",
-                            style: TextStyle(fontSize: 14)),
+                        const Text(
+                          "Your Answer: ",
+                          style: TextStyle(fontSize: 14),
+                        ),
+
                         Text(
                           ans,
                           style: const TextStyle(
@@ -185,7 +203,9 @@ class _ResultScreenState extends State<ResultScreen> {
                   ],
                 ),
               );
+
             }).toList(),
+
           ],
         ),
       ),

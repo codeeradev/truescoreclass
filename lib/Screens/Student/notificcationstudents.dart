@@ -33,14 +33,19 @@ class _NotificationScreen1State extends State<NotificationScreen1> {
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: {"apiToken": apiToken},
       );
-
-      print("NOTICE RESPONSE: ${response.body}");
+      print(response.body);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        SharedPreferences pref = await SharedPreferences.getInstance();
 
         if (data["status"] == 1) {
-          setState(() => notices = data["data"]);
+
+          List<dynamic> newNotices = data["data"];
+
+          setState(() => notices = newNotices);
+
+          await pref.setInt("last_notice_count", newNotices.length);
         }
       }
     } catch (e) {
@@ -49,6 +54,7 @@ class _NotificationScreen1State extends State<NotificationScreen1> {
       setState(() => isLoading = false);
     }
   }
+
 
   @override
   Widget build(BuildContext context) {

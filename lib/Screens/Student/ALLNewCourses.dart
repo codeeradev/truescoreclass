@@ -14,6 +14,7 @@ class AllCoursesScreen extends StatefulWidget {
 }
 
 class _AllCoursesScreenState extends State<AllCoursesScreen> {
+
   Map<String, dynamic>? apiData;
   bool isLoading = true;
   List<dynamic> allCourses = [];
@@ -46,6 +47,7 @@ class _AllCoursesScreenState extends State<AllCoursesScreen> {
           ...?data["trendingCourses"] as List?,
           ...?data["freeCourses"] as List?,
           ...?data["newCourses"] as List?,
+          ...?data["purchasedCourses"] as List?,
         ];
 
         setState(() {
@@ -120,8 +122,11 @@ class _AllCoursesScreenState extends State<AllCoursesScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+
             Icon(Icons.menu_book_outlined, size: 80, color: Colors.grey.shade400),
+
             const SizedBox(height: 16),
+
             Text(
               "No courses available",
               style: TextStyle(fontSize: 18, color: Colors.grey.shade700),

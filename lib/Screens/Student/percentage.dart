@@ -2,8 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 class CourseProgressScreen extends StatefulWidget {
   final String batchId;
+  final List<dynamic> mcqQuestions;
+  final List<dynamic> caQuestions;
+  final List<dynamic> pyqQuestions;
 
-  const CourseProgressScreen({super.key, required this.batchId});
+  const CourseProgressScreen({
+    super.key,
+    required this.batchId,
+    required this.mcqQuestions,
+    required this.caQuestions,
+    required this.pyqQuestions,
+  });
 
   @override
   State<CourseProgressScreen> createState() => _CourseProgressScreenState();
@@ -16,16 +25,25 @@ class _CourseProgressScreenState extends State<CourseProgressScreen> {
   Future<double> getCompletionPercentage({
     required String batchId,
     required String questionType,
+    required List<dynamic> allQuestionsInType, // ← pass the full question list!
   }) async {
     final prefs = await SharedPreferences.getInstance();
 
-    final total =
-        prefs.getInt("batch_${batchId}_total_$questionType") ?? 0;
-    final progress =
-        prefs.getInt("batch_${batchId}_progress_$questionType") ?? 0;
+    int attemptedCount = 0;
+    int total = allQuestionsInType.length;
 
-    if (total == 0) return 0;
-    return (progress / total) * 100;
+    if (total == 0) return 0.0;
+
+    for (var q in allQuestionsInType) {
+      final qId = q['id']?.toString() ?? q['question_id']?.toString() ?? "";
+      if (qId.isEmpty) continue;
+
+      final key = "attempted_${batchId}_${questionType}_$qId";
+      final isAttempted = prefs.getBool(key) ?? false;
+      if (isAttempted) attemptedCount++;
+    }
+
+    return (attemptedCount / total) * 100;
   }
 
 
@@ -36,10 +54,22 @@ class _CourseProgressScreenState extends State<CourseProgressScreen> {
     _loadProgress();
   }
   Future<void> _loadProgress() async {
-    mcq = await getCompletionPercentage(batchId: widget.batchId, questionType: "1");
-    ca = await getCompletionPercentage(batchId: widget.batchId, questionType: "2");
-    pyq = await getCompletionPercentage(batchId: widget.batchId, questionType: "3");
-    setState(() {});
+    mcq = await getCompletionPercentage(
+      batchId: widget.batchId,
+      questionType: "1",
+      allQuestionsInType: widget.mcqQuestions,
+    );
+    ca = await getCompletionPercentage(
+      batchId: widget.batchId,
+      questionType: "2",
+      allQuestionsInType: widget.caQuestions,
+    );
+    pyq = await getCompletionPercentage(
+      batchId: widget.batchId,
+      questionType: "3",
+      allQuestionsInType: widget.pyqQuestions,
+    );
+    if (mounted) setState(() {});
   }
 
 
