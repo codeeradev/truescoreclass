@@ -872,9 +872,8 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
   }
 
   Widget courseDescription(String description) {
-
-    String formattedDescription = description
-        .replaceAll("\n", "<br>"); // convert newline to HTML break
+    String formattedDescription =
+    description.replaceAll("\n", "<br>");
 
     return Html(
       data: formattedDescription.isEmpty
@@ -887,8 +886,15 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
           color: Colors.black87,
           margin: Margins.zero,
           padding: HtmlPaddings.zero,
+          textAlign: TextAlign.justify, // 🔥 KEY FIX
         ),
-        "p": Style(margin: Margins.only(bottom: 10)),
+        "p": Style(
+          margin: Margins.only(bottom: 10),
+          textAlign: TextAlign.justify, // 🔥 IMPORTANT
+        ),
+        "span": Style(
+          textAlign: TextAlign.justify,
+        ),
         "strong": Style(fontWeight: FontWeight.bold),
         "b": Style(fontWeight: FontWeight.bold),
       },
