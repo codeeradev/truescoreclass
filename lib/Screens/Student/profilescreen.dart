@@ -9,18 +9,19 @@ import 'Mydoubtsscreen.dart';
 import 'Querystudent.dart';
 import 'editprofile.dart';
 import 'helps.dart';
+import 'meetings_screen.dart';
+
 class ProfileScreen1 extends StatefulWidget {
   const ProfileScreen1({super.key});
 
   @override
   State<ProfileScreen1> createState() => _ProfileScreen1State();
-
 }
 
 class _ProfileScreen1State extends State<ProfileScreen1> {
   String userName = "Student Name";
   File? profileImage;
-  String image='';
+  String image = '';
 
   @override
   void initState() {
@@ -30,7 +31,6 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
     _loadProfileData();
   }
 
-
   /// 🔹 Load Name & Image
   Future<void> _loadProfileData() async {
     final prefs = await SharedPreferences.getInstance();
@@ -38,7 +38,7 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
     setState(() {
       userName = prefs.getString('studentname') ?? "Student Name";
 
-       image = prefs.getString('studentimage').toString();
+      image = prefs.getString('studentimage').toString();
       // if (imgPath != null) {
       //   profileImage = File(imgPath);
       // }
@@ -48,8 +48,10 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
   /// 🔹 Pick Profile Image
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final XFile? image =
-    await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70,
+    );
 
     if (image != null) {
       final prefs = await SharedPreferences.getInstance();
@@ -71,17 +73,13 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
 
   @override
   Widget build(BuildContext context) {
-    return
-      Scaffold(
+    return Scaffold(
       backgroundColor: Colors.white,
 
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.white,
-        title: const Text(
-          "Profile",
-          style: TextStyle(color: Colors.black),
-        ),
+        title: const Text("Profile", style: TextStyle(color: Colors.black)),
         centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.black),
       ),
@@ -90,10 +88,9 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-
             /// 🔵 PROFILE IMAGE
             GestureDetector(
-              onTap: (){},
+              onTap: () {},
               child: Stack(
                 alignment: Alignment.bottomRight,
                 children: [
@@ -107,10 +104,19 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
                       radius: 55,
                       backgroundColor: Colors.grey.shade200,
                       backgroundImage:
-                      image.isNotEmpty ? NetworkImage("https://truescoreedu.com/uploads/students/${image}"): null,
-                      child: image.isEmpty
-                          ? const Icon(Icons.person, size: 55, color: Colors.grey)
-                          : null,
+                          image.isNotEmpty
+                              ? NetworkImage(
+                                "https://truescoreedu.com/uploads/students/${image}",
+                              )
+                              : null,
+                      child:
+                          image.isEmpty
+                              ? const Icon(
+                                Icons.person,
+                                size: 55,
+                                color: Colors.grey,
+                              )
+                              : null,
                     ),
                   ),
                   // Container(
@@ -130,10 +136,7 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
             /// 🔹 NAME
             Text(
               userName,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 24),
@@ -142,7 +145,11 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
               title: "Edit Profile",
               onTap: () {
                 Navigator.push(
-                    context, MaterialPageRoute(builder: (context) => UpdateProfileScreen()));
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => UpdateProfileScreen(),
+                  ),
+                );
               },
             ),
 
@@ -152,7 +159,9 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
               title: "Purchased Courses",
               onTap: () {
                 Navigator.push(
-                    context, MaterialPageRoute(builder: (context) => MyOnlyPurchased()));
+                  context,
+                  MaterialPageRoute(builder: (context) => MyOnlyPurchased()),
+                );
                 // Navigate to Doubts Screen
               },
             ),
@@ -160,10 +169,24 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
               icon: Icons.document_scanner,
               title: "My Doubts",
               onTap: () {
-
                 Navigator.push(
-                    context, MaterialPageRoute(builder: (context) => GetDoubtsScreenstudent()));
-
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => GetDoubtsScreenstudent(),
+                  ),
+                );
+              },
+            ),
+            _profileCard(
+              icon: Icons.video_call_rounded,
+              title: "Meetings",
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MeetingsScreen(),
+                  ),
+                );
               },
             ),
             _profileCard(
@@ -171,8 +194,11 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
               title: "Help & Support",
               onTap: () {
                 Navigator.push(
-                    context, MaterialPageRoute(builder: (context) => HelpSupportScreenstudent()));
-
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => HelpSupportScreenstudent(),
+                  ),
+                );
 
                 // Navigate to Help Screen
               },
@@ -183,7 +209,9 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
               title: "Any Query",
               onTap: () {
                 Navigator.push(
-                    context, MaterialPageRoute(builder: (context) => QueryScreen()));
+                  context,
+                  MaterialPageRoute(builder: (context) => QueryScreen()),
+                );
               },
             ),
 
@@ -191,7 +219,7 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
               icon: Icons.logout_rounded,
               title: "Logout",
               isLogout: true,
-              onTap: () async{
+              onTap: () async {
                 showLogoutWarningDialog(context);
 
                 // logout logic
@@ -202,6 +230,7 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
       ),
     );
   }
+
   void showLogoutWarningDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -235,10 +264,7 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
               /// TITLE
               const Text(
                 "Logout Warning",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
 
               const SizedBox(height: 10),
@@ -247,10 +273,7 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
               const Text(
                 "If you logout, all your course progress and saved data will be permanently removed.\n\nDo you want to continue?",
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.black54,
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.black54),
               ),
 
               const SizedBox(height: 24),
@@ -282,16 +305,14 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
                       onPressed: () async {
                         /// CLEAR DATA
                         SharedPreferences pref =
-                        await SharedPreferences.getInstance();
+                            await SharedPreferences.getInstance();
                         await pref.clear();
 
                         /// NAVIGATE
                         Navigator.pushAndRemoveUntil(
                           context,
-                          MaterialPageRoute(
-                            builder: (_) => const AskType(),
-                          ),
-                              (_) => false,
+                          MaterialPageRoute(builder: (_) => const AskType()),
+                          (_) => false,
                         );
                       },
                       child: const Text(
@@ -308,7 +329,6 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
       },
     );
   }
-
 
   /// 🔹 Profile Card Widget
   Widget _profileCard({
@@ -335,19 +355,15 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
         leading: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: isLogout
-                ? Colors.red.withOpacity(0.1)
-                : Colors.blue.withOpacity(0.1),
+            color:
+                isLogout
+                    ? Colors.red.withOpacity(0.1)
+                    : Colors.blue.withOpacity(0.1),
             borderRadius: BorderRadius.circular(12),
           ),
-          child:
-          Icon(
-            icon,
-            color: isLogout ? Colors.red : Colors.blue,
-          ),
+          child: Icon(icon, color: isLogout ? Colors.red : Colors.blue),
         ),
-        title:
-        Text(
+        title: Text(
           title,
           style: TextStyle(
             fontWeight: FontWeight.w600,

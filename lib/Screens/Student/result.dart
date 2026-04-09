@@ -7,11 +7,13 @@ import 'package:http/http.dart' as http;
 class ResultScreen extends StatefulWidget {
   final String paperId;
   final String paperType;
+  final bool showTryAgain;
 
   const ResultScreen({
     super.key,
     required this.paperId,
     required this.paperType,
+    this.showTryAgain = false,
   });
 
   @override
@@ -36,9 +38,7 @@ class _ResultScreenState extends State<ResultScreen> {
     try {
       final response = await http.post(
         Uri.parse("https://truescoreedu.com/api/answer-sheet"),
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: {
           "apiToken": token,
           "paper_id": widget.paperId,
@@ -65,22 +65,15 @@ class _ResultScreenState extends State<ResultScreen> {
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     if (errorMsg.isNotEmpty) {
-      return Scaffold(
-        body: Center(child: Text(errorMsg)),
-      );
+      return Scaffold(body: Center(child: Text(errorMsg)));
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Your Result"),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text("Your Result"), centerTitle: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -91,7 +84,11 @@ class _ResultScreenState extends State<ResultScreen> {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF0f0c29), Color(0xFF302b63), Color(0xFF24243e)],
+                  colors: [
+                    Color(0xFF0f0c29),
+                    Color(0xFF302b63),
+                    Color(0xFF24243e),
+                  ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -101,7 +98,7 @@ class _ResultScreenState extends State<ResultScreen> {
                     color: Colors.black26,
                     blurRadius: 12,
                     offset: Offset(0, 4),
-                  )
+                  ),
                 ],
               ),
               child: Column(
@@ -154,58 +151,73 @@ class _ResultScreenState extends State<ResultScreen> {
                 .asMap()
                 .entries
                 .map((entry) {
+                  int index = entry.key; // index number
+                  var e = entry.value;
 
-              int index = entry.key;                 // index number
-              var e = entry.value;
+                  String ans = e.value;
 
-              String qid = e.key;
-              String ans = e.value;
-
-              return Container(
-                margin: const EdgeInsets.symmetric(vertical: 6),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-
-                    /// Question index
-                    Text(
-                      "Q${index + 1}",
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
+                  return Container(
+                    margin: const EdgeInsets.symmetric(vertical: 6),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.grey.shade300),
                     ),
 
-                    Row(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          "Your Answer: ",
-                          style: TextStyle(fontSize: 14),
-                        ),
-
+                        /// Question index
                         Text(
-                          ans,
+                          "Q${index + 1}",
                           style: const TextStyle(
-                            fontSize: 16,
-                            color: Colors.blue,
                             fontWeight: FontWeight.bold,
+                            fontSize: 16,
                           ),
                         ),
+
+                        Row(
+                          children: [
+                            const Text(
+                              "Your Answer: ",
+                              style: TextStyle(fontSize: 14),
+                            ),
+
+                            Text(
+                              ans,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                color: Colors.blue,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
-                    )
-                  ],
+                    ),
+                  );
+                })
+                .toList(),
+
+            if (widget.showTryAgain) ...[
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context, "retry");
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: const Text("Try Again"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepPurple,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
                 ),
-              );
-
-            }).toList(),
-
+              ),
+            ],
           ],
         ),
       ),

@@ -19,6 +19,7 @@ void main() {
     ChangeNotifierProvider(
       create: (_) => SearchProvider(),
       child: const MyApp(),
+
     ),
   );
   SecureScreen.enable();

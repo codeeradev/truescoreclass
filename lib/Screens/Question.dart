@@ -10,7 +10,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../servcies.dart';
 import 'Student/result.dart';
 
-
 class PaperTypeScreen extends StatefulWidget {
   const PaperTypeScreen({super.key});
   @override
@@ -27,7 +26,6 @@ class _PaperTypeScreenState extends State<PaperTypeScreen> {
   void initState() {
     super.initState();
     fetchPapers();
-
   }
 
   Future<void> fetchPapers() async {
@@ -45,11 +43,9 @@ class _PaperTypeScreenState extends State<PaperTypeScreen> {
 
       final response = await http.post(
         Uri.parse("https://truescoreedu.com/api/get-active-questions"),
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: {
-          "apiToken": apiToken,  // 🔥 PASS TOKEN HERE
+          "apiToken": apiToken, // 🔥 PASS TOKEN HERE
         },
       );
 
@@ -57,11 +53,12 @@ class _PaperTypeScreenState extends State<PaperTypeScreen> {
 
       if (response.statusCode == 200) {
         /// Clean HTML and newline junk
-        String cleanedBody = response.body
-            .replaceAll('\\r\\n', ' ')
-            .replaceAll('\\n', ' ')
-            .replaceAll('> <', '><')
-            .trim();
+        String cleanedBody =
+            response.body
+                .replaceAll('\\r\\n', ' ')
+                .replaceAll('\\n', ' ')
+                .replaceAll('> <', '><')
+                .trim();
 
         final Map<String, dynamic> json = jsonDecode(cleanedBody);
 
@@ -105,49 +102,67 @@ class _PaperTypeScreenState extends State<PaperTypeScreen> {
       //   backgroundColor: Colors.deepPurple,
       //   foregroundColor: Colors.white,
       // ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : errorMsg.isNotEmpty
-          ? Center(child: Text(errorMsg, style: const TextStyle(color: Colors.red)))
-          :
-      Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            const Text(
-              "Select Paper Type",
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 40),
+      body:
+          isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : errorMsg.isNotEmpty
+              ? Center(
+                child: Text(
+                  errorMsg,
+                  style: const TextStyle(color: Colors.red),
+                ),
+              )
+              : Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    const Text(
+                      "Select Paper Type",
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 40),
 
-            _buildBigCard(
-              title: "Mock Papers",
-              count: mockPapers.length,
-              color: Colors.blue,
-              icon: Icons.timer,
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => PapersListScreen(papers: mockPapers, title: "Mock Papers"),
+                    _buildBigCard(
+                      title: "Mock Papers",
+                      count: mockPapers.length,
+                      color: Colors.blue,
+                      icon: Icons.timer,
+                      onTap:
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (_) => PapersListScreen(
+                                    papers: mockPapers,
+                                    title: "Mock Papers",
+                                  ),
+                            ),
+                          ),
+                    ),
+                    const SizedBox(height: 20),
+                    _buildBigCard(
+                      title: "Practice Papers",
+                      count: practicePapers.length,
+                      color: Colors.green,
+                      icon: Icons.school,
+                      onTap:
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (_) => PapersListScreen(
+                                    papers: practicePapers,
+                                    title: "Practice Papers",
+                                  ),
+                            ),
+                          ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-            _buildBigCard(
-              title: "Practice Papers",
-              count: practicePapers.length,
-              color: Colors.green,
-              icon: Icons.school,
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => PapersListScreen(papers: practicePapers, title: "Practice Papers"),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -167,22 +182,41 @@ class _PaperTypeScreenState extends State<PaperTypeScreen> {
         decoration: BoxDecoration(
           gradient: LinearGradient(colors: [color, color.withOpacity(0.8)]),
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10, offset: const Offset(0, 5))],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black26,
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
         ),
         child: Column(
           children: [
             Icon(icon, size: 60, color: Colors.white),
             const SizedBox(height: 16),
-            Text(title, style: const TextStyle(fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold)),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 24,
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 8),
             Text(
               "$count Available",
-              style: TextStyle(fontSize: 18, color: Colors.white.withOpacity(0.9)),
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.white.withOpacity(0.9),
+              ),
             ),
             if (count == 0)
               const Padding(
                 padding: EdgeInsets.only(top: 10),
-                child: Text("Coming Soon", style: TextStyle(color: Colors.white70)),
+                child: Text(
+                  "Coming Soon",
+                  style: TextStyle(color: Colors.white70),
+                ),
               ),
           ],
         ),
@@ -195,43 +229,154 @@ class _PaperTypeScreenState extends State<PaperTypeScreen> {
 class PapersListScreen extends StatefulWidget {
   final List papers;
   final String title;
-  const PapersListScreen({super.key, required this.papers, required this.title});
+  const PapersListScreen({
+    super.key,
+    required this.papers,
+    required this.title,
+  });
 
   @override
   State<PapersListScreen> createState() => _PapersListScreenState();
 }
 
 class _PapersListScreenState extends State<PapersListScreen> {
+  final Set<String> _completedPaperIds = <String>{};
+  bool get _isPracticeList => widget.title.toLowerCase().contains("practice");
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCompletedStatus();
+  }
+
+  Future<void> _loadCompletedStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final Set<String> completed = <String>{};
+
+    for (final paper in widget.papers) {
+      final paperId = paper['paper_id']?.toString() ?? "";
+      if (paperId.isEmpty) continue;
+
+      if (_isPracticeList) {
+        final key =
+            "paper_completed_${widget.title.replaceAll(' ', '_').toLowerCase()}_$paperId";
+        if (prefs.getBool(key) == true) {
+          completed.add(paperId);
+        }
+      }
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _completedPaperIds
+        ..clear()
+        ..addAll(completed);
+    });
+  }
+
+  Future<void> _clearPaperCompleted(String paperId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key =
+        "paper_completed_${widget.title.replaceAll(' ', '_').toLowerCase()}_$paperId";
+    await prefs.remove(key);
+    if (!mounted) return;
+    setState(() {
+      _completedPaperIds.remove(paperId);
+    });
+  }
+
+  Future<void> _openResultAndHandleRetry(Map<String, dynamic> paper) async {
+    final action = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(
+        builder:
+            (_) => ResultScreen(
+              paperId: paper['paper_id'].toString(),
+              paperType: paper['paper_type'].toString(),
+              showTryAgain: true,
+            ),
+      ),
+    );
+
+    if (action == "retry") {
+      await _clearPaperCompleted(paper['paper_id'].toString());
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ExamScreen(paperData: paper, title: widget.title),
+        ),
+      );
+      await _loadCompletedStatus();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(widget.title)),
-      body: widget.papers.isEmpty
-          ? const Center(child: Text("No papers found"))
-          : ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: widget.papers.length,
-        itemBuilder: (_, i) {
-          final p = widget.papers[i];
-          return Card(
-            margin: const EdgeInsets.only(bottom: 12),
-            child: ListTile(
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ExamScreen(paperData: p,title: widget.title.toString(),))),
-              leading: CircleAvatar(backgroundColor: Colors.deepPurple, child: Text("${i + 1}")),
-              title: Text(p['paper_name'], style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text("${p['total_questions']} Qs • ${p['time_duration']} min • Negative: ${p['negative_percent']}"),
-              trailing: const Icon(Icons.arrow_forward_ios),
-            ),
-          );
-        },
-      ),
+      body:
+          widget.papers.isEmpty
+              ? const Center(child: Text("No papers found"))
+              : ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: widget.papers.length,
+                itemBuilder: (_, i) {
+                  final p = Map<String, dynamic>.from(widget.papers[i] as Map);
+                  final paperId = p['paper_id']?.toString() ?? "";
+                  final isCompleted =
+                      _isPracticeList && _completedPaperIds.contains(paperId);
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: ListTile(
+                      onTap: () async {
+                        if (isCompleted) {
+                          await _openResultAndHandleRetry(p);
+                        } else {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (_) => ExamScreen(
+                                    paperData: p,
+                                    title: widget.title.toString(),
+                                  ),
+                            ),
+                          );
+                          await _loadCompletedStatus();
+                        }
+                      },
+                      leading: CircleAvatar(
+                        backgroundColor:
+                            isCompleted ? Colors.green : Colors.deepPurple,
+                        child: Icon(
+                          isCompleted ? Icons.check : Icons.description,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ),
+                      title: Text(
+                        p['paper_name'],
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        "${p['total_questions']} Qs • ${p['time_duration']} min • Negative: ${p['negative_percent']}",
+                      ),
+                      trailing: Icon(
+                        isCompleted
+                            ? Icons.verified_rounded
+                            : Icons.arrow_forward_ios,
+                        color: isCompleted ? Colors.green : null,
+                      ),
+                    ),
+                  );
+                },
+              ),
     );
   }
 }
 
 // Exam Screen (Same as before but with HTML fix)
-
 
 class ExamScreen extends StatefulWidget {
   final Map<String, dynamic> paperData;
@@ -256,7 +401,10 @@ class _ExamScreenState extends State<ExamScreen> {
   late SharedPreferences prefs;
 
   // Unique key for saving progress: e.g., "practice_12" or "mock_15"
-  String get _progressKey => "${widget.title.replaceAll(' ', '_').toLowerCase()}_${widget.paperData['paper_id']}";
+  String get _progressKey =>
+      "${widget.title.replaceAll(' ', '_').toLowerCase()}_${widget.paperData['paper_id']}";
+  String get _completedKey =>
+      "paper_completed_${widget.title.replaceAll(' ', '_').toLowerCase()}_${widget.paperData['paper_id']}";
 
   @override
   void initState() {
@@ -265,7 +413,6 @@ class _ExamScreenState extends State<ExamScreen> {
 
     _initSharedPrefsAndResume();
   }
-
 
   Future<void> _initSharedPrefsAndResume() async {
     prefs = await SharedPreferences.getInstance();
@@ -280,7 +427,9 @@ class _ExamScreenState extends State<ExamScreen> {
       // Move to next unanswered question
       final questions = widget.paperData['questions'] as List;
       while (currentIndex < questions.length &&
-          selectedAnswers.containsKey(questions[currentIndex]['id'].toString())) {
+          selectedAnswers.containsKey(
+            questions[currentIndex]['id'].toString(),
+          )) {
         currentIndex++;
       }
 
@@ -291,9 +440,13 @@ class _ExamScreenState extends State<ExamScreen> {
     }
 
     // Set timer
-    remainingSeconds = int.tryParse(widget.paperData['time_duration'].toString())! * 60;
+    remainingSeconds =
+        int.tryParse(widget.paperData['time_duration'].toString())! * 60;
     startTime = DateTime.now();
-    formattedStartTime = startTime.toIso8601String().substring(0, 19).replaceAll('T', ' ');
+    formattedStartTime = startTime
+        .toIso8601String()
+        .substring(0, 19)
+        .replaceAll('T', ' ');
 
     startTimer();
     setState(() {}); // Refresh UI after loading saved progress
@@ -328,14 +481,18 @@ class _ExamScreenState extends State<ExamScreen> {
     super.dispose();
   }
 
-  String formatTime(int s) => "${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')}";
+  String formatTime(int s) =>
+      "${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')}";
 
   Future<void> submitExam({bool auto = false}) async {
     // Clear saved progress on final submit
     await prefs.remove(_progressKey);
 
     final DateTime submitTime = DateTime.now();
-    final String formattedSubmitTime = submitTime.toIso8601String().substring(0, 19).replaceAll('T', ' ');
+    final String formattedSubmitTime = submitTime
+        .toIso8601String()
+        .substring(0, 19)
+        .replaceAll('T', ' ');
 
     final token = prefs.getString('token') ?? '';
 
@@ -368,22 +525,34 @@ class _ExamScreenState extends State<ExamScreen> {
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
         if (json["status"].toString() == "1") {
+          if (widget.title.toLowerCase().contains("practice")) {
+            await prefs.setBool(_completedKey, true);
+          }
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(auto ? "Time Up! Auto Submitted!" : "Exam Submitted Successfully!")),
+            SnackBar(
+              content: Text(
+                auto
+                    ? "Time Up! Auto Submitted!"
+                    : "Exam Submitted Successfully!",
+              ),
+            ),
           );
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => ResultScreen(
-                paperId: widget.paperData['paper_id'].toString(),
-                paperType: widget.paperData['paper_type'].toString(),
-              ),
+              builder:
+                  (context) => ResultScreen(
+                    paperId: widget.paperData['paper_id'].toString(),
+                    paperType: widget.paperData['paper_type'].toString(),
+                  ),
             ),
           );
         }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error: $e")));
     }
   }
 
@@ -395,7 +564,9 @@ class _ExamScreenState extends State<ExamScreen> {
       barrierDismissible: false,
       builder: (context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: const Text(
             "Your Problem",
             style: TextStyle(fontWeight: FontWeight.bold),
@@ -445,10 +616,9 @@ class _ExamScreenState extends State<ExamScreen> {
     );
   }
 
-  Future<void> submitDoubt(String des,String id) async {
+  Future<void> submitDoubt(String des, String id) async {
     print(des);
     print(id);
-
 
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? '';
@@ -457,7 +627,7 @@ class _ExamScreenState extends State<ExamScreen> {
       final Map<String, String> body = {
         "apiToken": token,
         "batch_id": id,
-        "description":des ,
+        "description": des,
         // "chapter_id": "4",
       };
       print(body);
@@ -482,22 +652,22 @@ class _ExamScreenState extends State<ExamScreen> {
       }
     } catch (e) {
       _showSnackBar("Network error. Please try again.", isError: true);
-    } finally {
-    }
+    } finally {}
   }
 
   void _showSnackBar(String message, {required bool isError}) {
-
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: const TextStyle(fontWeight: FontWeight.w600)),
+        content: Text(
+          message,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
         backgroundColor: isError ? Colors.red.shade600 : Colors.green.shade600,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
       ),
     );
-
   }
 
   String htmlToPlainText(String html) {
@@ -506,6 +676,7 @@ class _ExamScreenState extends State<ExamScreen> {
         .replaceAll('&nbsp;', ' ')
         .trim();
   }
+
   Widget buildContent(String text) {
     bool isMath(String t) {
       return t.contains(r"\frac") ||
@@ -519,10 +690,7 @@ class _ExamScreenState extends State<ExamScreen> {
     if (isMath(text)) {
       return Math.tex(
         text,
-        textStyle: const TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-        ),
+        textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
       );
     }
 
@@ -534,15 +702,11 @@ class _ExamScreenState extends State<ExamScreen> {
     /// Normal text
     return Text(
       text,
-      style: const TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-      ),
+      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
     );
   }
 
   Widget buildContenttext(String text, {double fontSize = 16}) {
-
     bool isMath(String t) {
       return t.contains(r"\frac") ||
           t.contains(r"\sqrt") ||
@@ -553,12 +717,7 @@ class _ExamScreenState extends State<ExamScreen> {
 
     /// Math equation
     if (isMath(text)) {
-      return Math.tex(
-        text,
-        textStyle: TextStyle(
-          fontSize: fontSize,
-        ),
-      );
+      return Math.tex(text, textStyle: TextStyle(fontSize: fontSize));
     }
 
     /// HTML content
@@ -567,26 +726,25 @@ class _ExamScreenState extends State<ExamScreen> {
     }
 
     /// Normal text
-    return Text(
-      text,
-      style: TextStyle(fontSize: fontSize),
-    );
+    return Text(text, style: TextStyle(fontSize: fontSize));
   }
-
-
-
 
   @override
   Widget build(BuildContext context) {
     final questions = widget.paperData['questions'] as List;
     if (questions.isEmpty) {
-      return Scaffold(appBar: AppBar(), body: Center(child: Text("No questions")));
+      return Scaffold(
+        appBar: AppBar(),
+        body: Center(child: Text("No questions")),
+      );
     }
 
     final q = questions[currentIndex];
     String? selectedOption = selectedAnswers[q['id'].toString()];
-    bool isCorrect = selectedOption == q['right_answer'].toString().toUpperCase();
-   // print(q['answer_value'].toString());
+    bool isCorrect =
+        selectedOption == q['right_answer'].toString().toUpperCase();
+    final isPracticePaper = widget.title.toLowerCase().contains("practice");
+    // print(q['answer_value'].toString());
 
     return Scaffold(
       appBar: AppBar(
@@ -601,44 +759,51 @@ class _ExamScreenState extends State<ExamScreen> {
             ),
             child: Text(
               formatTime(remainingSeconds),
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
-          SizedBox(width: 20,),
-          InkWell(onTap: (){
-            openDoubtDialog(
-              context,
-                htmlToPlainText(q['question']?.toString() ?? ""),widget.paperData['batch_id'].toString() // pass your batch id here
-            );
-          //  submitDoubt(htmlToPlainText(q['question']?.toString() ?? ""),widget.paperData['batch_id'].toString());
-
-
-          },
-            child:  Container(
+          SizedBox(width: 20),
+          InkWell(
+            onTap: () {
+              openDoubtDialog(
+                context,
+                htmlToPlainText(q['question']?.toString() ?? ""),
+                widget.paperData['batch_id']
+                    .toString(), // pass your batch id here
+              );
+              //  submitDoubt(htmlToPlainText(q['question']?.toString() ?? ""),widget.paperData['batch_id'].toString());
+            },
+            child: Container(
               height: 30,
               decoration: BoxDecoration(
-                  color: Colors.green,borderRadius: BorderRadius.circular(10)
+                color: Colors.green,
+                borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
                 children: [
-                  Text("  Raise Doubt",style: TextStyle(color: Colors.white),),
-                  Icon(Icons.question_mark,color: Colors.white,size: 20,)
+                  Text("  Raise Doubt", style: TextStyle(color: Colors.white)),
+                  Icon(Icons.question_mark, color: Colors.white, size: 20),
                 ],
               ),
             ),
-          )
-
+          ),
         ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: ListView(
           children: [
-
-            LinearProgressIndicator(value: (currentIndex + 1) / questions.length),
+            LinearProgressIndicator(
+              value: (currentIndex + 1) / questions.length,
+            ),
             const SizedBox(height: 8),
-            Text("Question ${currentIndex + 1} / ${questions.length}",
-                style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              "Question ${currentIndex + 1} / ${questions.length}",
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const Divider(height: 30),
 
             // Question
@@ -656,22 +821,26 @@ class _ExamScreenState extends State<ExamScreen> {
               String optionText = q['options'][i].toString().trim();
 
               return Card(
-                color: selectedOption == optionKey
-                    ? (isCorrect ? Colors.green.shade100 : Colors.red.shade100)
-                    : null,
+                color:
+                    selectedOption == optionKey
+                        ? (isCorrect
+                            ? Colors.green.shade100
+                            : Colors.red.shade100)
+                        : null,
                 child: RadioListTile<String>(
                   title: buildContent(optionText),
                   value: optionKey,
                   groupValue: selectedOption,
-                  onChanged: selectedOption == null
-                      ? (val) {
-                    setState(() {
-                      selectedAnswers[q['id'].toString()] = val!;
-                      showResult = true;
-                    });
-                    _saveProgress(); // Save immediately
-                  }
-                      : null,
+                  onChanged:
+                      selectedOption == null
+                          ? (val) {
+                            setState(() {
+                              selectedAnswers[q['id'].toString()] = val!;
+                              showResult = true;
+                            });
+                            _saveProgress(); // Save immediately
+                          }
+                          : null,
                   activeColor: isCorrect ? Colors.green : Colors.red,
                 ),
               );
@@ -686,70 +855,104 @@ class _ExamScreenState extends State<ExamScreen> {
                 decoration: BoxDecoration(
                   color: isCorrect ? Colors.green.shade50 : Colors.red.shade50,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: isCorrect ? Colors.green : Colors.red),
+                  border: Border.all(
+                    color: isCorrect ? Colors.green : Colors.red,
+                  ),
                 ),
                 child: Row(
                   children: [
-                    Icon(isCorrect ? Icons.check_circle : Icons.cancel,
-                        color: isCorrect ? Colors.green : Colors.red, size: 32),
+                    Icon(
+                      isCorrect ? Icons.check_circle : Icons.cancel,
+                      color: isCorrect ? Colors.green : Colors.red,
+                      size: 32,
+                    ),
                     const SizedBox(width: 12),
                     Text(
                       isCorrect ? "Correct Answer!" : "Wrong Answer!",
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: isCorrect ? Colors.green.shade700 : Colors.red.shade700,
+                        color:
+                            isCorrect
+                                ? Colors.green.shade700
+                                : Colors.red.shade700,
                       ),
                     ),
                   ],
                 ),
               ),
 
-            if (showResult && !isCorrect) ...[
+            if (!isPracticePaper && showResult && !isCorrect) ...[
               const SizedBox(height: 20),
-              q['answer_value'].toString()=="No explanation required"?SizedBox(): const Text("Explanation:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              q['answer_value'].toString() == "No explanation required"
+                  ? SizedBox()
+                  : const Text(
+                    "Explanation:",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
               const SizedBox(height: 10),
-              if (q['answer_type'] == "link" && (q['answer_value'].toString().isNotEmpty||q['answer_value'].toString()!="null"))
+              if (q['answer_type'] == "link" &&
+                  (q['answer_value'].toString().isNotEmpty ||
+                      q['answer_value'].toString() != "null"))
                 GestureDetector(
                   onTap: () async {
                     final url = q['answer_value'].toString();
                     if (await canLaunchUrl(Uri.parse(url))) {
-                      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                      await launchUrl(
+                        Uri.parse(url),
+                        mode: LaunchMode.externalApplication,
+                      );
                     }
                   },
-                  child: q['answer_value'].toString()=="No explanation required"?SizedBox():Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.blue),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Icon(Icons.link, color: Colors.blue),
-                        SizedBox(width: 8),
-                        Text("View Detailed Explanation",
-                            style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                  ),
+                  child:
+                      q['answer_value'].toString() == "No explanation required"
+                          ? SizedBox()
+                          : Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.blue),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: const [
+                                Icon(Icons.link, color: Colors.blue),
+                                SizedBox(width: 8),
+                                Text(
+                                  "View Detailed Explanation",
+                                  style: TextStyle(
+                                    color: Colors.blue,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                 ),
-              if (q['answer_type'] == "file" ||q['answer_type'] == "image")
+              if (q['answer_type'] == "file" || q['answer_type'] == "image")
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child:q['answer_value'].toString()=="null"?SizedBox(): Image.network(
-                    "https://truescoreedu.com/${q['answer_value']}",
-                    height: 200,
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => Container(
-                      padding: const EdgeInsets.all(16),
-                      color: Colors.grey.shade200,
-                      child: const Text("Image not available"),
-                    ),
-                  ),
+                  child:
+                      q['answer_value'].toString() == "null"
+                          ? SizedBox()
+                          : Image.network(
+                            "https://truescoreedu.com/${q['answer_value']}",
+                            height: 200,
+                            fit: BoxFit.contain,
+                            errorBuilder:
+                                (_, __, ___) => Container(
+                                  padding: const EdgeInsets.all(16),
+                                  color: Colors.grey.shade200,
+                                  child: const Text("Image not available"),
+                                ),
+                          ),
                 ),
-              if (q['answer_type'] == "text" && q['answer_value'].toString().isNotEmpty)
+              if (q['answer_type'] == "text" &&
+                  q['answer_value'].toString().isNotEmpty)
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -757,7 +960,10 @@ class _ExamScreenState extends State<ExamScreen> {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.orange),
                   ),
-                  child: buildContenttext(q['answer_value'].toString(), fontSize: 15),
+                  child: buildContenttext(
+                    q['answer_value'].toString(),
+                    fontSize: 15,
+                  ),
                 ),
             ],
 
@@ -778,12 +984,23 @@ class _ExamScreenState extends State<ExamScreen> {
                     submitExam();
                   }
                 },
-                icon: Icon(currentIndex == questions.length - 1 ? Icons.check : Icons.arrow_forward),
-                label: Text(currentIndex == questions.length - 1 ? "Submit Exam" : "Next Question"),
+                icon: Icon(
+                  currentIndex == questions.length - 1
+                      ? Icons.check
+                      : Icons.arrow_forward,
+                ),
+                label: Text(
+                  currentIndex == questions.length - 1
+                      ? "Submit Exam"
+                      : "Next Question",
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.deepPurple,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 14,
+                  ),
                 ),
               ),
             ),

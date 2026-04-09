@@ -6,6 +6,7 @@ import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'DoubtVideoNoteScreen.dart';
 
 import '../../../servcies.dart';
 
@@ -14,8 +15,6 @@ class TeacherDoubtsScreen extends StatefulWidget {
 
   @override
   State<TeacherDoubtsScreen> createState() => _TeacherDoubtsScreenState();
-
-
 }
 
 class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
@@ -42,12 +41,10 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
       CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
     );
     _fadeController.forward();
-
   }
 
-  File? selectedFile; // image or pdf
-  String? selectedFileType; // "image" | "pdf"
-
+  File? selectedFile; // image | pdf | video
+  String? selectedFileType; // "image" | "pdf" | "video"
 
   @override
   void dispose() {
@@ -83,7 +80,8 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
         print(json);
         if (json['status'] == 1) {
           final List data = json['data'] ?? [];
-          final List<Map<String, dynamic>> sorted = data.cast<Map<String, dynamic>>();
+          final List<Map<String, dynamic>> sorted =
+              data.cast<Map<String, dynamic>>();
 
           sorted.sort((a, b) {
             final aAnswer = (a['teacher_description'] ?? '').toString().trim();
@@ -99,7 +97,6 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
           setState(() {
             doubts = sorted;
           });
-
         } else {
           _showSnackBar(json['msg'] ?? "No doubts found", isError: false);
         }
@@ -110,7 +107,11 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
       setState(() => isLoading = false);
     }
   }
-  void showSuccessDialog(BuildContext context, {String message = "Successfully Submitted"}) {
+
+  void showSuccessDialog(
+    BuildContext context, {
+    String message = "Successfully Submitted",
+  }) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -124,7 +125,6 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-
                 /// ✅ SUCCESS ICON
                 Container(
                   height: 70,
@@ -145,10 +145,7 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
                 /// TITLE
                 const Text(
                   "Success",
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
 
                 const SizedBox(height: 8),
@@ -157,10 +154,7 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
                 Text(
                   message,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    color: Colors.black87,
-                  ),
+                  style: const TextStyle(fontSize: 15, color: Colors.black87),
                 ),
 
                 const SizedBox(height: 20),
@@ -180,7 +174,7 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
                     },
                     child: const Text("OK"),
                   ),
-                )
+                ),
               ],
             ),
           ),
@@ -188,7 +182,6 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
       },
     );
   }
-
 
   // Teacher replies to a doubt
   Future<void> replyToDoubt(String doubtId, String reply) async {
@@ -241,12 +234,11 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
         _showSnackBar("Reply submitted successfully!", isError: false);
         selectedFile = null;
         selectedFileType = null;
-       // r.clear();
+        // r.clear();
         fetchTeacherDoubts();
 
         Navigator.pop(context);
         showSuccessDialog(context);
-
       } else {
         _showSnackBar(json['msg'] ?? "Failed to submit reply", isError: true);
       }
@@ -257,6 +249,7 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
       setState(() => isSubmitting = false);
     }
   }
+
   bool _isMath(String text) {
     return text.contains(r"\frac") ||
         text.contains("^") ||
@@ -268,188 +261,234 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
   void _showReplyDialog(Map<String, dynamic> doubt) {
     final TextEditingController replyController = TextEditingController();
     replyController.text = doubt['teacher_description'] ?? '';
-    String value="";
+    selectedFile = null;
+    selectedFileType = null;
 
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          "Reply to Student",
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        content: StatefulBuilder(
-          builder: (context, setDialogState) {
-            return SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+      builder:
+          (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: const Text(
+              "Reply to Student",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: StatefulBuilder(
+              builder: (context, setDialogState) {
+                return SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-
-                      TextField(
-                        controller: replyController,
-                        maxLines: null,
-                        onChanged: (_) => setDialogState(() {}), // ⭐ refresh preview
-                        decoration: InputDecoration(
-                          hintText: "Write your explanation here...",
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16)),
-                        ),
-                      ),
-
-                      const SizedBox(height: 10),
-
-                      /// 🧮 LIVE MATH PREVIEW
-                      if (_isMath(replyController.text))
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.green.shade50,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Math.tex(
-                              replyController.text,
-                              textStyle: const TextStyle(fontSize: 20),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // 🔹 FILE PICK BUTTONS
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          icon: const Icon(Icons.image),
-                          label: const Text("Image"),
-                          onPressed: () async {
-                            final picker = ImagePicker();
-                            final picked =
-                            await picker.pickImage(source: ImageSource.gallery);
-                            if (picked != null) {
-                              setDialogState(() {
-                                selectedFile = File(picked.path);
-                                selectedFileType = "image";
-                              });
-                            }
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          icon: const Icon(Icons.picture_as_pdf),
-                          label: const Text("PDF"),
-                          onPressed: () async {
-                            final result = await FilePicker.platform.pickFiles(
-                              type: FileType.custom,
-                              allowedExtensions: ['pdf'],
-                            );
-                            if (result != null) {
-                              setDialogState(() {
-                                selectedFile = File(result.files.single.path!);
-                                selectedFileType = "pdf";
-                              });
-                            }
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // 🔹 FILE PREVIEW
-                  if (selectedFile != null)
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            selectedFileType == "pdf"
-                                ? Icons.picture_as_pdf
-                                : Icons.image,
-                            color: Colors.blue,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              selectedFile!.path.split('/').last,
-                              overflow: TextOverflow.ellipsis,
+                          TextField(
+                            controller: replyController,
+                            maxLines: null,
+                            onChanged:
+                                (_) =>
+                                    setDialogState(() {}), // ⭐ refresh preview
+                            decoration: InputDecoration(
+                              hintText: "Write your explanation here...",
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
                             ),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.close, color: Colors.red),
-                            onPressed: () {
-                              setDialogState(() {
-                                selectedFile = null;
-                                selectedFileType = null;
-                              });
-                            },
-                          )
+
+                          const SizedBox(height: 10),
+
+                          /// 🧮 LIVE MATH PREVIEW
+                          if (_isMath(replyController.text))
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.green.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Math.tex(
+                                  replyController.text,
+                                  textStyle: const TextStyle(fontSize: 20),
+                                ),
+                              ),
+                            ),
                         ],
                       ),
-                    ),
-                ],
-              ),
-            );
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: isSubmitting
-                ? null
-                : () {
-             // Navigator.pop(context);
-              replyToDoubt(
-                doubt['doubt_id'].toString(),
-                replyController.text,
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue.shade700,
-              shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: isSubmitting
-                ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                  strokeWidth: 2, color: Colors.white),
-            )
-                : const Text("Submit Reply",
-                style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
+                      const SizedBox(height: 16),
 
+                      // 🔹 FILE PICK BUTTONS
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          OutlinedButton.icon(
+                            icon: const Icon(Icons.image),
+                            label: const Text("Image"),
+                            onPressed: () async {
+                              final picker = ImagePicker();
+                              final picked = await picker.pickImage(
+                                source: ImageSource.gallery,
+                              );
+                              if (picked != null) {
+                                setDialogState(() {
+                                  selectedFile = File(picked.path);
+                                  selectedFileType = "image";
+                                });
+                              }
+                            },
+                          ),
+                          OutlinedButton.icon(
+                            icon: const Icon(Icons.picture_as_pdf),
+                            label: const Text("PDF"),
+                            onPressed: () async {
+                              final result = await FilePicker.platform
+                                  .pickFiles(
+                                    type: FileType.custom,
+                                    allowedExtensions: ['pdf'],
+                                  );
+                              if (result != null) {
+                                setDialogState(() {
+                                  selectedFile = File(
+                                    result.files.single.path!,
+                                  );
+                                  selectedFileType = "pdf";
+                                });
+                              }
+                            },
+                          ),
+                          OutlinedButton.icon(
+                            icon: const Icon(Icons.videocam),
+                            label: const Text("Video"),
+                            onPressed: () async {
+                              await SecureScreen.disable();
+                              final String? videoPath =
+                                  await Navigator.push<String>(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (_) => const DoubtVideoNoteScreen(),
+                                    ),
+                                  );
+                              await SecureScreen.enable();
+
+                              if (videoPath != null && videoPath.isNotEmpty) {
+                                setDialogState(() {
+                                  selectedFile = File(videoPath);
+                                  selectedFileType = "video";
+                                });
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // 🔹 FILE PREVIEW
+                      if (selectedFile != null)
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                selectedFileType == "pdf"
+                                    ? Icons.picture_as_pdf
+                                    : selectedFileType == "video"
+                                    ? Icons.videocam
+                                    : Icons.image,
+                                color: Colors.blue,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  selectedFile!.path.split('/').last,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.close,
+                                  color: Colors.red,
+                                ),
+                                onPressed: () {
+                                  setDialogState(() {
+                                    selectedFile = null;
+                                    selectedFileType = null;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancel"),
+              ),
+              ElevatedButton(
+                onPressed:
+                    isSubmitting
+                        ? null
+                        : () {
+                          // Navigator.pop(context);
+                          replyToDoubt(
+                            doubt['doubt_id'].toString(),
+                            replyController.text,
+                          );
+                        },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue.shade700,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child:
+                    isSubmitting
+                        ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                        : const Text(
+                          "Submit Reply",
+                          style: TextStyle(color: Colors.white),
+                        ),
+              ),
+            ],
+          ),
+    );
   }
 
-  String _getStatusText(String status) => status == "0" ? "Pending" : "Resolved";
-  Color _getStatusColor(String status) => status == "0" ? Colors.orange : Colors.green;
+  String _getStatusText(String status) =>
+      status == "0" ? "Pending" : "Resolved";
+  Color _getStatusColor(String status) =>
+      status == "0" ? Colors.orange : Colors.green;
 
   void _showSnackBar(String message, {required bool isError}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: const TextStyle(fontWeight: FontWeight.w600)),
+        content: Text(
+          message,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
         backgroundColor: isError ? Colors.red.shade600 : Colors.green.shade600,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -457,11 +496,12 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
       ),
     );
   }
+
   Widget buildMathText(
-      String text, {
-        double fontSize = 15,
-        FontWeight fontWeight = FontWeight.normal,
-      }) {
+    String text, {
+    double fontSize = 15,
+    FontWeight fontWeight = FontWeight.normal,
+  }) {
     bool isMath(String t) {
       return t.contains(r"\frac") ||
           t.contains("^") ||
@@ -476,24 +516,14 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
         scrollDirection: Axis.horizontal,
         child: Math.tex(
           text,
-          textStyle: TextStyle(
-            fontSize: fontSize,
-            fontWeight: fontWeight,
-          ),
+          textStyle: TextStyle(fontSize: fontSize, fontWeight: fontWeight),
         ),
       );
     }
 
     /// 🔤 NORMAL TEXT
-    return Text(
-      text,
-      style: TextStyle(
-        fontSize: fontSize,
-        height: 1.5,
-      ),
-    );
+    return Text(text, style: TextStyle(fontSize: fontSize, height: 1.5));
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -501,8 +531,10 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
         backgroundColor: Colors.blue.shade700,
-        title: const Text("Student Doubts",
-            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        title: const Text(
+          "Student Doubts",
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+        ),
         centerTitle: true,
         elevation: 0,
       ),
@@ -511,110 +543,154 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
         child: RefreshIndicator(
           onRefresh: fetchTeacherDoubts,
           color: Colors.blue.shade700,
-          child: isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : doubts.isEmpty
-              ? _buildEmptyState()
-              : ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: doubts.length,
-            itemBuilder: (context, index) {
-              final doubt = doubts[index];
-              final subject = doubt['subject'] ?? {};
-              final student = doubt['student'] ?? {};
+          child:
+              isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : doubts.isEmpty
+                  ? _buildEmptyState()
+                  : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: doubts.length,
+                    itemBuilder: (context, index) {
+                      final doubt = doubts[index];
+                      final student = doubt['student'] ?? {};
 
-              return Card(
-                margin: const EdgeInsets.only(bottom: 16),
-                elevation: 6,
-                shadowColor: Colors.blue.shade100,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Student & Subject
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "At: ${doubt['created_at'] ?? ''}",
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                ),
-                                Text(
-                                  "From: ${student['name'] ?? 'Unknown Student'}",
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                ),
-                                const SizedBox(height: 4),
-                                // Text(
-                                //   "Subject: ${subject['name'] ?? 'Unknown'}",
-                                //   style: const TextStyle(color: Colors.grey),
-                                // ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: _getStatusColor(doubt['status'] ?? '0').withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: _getStatusColor(doubt['status'] ?? '0')),
-                            ),
-                            child: Text(
-                              _getStatusText(doubt['status'] ?? '0'),
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: _getStatusColor(doubt['status'] ?? '0'),
-                                fontSize: 12,
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        elevation: 6,
+                        shadowColor: Colors.blue.shade100,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Student & Subject
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          "At: ${doubt['created_at'] ?? ''}",
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        Text(
+                                          "From: ${student['name'] ?? 'Unknown Student'}",
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        // Text(
+                                        //   "Subject: ${subject['name'] ?? 'Unknown'}",
+                                        //   style: const TextStyle(color: Colors.grey),
+                                        // ),
+                                      ],
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: _getStatusColor(
+                                        doubt['status'] ?? '0',
+                                      ).withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: _getStatusColor(
+                                          doubt['status'] ?? '0',
+                                        ),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      _getStatusText(doubt['status'] ?? '0'),
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: _getStatusColor(
+                                          doubt['status'] ?? '0',
+                                        ),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ),
-                        ],
-                      ),
 
-                      const Divider(height: 30),
+                              const Divider(height: 30),
 
-                      // Student's Doubt
-                      const Text("Student's Doubt:", style: TextStyle(fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 8),
-                      buildMathText(
-                        doubt['description'] ?? 'No description',
-                      ),
+                              // Student's Doubt
+                              const Text(
+                                "Student's Doubt:",
+                                style: TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                              const SizedBox(height: 8),
+                              buildMathText(
+                                doubt['description'] ?? 'No description',
+                              ),
 
-                      const SizedBox(height: 16),
+                              const SizedBox(height: 16),
 
-                      // Teacher's Current Reply (if any)
-                      if ((doubt['teacher_description'] ?? '').isNotEmpty) ...[
-                        const Text("Your Reply:", style: TextStyle(fontWeight: FontWeight.w600, color: Colors.green)),
-                        const SizedBox(height: 8),
-                        Text(doubt['teacher_description'], style: const TextStyle(fontStyle: FontStyle.italic)),
-                        const SizedBox(height: 16),
+                              // Teacher's Current Reply (if any)
+                              if ((doubt['teacher_description'] ?? '')
+                                  .isNotEmpty) ...[
+                                const Text(
+                                  "Your Reply:",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.green,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  doubt['teacher_description'],
+                                  style: const TextStyle(
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                              ],
 
-                      ],
-
-                      // Reply Button
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: ElevatedButton.icon(
-                          onPressed: () => _showReplyDialog(doubt),
-                          icon: const Icon(Icons.reply, size: 18),
-                          label: Text(doubt['teacher_description'].toString().isEmpty ? "Reply" : "Update Reply",style: TextStyle(color: Colors.white),),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue.shade700,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              // Reply Button
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: ElevatedButton.icon(
+                                  onPressed: () => _showReplyDialog(doubt),
+                                  icon: const Icon(Icons.reply, size: 18),
+                                  label: Text(
+                                    doubt['teacher_description']
+                                            .toString()
+                                            .isEmpty
+                                        ? "Reply"
+                                        : "Update Reply",
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue.shade700,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                    ],
+                      );
+                    },
                   ),
-                ),
-              );
-            },
-          ),
         ),
       ),
     );
@@ -625,7 +701,11 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.assignment_turned_in, size: 80, color: Colors.grey.shade400),
+          Icon(
+            Icons.assignment_turned_in,
+            size: 80,
+            color: Colors.grey.shade400,
+          ),
           const SizedBox(height: 20),
           Text(
             "No student doubts yet",

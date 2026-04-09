@@ -4,34 +4,35 @@ import 'package:online_classes/Screens/AddQuestionsScreen.dart';
 import 'package:online_classes/Screens/Auth/asktype.dart';
 import 'package:online_classes/Screens/GetQues.dart';
 import 'package:online_classes/Screens/Teachers/screens/Teacher_Notification_Screen.dart';
-import 'package:online_classes/Screens/Teachers/screens/Teacher_Profile.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../ThemeConstent/themeData.dart';
 import '../../Addnotes.dart';
 import '../../teacherprofile.dart';
-import 'CreateEventScreen.dart';
 import 'DoubtClassScreen.dart';
-import 'LiveClassScreen.dart';
 import 'PostVideoScreen.dart';
-import 'UploadNotesScreen.dart';
+import 'TeacherMeetingsScreen.dart';
 
 class TeacherDashboardScreen extends StatefulWidget {
   const TeacherDashboardScreen({Key? key}) : super(key: key);
 
   @override
   State<TeacherDashboardScreen> createState() => _TeacherDashboardScreenState();
-
 }
 
 class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
-
   final List<_DashboardItem> items = [
-
     _DashboardItem("Upload Questions", FontAwesomeIcons.listCheck, Colors.blue),
-    _DashboardItem("Teacher Questions", FontAwesomeIcons.fileLines, Colors.orange),
-    _DashboardItem("Doubt Class", FontAwesomeIcons.questionCircle, Colors.green),
+    _DashboardItem(
+      "Teacher Questions",
+      FontAwesomeIcons.fileLines,
+      Colors.orange,
+    ),
+    _DashboardItem(
+      "Doubt Class",
+      FontAwesomeIcons.questionCircle,
+      Colors.green,
+    ),
     _DashboardItem("Post Video", FontAwesomeIcons.video, Colors.pink),
+    _DashboardItem("Meetings", Icons.video_call_rounded, Colors.deepPurple),
     _DashboardItem("Add Notes", FontAwesomeIcons.noteSticky, Colors.brown),
     _DashboardItem("Profile", FontAwesomeIcons.userLarge, Colors.indigo),
     _DashboardItem("Logout", Icons.logout, Colors.red),
@@ -45,14 +46,12 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
     getname();
   }
 
-
   Future<void> getname() async {
     SharedPreferences preferences = await SharedPreferences.getInstance();
     setState(() {
       name = preferences.getString('teachername') ?? 'Teacher';
     });
   }
-
 
   void _navigateToScreen(String label) {
     Widget? targetScreen;
@@ -69,6 +68,9 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
       case "Post Video":
         targetScreen = const PostVideoScreen();
         break;
+      case "Meetings":
+        targetScreen = const TeacherMeetingsScreen();
+        break;
       case "Add Notes":
         targetScreen = const AddNotesScreen();
         break;
@@ -76,7 +78,10 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
         targetScreen = const TeacherProfileScreen();
         break;
       case "Logout":
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const AskType()));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const AskType()),
+        );
         return;
     }
 
@@ -146,7 +151,12 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
             children: [
               // Welcome Section
               Padding(
-                padding: EdgeInsets.fromLTRB(horizontalPadding, 24, horizontalPadding, 16),
+                padding: EdgeInsets.fromLTRB(
+                  horizontalPadding,
+                  24,
+                  horizontalPadding,
+                  16,
+                ),
                 child: Row(
                   children: [
                     Expanded(
@@ -160,9 +170,17 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                       ),
                     ),
                     IconButton(
-                      icon: Icon(Icons.notifications_outlined, size: screenWidth < 400 ? 28 : 32),
+                      icon: Icon(
+                        Icons.notifications_outlined,
+                        size: screenWidth < 400 ? 28 : 32,
+                      ),
                       onPressed: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const NoticesScreen()));
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const NoticesScreen(),
+                          ),
+                        );
                       },
                     ),
                   ],
@@ -172,7 +190,10 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
               // Responsive GridView
               Expanded(
                 child: GridView.builder(
-                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 10),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: horizontalPadding,
+                    vertical: 10,
+                  ),
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: crossAxisCount,
                     crossAxisSpacing: spacing,
@@ -187,7 +208,9 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                       child: Card(
                         elevation: 10,
                         shadowColor: item.color.withOpacity(0.3),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24),
+                        ),
                         child: Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(24),
@@ -207,7 +230,9 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                               ),
                               const SizedBox(height: 16),
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                ),
                                 child: Text(
                                   item.label,
                                   textAlign: TextAlign.center,

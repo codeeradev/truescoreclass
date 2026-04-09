@@ -450,19 +450,18 @@
 // }
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:expandable_text/expandable_text.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../servcies.dart';
 
 class GetDoubtsScreenstudent extends StatefulWidget {
   const GetDoubtsScreenstudent({super.key});
 
   @override
-  State<GetDoubtsScreenstudent> createState() =>
-      _GetDoubtsScreenstudentState();
+  State<GetDoubtsScreenstudent> createState() => _GetDoubtsScreenstudentState();
 }
 
 class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
@@ -478,7 +477,6 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
     SecureScreen.enable();
     fetchDoubts();
     SecureScreen.enable();
-
   }
 
   Future<void> fetchDoubts() async {
@@ -550,35 +548,37 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
         centerTitle: true,
         backgroundColor: Colors.blue.shade700,
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : errorMessage != null
-          ? _errorState()
-          : doubts.isEmpty
-          ? _emptyState()
-          : RefreshIndicator(
-        onRefresh: fetchDoubts,
-        child: ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: doubts.length,
-          itemBuilder: (context, index) {
-            final doubt = doubts[index];
-            return _doubtCard(
-              doubt["description"] ?? "",
-              doubt["teacher_description"] ?? "",
-              doubt["file"] ?? "",
-              doubt["created_at"] ?? "",
-            );
-          },
-        ),
-      ),
+      body:
+          isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : errorMessage != null
+              ? _errorState()
+              : doubts.isEmpty
+              ? _emptyState()
+              : RefreshIndicator(
+                onRefresh: fetchDoubts,
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: doubts.length,
+                  itemBuilder: (context, index) {
+                    final doubt = doubts[index];
+                    return _doubtCard(
+                      doubt["description"] ?? "",
+                      doubt["teacher_description"] ?? "",
+                      doubt["file"] ?? "",
+                      doubt["created_at"] ?? "",
+                    );
+                  },
+                ),
+              ),
     );
   }
+
   Widget buildMathText(
-      String text, {
-        double fontSize = 16,
-        FontWeight fontWeight = FontWeight.normal,
-      }) {
+    String text, {
+    double fontSize = 16,
+    FontWeight fontWeight = FontWeight.normal,
+  }) {
     bool isMath(String t) {
       return t.contains(r"\frac") ||
           t.contains("^") ||
@@ -593,10 +593,7 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
         scrollDirection: Axis.horizontal, // ⭐ KEY FIX
         child: Math.tex(
           text,
-          textStyle: TextStyle(
-            fontSize: fontSize,
-            fontWeight: fontWeight,
-          ),
+          textStyle: TextStyle(fontSize: fontSize, fontWeight: fontWeight),
         ),
       );
     }
@@ -604,19 +601,13 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
     /// 🔤 NORMAL TEXT
     return Text(
       text,
-      style: TextStyle(
-        fontSize: fontSize,
-        height: 1.5,
-        fontWeight: fontWeight,
-      ),
+      style: TextStyle(fontSize: fontSize, height: 1.5, fontWeight: fontWeight),
     );
   }
 
-
-
   // ================== CARD ==================
 
-  Widget _doubtCard(String question, String answer, String file,String time) {
+  Widget _doubtCard(String question, String answer, String file, String time) {
     final bool hasAnswer = answer.trim().isNotEmpty;
 
     return Container(
@@ -659,8 +650,11 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
                       Container(
                         child: Row(
                           children: [
-                            Icon(Icons.help_outline,
-                                size: 18, color: Colors.blue.shade700),
+                            Icon(
+                              Icons.help_outline,
+                              size: 18,
+                              color: Colors.blue.shade700,
+                            ),
                             const SizedBox(width: 6),
                             const Text(
                               "Question",
@@ -675,10 +669,13 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
                       Container(
                         child: Row(
                           children: [
-                            Icon(Icons.calendar_month,
-                                size: 18, color: Colors.blue.shade700),
+                            Icon(
+                              Icons.calendar_month,
+                              size: 18,
+                              color: Colors.blue.shade700,
+                            ),
                             const SizedBox(width: 6),
-                             Text(
+                            Text(
                               time.toString(),
                               style: TextStyle(
                                 fontWeight: FontWeight.w600,
@@ -688,16 +685,11 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
                           ],
                         ),
                       ),
-
                     ],
                   ),
                   const SizedBox(height: 6),
 
-                  buildMathText(
-                    question,
-                    fontSize: 15,
-                  ),
-
+                  buildMathText(question, fontSize: 15),
 
                   if (hasAnswer) ...[
                     const SizedBox(height: 14),
@@ -706,8 +698,11 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
 
                     Row(
                       children: const [
-                        Icon(Icons.check_circle_outline,
-                            size: 18, color: Colors.green),
+                        Icon(
+                          Icons.check_circle_outline,
+                          size: 18,
+                          color: Colors.green,
+                        ),
                         SizedBox(width: 6),
                         Text(
                           "Answer (Tap on Ans to read full)",
@@ -722,22 +717,26 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
 
                     if (file.isNotEmpty)
                       InkWell(
-                        onTap: () {
+                        onTap: () async {
                           if (isPdf(file)) {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) =>
-                                    PdfViewScreen(pdfUrl: file),
+                                builder: (_) => PdfViewScreen(pdfUrl: file),
                               ),
                             );
                           } else if (isImage(file)) {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) =>
-                                    ImageViewScreen(imageUrl: file),
+                                builder: (_) => ImageViewScreen(imageUrl: file),
                               ),
+                            );
+                          } else if (isVideo(file)) {
+                            final uri = Uri.parse(_getDoubtFileUrl(file));
+                            await launchUrl(
+                              uri,
+                              mode: LaunchMode.externalApplication,
                             );
                           }
                         },
@@ -746,14 +745,23 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
                             Icon(
                               isPdf(file)
                                   ? Icons.picture_as_pdf
+                                  : isVideo(file)
+                                  ? Icons.videocam
                                   : Icons.image,
-                              color: isPdf(file)
-                                  ? Colors.red
-                                  : Colors.blue,
+                              color:
+                                  isPdf(file)
+                                      ? Colors.red
+                                      : isVideo(file)
+                                      ? Colors.deepPurple
+                                      : Colors.blue,
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              isPdf(file) ? "Open PDF" : "Open Image",
+                              isPdf(file)
+                                  ? "Open PDF"
+                                  : isVideo(file)
+                                  ? "Open Video"
+                                  : "Open Image",
                               style: const TextStyle(color: Colors.blue),
                             ),
                           ],
@@ -764,12 +772,8 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
 
                     GestureDetector(
                       onTap: () => _showFullAnswerBottomSheet(context, answer),
-                      child: buildMathText(
-                        answer,
-                        fontSize: 14,
-                      ),
+                      child: buildMathText(answer, fontSize: 14),
                     ),
-
                   ],
                 ],
               ),
@@ -779,8 +783,8 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
       ),
     );
   }
-  Widget buildMathAnswer(String text) {
 
+  Widget buildMathAnswer(String text) {
     bool isMath(String t) {
       return t.contains(r"\frac") ||
           t.contains("^") ||
@@ -793,36 +797,40 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
     if (isMath(text)) {
       return SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        child: Math.tex(
-          text,
-          textStyle: const TextStyle(
-            fontSize: 18,
-          ),
-        ),
+        child: Math.tex(text, textStyle: const TextStyle(fontSize: 18)),
       );
     }
 
     /// 🔤 NORMAL TEXT
     return SelectableText(
       text,
-      style: const TextStyle(
-        fontSize: 16,
-        height: 1.6,
-        color: Colors.black87,
-      ),
+      style: const TextStyle(fontSize: 16, height: 1.6, color: Colors.black87),
     );
   }
 
   // ================== HELPERS ==================
 
-  bool isPdf(String url) =>
-      url.toLowerCase().endsWith(".pdf");
+  bool isPdf(String url) => url.toLowerCase().endsWith(".pdf");
 
   bool isImage(String url) =>
       url.toLowerCase().endsWith(".png") ||
-          url.toLowerCase().endsWith(".jpg") ||
-          url.toLowerCase().endsWith(".jpeg") ||
-          url.toLowerCase().endsWith(".webp");
+      url.toLowerCase().endsWith(".jpg") ||
+      url.toLowerCase().endsWith(".jpeg") ||
+      url.toLowerCase().endsWith(".webp");
+
+  bool isVideo(String url) =>
+      url.toLowerCase().endsWith(".mp4") ||
+      url.toLowerCase().endsWith(".mov") ||
+      url.toLowerCase().endsWith(".m4v") ||
+      url.toLowerCase().endsWith(".webm");
+
+  String _getDoubtFileUrl(String value) {
+    final trimmed = value.trim();
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+      return trimmed;
+    }
+    return "https://truescoreedu.com/uploads/doubts_answer/$trimmed";
+  }
 
   void _showFullAnswerBottomSheet(BuildContext context, String answer) {
     showModalBottomSheet(
@@ -839,15 +847,12 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
             return Container(
               decoration: const BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(24),
-                ),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
               child: SafeArea(
                 top: false,
                 child: Column(
                   children: [
-
                     /// 🔘 Drag Handle
                     Container(
                       margin: const EdgeInsets.only(top: 10, bottom: 6),
@@ -861,11 +866,12 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
 
                     /// 🔹 HEADER
                     Padding(
-                      padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       child: Row(
                         children: [
-
                           /// Title
                           const Expanded(
                             child: Text(
@@ -914,13 +920,9 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
     );
   }
 
-  Widget _errorState() => Center(
-    child: Text(errorMessage ?? ""),
-  );
+  Widget _errorState() => Center(child: Text(errorMessage ?? ""));
 
-  Widget _emptyState() => const Center(
-    child: Text("No doubts yet"),
-  );
+  Widget _emptyState() => const Center(child: Text("No doubts yet"));
 }
 
 // ================== IMAGE VIEW ==================
