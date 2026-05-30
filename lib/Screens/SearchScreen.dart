@@ -16,8 +16,10 @@ class CourseSearchScreen extends StatefulWidget {
 }
 
 class _CourseSearchScreenState extends State<CourseSearchScreen> {
+
   final TextEditingController _searchController = TextEditingController();
   List<dynamic> courses = [];
+
   bool isLoading = false;
   bool hasSearched = false;
   String errorMessage = '';

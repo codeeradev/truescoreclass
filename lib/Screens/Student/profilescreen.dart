@@ -5,11 +5,11 @@ import 'package:online_classes/Screens/Student/purchasedcourses.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../servcies.dart';
 import '../Auth/asktype.dart';
+import '../Teachers/meetings_screen.dart';
 import 'Mydoubtsscreen.dart';
 import 'Querystudent.dart';
 import 'editprofile.dart';
 import 'helps.dart';
-import 'meetings_screen.dart';
 
 class ProfileScreen1 extends StatefulWidget {
   const ProfileScreen1({super.key});

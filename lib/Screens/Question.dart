@@ -555,8 +555,177 @@ class _ExamScreenState extends State<ExamScreen> {
       ).showSnackBar(SnackBar(content: Text("Error: $e")));
     }
   }
+  void openDoubtDialog(
+      BuildContext context, String des, String batchId,) {
 
-  void openDoubtDialog(BuildContext context, String des, String batchId) {
+    final TextEditingController problemController = TextEditingController();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+
+        bool isLoading = true;
+        String? teacherAnswer;
+        double matchPercent = 0;
+        bool apiCalled = false; // ✅ prevent loop
+
+        return StatefulBuilder(
+          builder: (context, setState) {
+
+            /// 🔹 Prepare static question (NO user input)
+            String finalDescription =
+                "$des\n my problem is: ${problemController.text.trim()}";
+
+            /// 🔥 API CALL FUNCTION
+            Future<void> checkSimilarity() async {
+              try {
+                final prefs = await SharedPreferences.getInstance();
+                final token = prefs.getString('token') ?? '';
+
+                final response = await http.post(
+                  Uri.parse('https://truescoreedu.com/api/similar-doubts'),
+                  headers: {
+                    "Content-Type": "application/x-www-form-urlencoded"
+                  },
+                  body: {
+                    "apiToken": token,
+                    "question": finalDescription, // ✅ only question + options
+                  },
+                );
+
+                final json = jsonDecode(response.body);
+
+                if (json['status'] == "true" && json['data'] != null) {
+
+                  matchPercent = double.tryParse(
+                      json['match_percent'].toString()) ?? 0;
+
+                  if (matchPercent >= 80) {
+                    teacherAnswer =
+                    json['data']['teacher_description'];
+                  } else {
+                    teacherAnswer = "No strong match found";
+                  }
+
+                } else {
+                  teacherAnswer =
+                      json['msg'] ?? "No close match found";
+                }
+
+              } catch (e) {
+                teacherAnswer = "Error checking match";
+              }
+
+              setState(() {
+                isLoading = false;
+              });
+            }
+
+            /// ✅ CALL API ONLY ONCE (NO LOOP)
+            if (!apiCalled) {
+              apiCalled = true;
+
+              Future.microtask(() {
+                checkSimilarity();
+              });
+            }
+
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+
+              title: const Text(
+                "Your Doubt",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+
+                    /// 🔄 LOADING
+                    if (isLoading) const CircularProgressIndicator(),
+
+                    /// ✅ MATCH RESULT
+                    if (!isLoading && teacherAnswer != null) ...[
+                      // print('object');
+                      teacherAnswer.toString()=="No close match found"?SizedBox():  Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Available Solution on this Doubt",
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text("${teacherAnswer!}"),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+
+                    /// ✍️ USER PROBLEM INPUT (NO AUTO API)
+                    TextField(
+                      controller: problemController,
+                      maxLines: 4,
+                      decoration: InputDecoration(
+                        hintText: "Type your problem here...",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              actions: [
+
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Cancel"),
+                ),
+
+                ElevatedButton(
+                  onPressed: () {
+                    if (problemController.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text("Please enter your problem")),
+                      );
+                      return;
+                    }
+
+                    String finalDescription =
+                        "$des\n my problem is: ${problemController.text.trim()}";
+
+                    submitDoubt(finalDescription, batchId);
+                    Navigator.pop(context);
+                  },
+                  child: const Text("Submit"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void openDoubtDialog1(BuildContext context, String des, String batchId) {
     final TextEditingController problemController = TextEditingController();
 
     showDialog(

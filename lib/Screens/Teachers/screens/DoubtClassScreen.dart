@@ -6,7 +6,7 @@ import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'DoubtVideoNoteScreen.dart';
+import '../DoubtVideoNoteScreen.dart';
 
 import '../../../servcies.dart';
 
@@ -19,6 +19,7 @@ class TeacherDoubtsScreen extends StatefulWidget {
 
 class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
     with TickerProviderStateMixin {
+
   bool isLoading = true;
   bool isSubmitting = false;
   List<Map<String, dynamic>> doubts = [];
@@ -60,6 +61,7 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
 
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? '';
+    print('tok$token');
 
     if (token.isEmpty) {
       _showSnackBar("Session expired. Please login again.", isError: true);
@@ -92,24 +94,37 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
             if (aAnswer.isNotEmpty && bAnswer.isEmpty) return 1;
 
             return 0; // keep relative order otherwise
+
           });
+
+
 
           setState(() {
             doubts = sorted;
           });
         } else {
+
           _showSnackBar(json['msg'] ?? "No doubts found", isError: false);
+
         }
+
       }
+
     } catch (e) {
+
       _showSnackBar("Network error. Please try again.", isError: true);
+
     } finally {
+
       setState(() => isLoading = false);
+
     }
   }
 
   void showSuccessDialog(
+
     BuildContext context, {
+
     String message = "Successfully Submitted",
   }) {
     showDialog(
@@ -372,7 +387,7 @@ class _TeacherDoubtsScreenState extends State<TeacherDoubtsScreen>
                                     context,
                                     MaterialPageRoute(
                                       builder:
-                                          (_) => const DoubtVideoNoteScreen(),
+                                          (_) =>  DoubtVideoNoteScreen(),
                                     ),
                                   );
                               await SecureScreen.enable();

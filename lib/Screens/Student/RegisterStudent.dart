@@ -234,6 +234,8 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
 
       body += "registerAs=4&";
       body += "name=${Uri.encodeQueryComponent(nameCtr.text.trim())}&";
+      body += "gender=${Uri.encodeQueryComponent(selectedGender.toString())}&";
+
       body += "father_name=${Uri.encodeQueryComponent(fatherCtr.text.trim())}&";
       body += "state=${selectedState['id']}&";
       body += "district=${selectedDistrict['id']}&";
@@ -497,6 +499,21 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
                           // Rest of your fields (unchanged)
                           _buildTextField(nameCtr, "Full Name", Icons.person),
                           _buildTextField(fatherCtr, "Father/Husband Name", Icons.family_restroom),
+                          _buildGlassDropdown(
+                            value: selectedGender,
+                            label: "Gender",
+                            items: ["Male", "Female"],
+
+                            onChanged: (val) {
+                              setState(() {
+                                selectedGender = val.toString(); // 🔥 store as string
+                              });
+
+                              print("Selected Gender: $selectedGender");
+                            },
+                          ),
+                          SizedBox(height: 15,),
+
                           // DOB Picker
                           InkWell(
                             onTap: () => _selectDate(context),
@@ -603,9 +620,11 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
       ),
     );
   }
+  String? selectedGender;
   Widget _buildTextField(TextEditingController controller, String label, IconData icon,
       {bool obscure = false, TextInputType keyboardType = TextInputType.text}) {
-    return Padding(
+    return
+      Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: TextFormField(
         controller: controller,

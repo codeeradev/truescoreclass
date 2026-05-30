@@ -131,6 +131,7 @@ class _VideosState extends State<Videos> {
       ),
     );
   }
+
   Widget _decorCircle(double size, Color color) {
     return Container(
       height: size,

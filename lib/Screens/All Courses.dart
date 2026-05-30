@@ -209,7 +209,7 @@ class CategoryDetailScreen extends StatelessWidget {
     final screenWidth = MediaQuery.of(context).size.width;
 
     /// 🔥 RESPONSIVE GRID
-    final int crossAxisCount = screenWidth < 400 ? 2 : 3;
+    final int crossAxisCount = screenWidth < 400 ? 2 : 2;
 
     final trending = _getCoursesByType("trendingCourses");
     final free = _getCoursesByType("freeCourses");

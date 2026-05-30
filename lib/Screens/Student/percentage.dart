@@ -1,6 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 class CourseProgressScreen extends StatefulWidget {
+
   final String batchId;
   final List<dynamic> mcqQuestions;
   final List<dynamic> caQuestions;
@@ -44,6 +48,40 @@ class _CourseProgressScreenState extends State<CourseProgressScreen> {
     }
 
     return (attemptedCount / total) * 100;
+  }
+
+  Future<void> _sendProgressToServer() async {
+   // final studentId = await getStudentId();
+
+    final body = {
+      "student_id": "studentId",
+      "batch_id": widget.batchId,
+      "mcq_progress": mcq.toStringAsFixed(0),
+      "ca_progress": ca.toStringAsFixed(0),
+      "pyq_progress": pyq.toStringAsFixed(0),
+    };
+
+    print("📤 Sending Progress 👉 $body");
+
+    try {
+      final response = await http.post(
+        Uri.parse("https://yourapi.com/save-progress"), // 🔥 your API
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: jsonEncode(body),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        print("✅ Progress synced: ${data['message']}");
+      } else {
+        print("❌ Failed: ${data}");
+      }
+    } catch (e) {
+      print("🚨 Error sending progress: $e");
+    }
   }
 
 

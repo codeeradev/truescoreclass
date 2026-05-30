@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:get/get_connect/http/src/utils/utils.dart';
 import 'package:ionicons/ionicons.dart';
 import 'package:http/http.dart' as http;
 import 'package:online_classes/Screens/AddQuestionsScreen.dart';
@@ -17,6 +18,7 @@ import '../MCQQuestion.dart';
 import '../Notification/notificationScreen.dart';
 import '../Question.dart';
 import '../SearchScreen.dart';
+import '../Teachers/screens/getmeeting.dart';
 import 'ADDdoubtsbystudents.dart';
 import 'ALLNewCourses.dart';
 import 'carddeatils.dart';
@@ -32,6 +34,7 @@ class StudentDashboardScreen extends StatefulWidget {
 }
 
 class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
+
   Map<String, dynamic>? apiData;
   bool isLoading = true;
   String sname = '';
@@ -39,6 +42,60 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   Map<String, dynamic>? apiData1;
   bool loading = true;
   List<dynamic> notices = [];
+
+  List<dynamic> liveClasses = [];
+  bool isLoading1 = true;
+  bool hasError = false;
+
+  Future<void> fetchLiveClasses() async {
+    setState(() {
+      isLoading1 = true;
+      hasError = false;
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+
+      if (token == null || token.isEmpty) {
+        throw Exception("Token not found");
+      }
+
+      final response = await http.post(
+        Uri.parse('https://truescoreedu.com/api/get-live-class'),
+        body: {"apiToken": token},
+      );
+      print('chck');
+      print(response.body);
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        if (jsonData['status'] == 1) {
+          setState(() {
+            liveClasses = jsonData['data'] ?? [];
+          });
+        } else {
+          throw Exception(jsonData['msg'] ?? "Failed to fetch classes");
+        }
+      } else {
+        throw Exception("Server error: ${response.statusCode}");
+      }
+
+    } catch (e) {
+
+      setState(() => hasError = true);
+
+      debugPrint("Error fetching live classes: $e");
+
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(content: Text("Failed to load live classes: $e")),
+      // );
+
+    } finally {
+      setState(() => isLoading1 = false);
+    }
+  }
+
 
   Future<void> fetchNotices() async {
     setState(() => isLoading = true);
@@ -71,6 +128,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
 
   @override
   void initState() {
+
     super.initState();
     checkNoticeUpdate();
 
@@ -80,6 +138,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     getname();
     fetchCourses();
     fetchNotices();
+    fetchLiveClasses();
   }
 
   Future<void> fetchCourses() async {
@@ -293,6 +352,17 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       ],
                     ),
                     const SizedBox(height: 20),
+
+                   liveClasses.isEmpty?SizedBox(): InkWell(onTap: (){
+                      Navigator.push(context, MaterialPageRoute(builder: (context)=>getclassscreen()));
+                    },
+                      child: Container(margin: EdgeInsets.symmetric(horizontal: 10),height: 50,width: double.maxFinite,decoration: BoxDecoration(
+                        color: Colors.blue,borderRadius: BorderRadius.circular(10)
+                      ),child: Center(child: Text('Check Your Google Meeting',style: TextStyle(color: Colors.white),)),),
+                    ),
+                    const SizedBox(height: 20),
+
+
                     // Find your lesson today
                     const Text(
                       "Find your Courses today",
@@ -672,11 +742,17 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
+
               width: double.infinity,
+
               height: 100,
+
               decoration: BoxDecoration(
+
                 borderRadius: BorderRadius.circular(12),
+
                 color: Colors.white,
+
                 image:
                     item["batch_image"] != null
                         ? DecorationImage(
@@ -696,13 +772,16 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       )
                       : null,
             ),
+
             const SizedBox(height: 8),
+
             Text(
               item["batch_name"] ?? "Untitled Course",
               style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
+
             const SizedBox(height: 4),
             Text(
               "${item["cat_name"] ?? ""} • ${item["sub_cat_name"] ?? ""}",

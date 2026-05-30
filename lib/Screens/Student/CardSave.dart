@@ -71,6 +71,17 @@ class RegistrationSuccessCard extends StatelessWidget {
               fontSize: 14,
             ),
           ),
+          const SizedBox(height: 12),
+
+          Center(
+            child: Text(
+              "You will recieve a mail shortly",
+              style: TextStyle(
+                color: Colors.green,
+                fontSize: 16,
+              ),
+            ),
+          ),
 
           const SizedBox(height: 20),
 

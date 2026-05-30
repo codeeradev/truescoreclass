@@ -10,29 +10,53 @@ import '../../teacherprofile.dart';
 import 'DoubtClassScreen.dart';
 import 'PostVideoScreen.dart';
 import 'TeacherMeetingsScreen.dart';
+import 'addmeetingscreen.dart';
+import 'cleareddoubtsscreen.dart';
+import 'getmeeting.dart';
 
 class TeacherDashboardScreen extends StatefulWidget {
   const TeacherDashboardScreen({Key? key}) : super(key: key);
 
   @override
   State<TeacherDashboardScreen> createState() => _TeacherDashboardScreenState();
+
 }
 
 class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
   final List<_DashboardItem> items = [
-    _DashboardItem("Upload Questions", FontAwesomeIcons.listCheck, Colors.blue),
+
+    _DashboardItem("Upload Questions",
+        FontAwesomeIcons.listCheck,
+        Colors.blue),
+
     _DashboardItem(
       "Teacher Questions",
       FontAwesomeIcons.fileLines,
       Colors.orange,
     ),
+
     _DashboardItem(
       "Doubt Class",
       FontAwesomeIcons.questionCircle,
       Colors.green,
     ),
-    _DashboardItem("Post Video", FontAwesomeIcons.video, Colors.pink),
-    _DashboardItem("Meetings", Icons.video_call_rounded, Colors.deepPurple),
+
+    _DashboardItem(
+      "Cleared Doubts",
+      FontAwesomeIcons.questionCircle,
+      Colors.pinkAccent,
+    ),
+
+    _DashboardItem("Post Video",
+        FontAwesomeIcons.video,
+        Colors.pink),
+
+    _DashboardItem("Meetings",
+        Icons.video_call_rounded,
+        Colors.deepPurple),
+
+    _DashboardItem("Open Meeting", Icons.video_call_rounded, Colors.lightGreenAccent),
+
     _DashboardItem("Add Notes", FontAwesomeIcons.noteSticky, Colors.brown),
     _DashboardItem("Profile", FontAwesomeIcons.userLarge, Colors.indigo),
     _DashboardItem("Logout", Icons.logout, Colors.red),
@@ -47,9 +71,13 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
   }
 
   Future<void> getname() async {
+
     SharedPreferences preferences = await SharedPreferences.getInstance();
+
     setState(() {
+
       name = preferences.getString('teachername') ?? 'Teacher';
+
     });
   }
 
@@ -69,10 +97,16 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
         targetScreen = const PostVideoScreen();
         break;
       case "Meetings":
-        targetScreen = const TeacherMeetingsScreen();
+        targetScreen = const CreateLiveClassScreen();
+        break;
+      case "Open Meeting":
+        targetScreen = const getclassscreen();
         break;
       case "Add Notes":
         targetScreen = const AddNotesScreen();
+        break;
+      case "Cleared Doubts":
+        targetScreen = const ClearDoubtsScreen();
         break;
       case "Profile":
         targetScreen = const TeacherProfileScreen();

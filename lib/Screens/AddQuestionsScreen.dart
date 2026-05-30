@@ -180,6 +180,12 @@ class _AddQuestionScreenState extends State<AddQuestionScreen>
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
     );
+
+
+
+
+
+
     _fadeController.forward();
 
     // Load data and restore selections
@@ -295,6 +301,7 @@ class _AddQuestionScreenState extends State<AddQuestionScreen>
       _showSnackBar("Please select Subject and Batch", isError: true);
       return;
     }
+
     if (answerType == "image" && selectedImage == null) {
       _showSnackBar("Please select an image for answer", isError: true);
       return;
