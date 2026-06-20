@@ -216,7 +216,6 @@ class _VideosState extends State<Videos> {
     Future.delayed(const Duration(seconds: 1), () {
       setState(() => loder = true);
     });
-    print(apiData!["videoLectures"]);
   }
 
   Widget videoLecturesSection(List videoLectures) {
@@ -256,10 +255,7 @@ class _VideosState extends State<Videos> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => VideoPlayerScreen(
-                          videoTitle: video["title"] ?? "Video Lecture",
-                          youtubeUrl: youtubeUrl,
-                        ),
+                        builder: (_) => VideoPlayerScreen(videoLectures: video,),
                       ),
                     );
                   },

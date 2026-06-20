@@ -1,7 +1,10 @@
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:online_classes/Screens/AddQuestionsScreen.dart';
 import 'package:online_classes/Screens/HomeScreen.dart';
 import 'package:online_classes/Screens/Teachers/screens/TeacherDashboardScreen.dart';
+import 'package:online_classes/notification_service.dart';
 import 'package:online_classes/servcies.dart';
 import 'package:online_classes/widgets/BottomNavigationBar.dart';
 import 'package:provider/provider.dart';
@@ -14,7 +17,13 @@ import 'Screens/SearchProvider.dart';
 import 'Screens/Student/Bottombar.dart';
 import 'Screens/Student/DasgBoradScreen.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp();
+
+  await AppNotificationService.instance.init();
+
   runApp(
     ChangeNotifierProvider(
       create: (_) => SearchProvider(),

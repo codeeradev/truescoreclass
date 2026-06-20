@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:online_classes/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
@@ -64,12 +65,29 @@ class _TeacherSigninScreenState extends State<TeacherSigninScreen> with TickerPr
   }
 
   Future<void> _loginTeacher() async {
+    final prefs = await SharedPreferences.getInstance();
+
     if (emailController.text.trim().isEmpty || passwordController.text.isEmpty) {
       _showError("Please enter username and password");
       return;
     }
 
     setState(() => isLoading = true);
+
+    bool isAllowed = await AppNotificationService.checkNotificationPermission();
+
+    if (!isAllowed) {
+      isAllowed = await AppNotificationService.requestNotificationPermission();
+    }
+
+    if (!isAllowed) {
+      setState(() => isLoading = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please allow notifications to continue")),
+      );
+      return;
+    }
 
     try {
       final response = await http.post(
@@ -79,13 +97,13 @@ class _TeacherSigninScreenState extends State<TeacherSigninScreen> with TickerPr
           "username": emailController.text.trim(),
           "password": passwordController.text.trim(),
           "role": "3", // Teacher role
+          'fcm_token':prefs.getString('fcm_token').toString()
         },
       );
 
       final data = json.decode(response.body);
 
       if (response.statusCode == 200 && data['data'] != null) {
-        final prefs = await SharedPreferences.getInstance();
         await prefs.setString('id', data['data']['id'].toString());
         await prefs.setString('token', data['data']['apiToken'].toString());
         await prefs.setString('type', 'teacher');

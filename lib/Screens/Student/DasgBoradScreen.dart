@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get_connect/http/src/utils/utils.dart';
 import 'package:ionicons/ionicons.dart';
@@ -34,7 +35,6 @@ class StudentDashboardScreen extends StatefulWidget {
 }
 
 class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
-
   Map<String, dynamic>? apiData;
   bool isLoading = true;
   String sname = '';
@@ -80,9 +80,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
       } else {
         throw Exception("Server error: ${response.statusCode}");
       }
-
     } catch (e) {
-
       setState(() => hasError = true);
 
       debugPrint("Error fetching live classes: $e");
@@ -90,12 +88,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
       // ScaffoldMessenger.of(context).showSnackBar(
       //   SnackBar(content: Text("Failed to load live classes: $e")),
       // );
-
     } finally {
       setState(() => isLoading1 = false);
     }
   }
-
 
   Future<void> fetchNotices() async {
     setState(() => isLoading = true);
@@ -128,12 +124,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
 
   @override
   void initState() {
-
     super.initState();
-    checkNoticeUpdate();
 
     SecureScreen.enable();
-
+    initNotification();
     fetchDashboardData();
     getname();
     fetchCourses();
@@ -220,35 +214,53 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   bool hasNewNotice = false;
   int newNoticeCount = 0;
 
-  Future<void> checkNoticeUpdate() async {
-    SharedPreferences pref = await SharedPreferences.getInstance();
-    String apiToken = pref.getString("token") ?? "";
 
-    int savedCount = pref.getInt("last_notice_count") ?? 0;
 
-    try {
-      final response = await http.post(
-        Uri.parse("https://truescoreedu.com/api/active-notices"),
-        headers: {"Content-Type": "application/x-www-form-urlencoded"},
-        body: {"apiToken": apiToken},
-      );
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+  Future<void> initNotification() async {
+    SharedPreferences prefs =
+    await SharedPreferences.getInstance();
 
-        if (data["status"] == 1) {
-          List notices = data["data"];
+    // LOAD saved count
+    setState(() {
+      newNoticeCount = prefs.getInt("notice_count") ?? 0;
+    });
 
-          int apiCount = notices.length;
+    // FOREGROUND LISTENER
+    FirebaseMessaging.onMessage.listen((message) async {
+      setState(() {
+        newNoticeCount++;
+      });
 
-          setState(() {
-            newNoticeCount = apiCount > savedCount ? apiCount - savedCount : 0;
-          });
-        }
+      await prefs.setInt("notice_count", newNoticeCount);
+    });
+
+    // APP OPEN FROM TERMINATED
+    FirebaseMessaging.instance
+        .getInitialMessage()
+        .then((message) async {
+      if (message != null) {
+        int count = prefs.getInt("notice_count") ?? 0;
+        count++;
+
+        await prefs.setInt("notice_count", count);
+
+        setState(() {
+          newNoticeCount = count;
+        });
       }
-    } catch (e) {
-      print(e);
-    }
+    });
+  }
+
+  Future<void> resetNotification() async {
+    SharedPreferences prefs =
+    await SharedPreferences.getInstance();
+
+    setState(() {
+      newNoticeCount = 0;
+    });
+
+    await prefs.setInt("notice_count", 0);
   }
 
   @override
@@ -283,10 +295,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           Stack(
             children: [
               IconButton(
-                icon: const Icon(
-                  Ionicons.notifications_outline,
-                  color: Colors.white,
-                ),
+                icon: const Icon(Icons.notifications, color: Colors.white),
                 onPressed: () async {
                   await Navigator.push(
                     context,
@@ -295,7 +304,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     ),
                   );
 
-                  checkNoticeUpdate();
+                  resetNotification();
                 },
               ),
 
@@ -303,18 +312,30 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                 Positioned(
                   right: 6,
                   top: 6,
-                  child: Container(
-                    padding: const EdgeInsets.all(5),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      "$newNoticeCount",
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
+                  child: GestureDetector(
+                    onTap: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const NotificationScreen1(),
+                        ),
+                      );
+
+                      resetNotification();
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(5),
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        "$newNoticeCount",
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
@@ -353,15 +374,34 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                   liveClasses.isEmpty?SizedBox(): InkWell(onTap: (){
-                      Navigator.push(context, MaterialPageRoute(builder: (context)=>getclassscreen()));
-                    },
-                      child: Container(margin: EdgeInsets.symmetric(horizontal: 10),height: 50,width: double.maxFinite,decoration: BoxDecoration(
-                        color: Colors.blue,borderRadius: BorderRadius.circular(10)
-                      ),child: Center(child: Text('Check Your Google Meeting',style: TextStyle(color: Colors.white),)),),
-                    ),
+                    liveClasses.isEmpty
+                        ? SizedBox()
+                        : InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => getclassscreen(),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            margin: EdgeInsets.symmetric(horizontal: 10),
+                            height: 50,
+                            width: double.maxFinite,
+                            decoration: BoxDecoration(
+                              color: Colors.blue,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Center(
+                              child: Text(
+                                'Check Your Google Meeting',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ),
                     const SizedBox(height: 20),
-
 
                     // Find your lesson today
                     const Text(
@@ -742,13 +782,11 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-
               width: double.infinity,
 
               height: 100,
 
               decoration: BoxDecoration(
-
                 borderRadius: BorderRadius.circular(12),
 
                 color: Colors.white,

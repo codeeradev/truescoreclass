@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:online_classes/Screens/Auth/signinScreen.dart';
 import 'package:online_classes/Screens/Teachers/screens/TeacherDashboardScreen.dart';
+import 'package:online_classes/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'OtpScreen.dart';
 import 'TeacherSiginin.dart';
@@ -70,7 +71,7 @@ class _AskTypeState extends State<AskType> with TickerProviderStateMixin {
     });
 
     await _centerZoomController.forward();
-
+    await AppNotificationService.instance.init();
     if (context.mounted) {
       if(teacher==true){
 

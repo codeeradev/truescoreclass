@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:online_classes/Screens/Student/percentage.dart';
 import 'package:online_classes/Screens/Student/videos.dart';
+import 'package:online_classes/Screens/Teachers/meetings_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -569,6 +570,19 @@ class _PurchasedCourseVideosScreenState extends State<PurchasedCourseVideosScree
                         color: const Color(0xFFF97316),
                         onTap: () {
                           Navigator.push(context, MaterialPageRoute(builder: (context)=>GetNotesScreen(batchid: widget.courseId.toString(),)));
+                        },
+                      ),
+                      notes.isEmpty?SizedBox(): _optionCard(
+                        title: "Live Class",
+                        icon: Icons.live_tv,
+                        color:  Color(0xffc417ea),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const MeetingsScreen(),
+                            ),
+                          );
                         },
                       ),
                     ],

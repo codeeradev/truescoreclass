@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:online_classes/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
@@ -21,7 +23,8 @@ class SigninScreen extends StatefulWidget {
   State<SigninScreen> createState() => _SigninScreenState();
 }
 
-class _SigninScreenState extends State<SigninScreen> with TickerProviderStateMixin {
+class _SigninScreenState extends State<SigninScreen>
+    with TickerProviderStateMixin {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
@@ -62,61 +65,88 @@ class _SigninScreenState extends State<SigninScreen> with TickerProviderStateMix
     super.dispose();
   }
 
+
+
   Future<void> signin() async {
-    print('start');
+    setState(() => isLoading = true);
 
+    bool isAllowed = await AppNotificationService.checkNotificationPermission();
+
+    if (!isAllowed) {
+      isAllowed = await AppNotificationService.requestNotificationPermission();
+    }
+
+    if (!isAllowed) {
+      setState(() => isLoading = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please allow notifications to continue")),
+      );
+      return;
+    }
     SharedPreferences preferences = await SharedPreferences.getInstance();
+    try {
+      final response = await http.post(
+        Uri.parse('https://truescoreedu.com/api/login'),
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        body: {
+          "username": emailController.text.trim(),
+          "password": passwordController.text.trim(),
+          "token": "sadfsa",
+          "versionCode": "1",
+          'fcm_token': preferences.getString('fcm_token').toString(),
+        },
+      );
+      print("fcm_token---${preferences.getString('fcm_token').toString()}");
+      //print(response.body);
+      final data = jsonDecode(response.body);
+      print(data);
+      print(response.statusCode);
 
-    final response = await http.post(
-      Uri.parse('https://truescoreedu.com/api/login'),
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: {
-        "username": emailController.text.trim(),
-        "password": passwordController.text.trim(),
-        "token": "sadfsa",
-        "versionCode": "1",
-      },
-    );
+      if (response.statusCode == 200) {
+        if (data['status'].toString() == "false") {
+          print('yes');
+          _showError("Check ID-Password");
+        } else {
+          await preferences.setString(
+            "studentData",
+            data['studentData']['enrollmentId'],
+          );
+          await preferences.setString("token", data['studentData']['apiToken']);
+          await preferences.setString('type', 'student');
+          await preferences.setString(
+            "studentname",
+            data['studentData']['fullName'],
+          );
+          await preferences.setString(
+            "studentimage",
+            data['studentData']['image'].toString(),
+          );
+          await preferences.setString(
+            "studentmail",
+            data['studentData']['userEmail'].toString(),
+          );
+          await preferences.setString(
+            "studentph",
+            data['studentData']['mobile'].toString(),
+          );
 
-    //print(response.body);
-    final data = jsonDecode(response.body);
-    print(data);
-    print(response.statusCode);
+          print(data['studentData']['enrollmentId']);
 
-
-    if (response.statusCode == 200) {
-      if(data['status'].toString()=="false"){
-        print('yes');
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => ModernBottomNav()),
+          );
+        }
+        //  showSnack(context,data['msg'].toString());
+      } else {
         _showError("Check ID-Password");
-
-
-      }else{
-        await preferences.setString("studentData", data['studentData']['enrollmentId']);
-        await preferences.setString("token", data['studentData']['apiToken']);
-        await preferences.setString('type', 'student');
-        await preferences.setString("studentname", data['studentData']['fullName']);
-        await preferences.setString("studentimage", data['studentData']['image'].toString());
-        await preferences.setString("studentmail", data['studentData']['userEmail'].toString());
-        await preferences.setString("studentph", data['studentData']['mobile'].toString());
-
-
-
-
-
-        print(data['studentData']['enrollmentId']);
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => ModernBottomNav()),
-        );
       }
-    //  showSnack(context,data['msg'].toString());
+    } catch (e) {
+      print("error sign in ---$e");
+    }finally{
+      setState(() => isLoading = false);
 
-
-    }else{
-      _showError("Check ID-Password");
     }
   }
 
@@ -140,11 +170,7 @@ class _SigninScreenState extends State<SigninScreen> with TickerProviderStateMix
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFE8F0FE),
-              Color(0xFFF5F9FF),
-              Color(0xFFFFFFFF),
-            ],
+            colors: [Color(0xFFE8F0FE), Color(0xFFF5F9FF), Color(0xFFFFFFFF)],
           ),
         ),
         child: SafeArea(
@@ -162,7 +188,11 @@ class _SigninScreenState extends State<SigninScreen> with TickerProviderStateMix
                     borderRadius: BorderRadius.circular(12),
                     child: const Padding(
                       padding: EdgeInsets.all(8.0),
-                      child: Icon(Icons.arrow_back_rounded, size: 32, color: Color(0xFF1E40AF)),
+                      child: Icon(
+                        Icons.arrow_back_rounded,
+                        size: 32,
+                        color: Color(0xFF1E40AF),
+                      ),
                     ),
                   ),
 
@@ -180,10 +210,7 @@ class _SigninScreenState extends State<SigninScreen> with TickerProviderStateMix
                   const SizedBox(height: 8),
                   Text(
                     "Sign in to continue learning",
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey.shade700,
-                    ),
+                    style: TextStyle(fontSize: 16, color: Colors.grey.shade700),
                   ),
 
                   const SizedBox(height: 48),
@@ -194,7 +221,10 @@ class _SigninScreenState extends State<SigninScreen> with TickerProviderStateMix
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(32),
-                      border: Border.all(color: Colors.blue.shade100, width: 1.2),
+                      border: Border.all(
+                        color: Colors.blue.shade100,
+                        width: 1.2,
+                      ),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.blue.shade200.withOpacity(0.18),
@@ -223,7 +253,10 @@ class _SigninScreenState extends State<SigninScreen> with TickerProviderStateMix
                           icon: Icons.lock_outline_rounded,
                           obscureText: _obscurePassword,
                           isPassword: true,
-                          onVisibilityTap: () => setState(() => _obscurePassword = !_obscurePassword),
+                          onVisibilityTap:
+                              () => setState(
+                                () => _obscurePassword = !_obscurePassword,
+                              ),
                         ),
 
                         const SizedBox(height: 32),
@@ -236,23 +269,31 @@ class _SigninScreenState extends State<SigninScreen> with TickerProviderStateMix
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF2563EB),
                               foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                              elevation: 8,
-                              shadowColor: Colors.blue.shade400.withOpacity(0.5),
-                            ),
-                            child: isLoading
-                                ? const SizedBox(
-                              height: 24,
-                              width: 24,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 3,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
                               ),
-                            )
-                                : const Text(
-                              "Sign In",
-                              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                              elevation: 8,
+                              shadowColor: Colors.blue.shade400.withOpacity(
+                                0.5,
+                              ),
                             ),
+                            child:
+                                isLoading
+                                    ? const SizedBox(
+                                      height: 24,
+                                      width: 24,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 3,
+                                      ),
+                                    )
+                                    : const Text(
+                                      "Sign In",
+                                      style: TextStyle(
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                           ),
                         ),
 
@@ -265,12 +306,19 @@ class _SigninScreenState extends State<SigninScreen> with TickerProviderStateMix
                             onPressed: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => SelfRegistrationScreen1()),
+                                MaterialPageRoute(
+                                  builder: (_) => SelfRegistrationScreen1(),
+                                ),
                               );
                             },
                             style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: Color(0xFF2563EB), width: 2),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                              side: const BorderSide(
+                                color: Color(0xFF2563EB),
+                                width: 2,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
                             ),
                             child: const Text(
                               "Register Now",
@@ -286,7 +334,12 @@ class _SigninScreenState extends State<SigninScreen> with TickerProviderStateMix
                           alignment: Alignment.centerRight,
                           child: TextButton(
                             onPressed: () {
-                              Navigator.push(context, MaterialPageRoute(builder: (context)=>ForgotPasswordScreen()));
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ForgotPasswordScreen(),
+                                ),
+                              );
                             },
                             child: const Text(
                               "Forgot Password?",
@@ -338,7 +391,6 @@ class _SigninScreenState extends State<SigninScreen> with TickerProviderStateMix
                   //     },
                   //   ),
                   // ),
-
                   const SizedBox(height: 40),
                 ],
               ),
@@ -369,18 +421,24 @@ class _SigninScreenState extends State<SigninScreen> with TickerProviderStateMix
         hintText: hint,
         hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 15),
         prefixIcon: Icon(icon, color: const Color(0xFF3B82F6)),
-        suffixIcon: isPassword
-            ? IconButton(
-          icon: Icon(
-            obscureText ? Icons.visibility_off_rounded : Icons.visibility_rounded,
-            color: const Color(0xFF3B82F6),
-          ),
-          onPressed: onVisibilityTap,
-        )
-            : null,
+        suffixIcon:
+            isPassword
+                ? IconButton(
+                  icon: Icon(
+                    obscureText
+                        ? Icons.visibility_off_rounded
+                        : Icons.visibility_rounded,
+                    color: const Color(0xFF3B82F6),
+                  ),
+                  onPressed: onVisibilityTap,
+                )
+                : null,
         filled: true,
         fillColor: const Color(0xFFF0F7FF),
-        contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 18,
+          horizontal: 20,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
           borderSide: BorderSide.none,

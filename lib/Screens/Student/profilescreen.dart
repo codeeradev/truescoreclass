@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:online_classes/Screens/Student/purchasedcourses.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../servcies.dart';
 import '../Auth/asktype.dart';
@@ -178,18 +179,6 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
               },
             ),
             _profileCard(
-              icon: Icons.video_call_rounded,
-              title: "Meetings",
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const MeetingsScreen(),
-                  ),
-                );
-              },
-            ),
-            _profileCard(
               icon: Icons.support_agent_rounded,
               title: "Help & Support",
               onTap: () {
@@ -214,6 +203,13 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
                 );
               },
             ),
+            _profileCard(
+              icon: Icons.share,
+              title: "Referral register",
+              onTap: () {
+                shareReferral();
+              },
+            ),
 
             _profileCard(
               icon: Icons.logout_rounded,
@@ -229,6 +225,24 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
         ),
       ),
     );
+  }
+
+  Future<void> shareReferral() async {
+    SharedPreferences preferences = await SharedPreferences.getInstance();
+    String token = preferences.getString('fcm_token').toString();
+    final message = '''
+🎓 Join me on TrueScore Edu – Learn smarter, anytime, anywhere!
+
+Click the link below to register:
+https://truescoreedu.com/referral/register?ref=$token
+
+📱 Download the app:
+https://play.google.com/store/apps/details?id=com.testora.student
+
+Start your learning journey today!
+''';
+
+    SharePlus.instance.share(ShareParams(text: message));
   }
 
   void showLogoutWarningDialog(BuildContext context) {
