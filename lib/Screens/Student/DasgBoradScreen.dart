@@ -41,7 +41,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   String simage = '';
   Map<String, dynamic>? apiData1;
   bool loading = true;
-  List<dynamic> notices = [];
 
   List<dynamic> liveClasses = [];
   bool isLoading1 = true;
@@ -93,46 +92,17 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     }
   }
 
-  Future<void> fetchNotices() async {
-    setState(() => isLoading = true);
-
-    SharedPreferences pref = await SharedPreferences.getInstance();
-    String apiToken = pref.getString("token") ?? "";
-
-    try {
-      final response = await http.post(
-        Uri.parse("https://truescoreedu.com/api/active-notices"),
-        headers: {"Content-Type": "application/x-www-form-urlencoded"},
-        body: {"apiToken": apiToken},
-      );
-
-      print("NOTICE RESPONSE: ${response.body}");
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-
-        if (data["status"] == 1) {
-          setState(() => notices = data["data"]);
-        }
-      }
-    } catch (e) {
-      print("Error: $e");
-    } finally {
-      setState(() => isLoading = false);
-    }
-  }
-
   @override
   void initState() {
     super.initState();
 
     SecureScreen.enable();
-    initNotification();
     fetchDashboardData();
     getname();
     fetchCourses();
     fetchNotices();
     fetchLiveClasses();
+    initNotificationListener();
   }
 
   Future<void> fetchCourses() async {
@@ -214,53 +184,44 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   bool hasNewNotice = false;
   int newNoticeCount = 0;
 
-
-
-
-  Future<void> initNotification() async {
-    SharedPreferences prefs =
-    await SharedPreferences.getInstance();
-
-    // LOAD saved count
-    setState(() {
-      newNoticeCount = prefs.getInt("notice_count") ?? 0;
-    });
-
-    // FOREGROUND LISTENER
-    FirebaseMessaging.onMessage.listen((message) async {
-      setState(() {
-        newNoticeCount++;
-      });
-
-      await prefs.setInt("notice_count", newNoticeCount);
-    });
-
-    // APP OPEN FROM TERMINATED
-    FirebaseMessaging.instance
-        .getInitialMessage()
-        .then((message) async {
-      if (message != null) {
-        int count = prefs.getInt("notice_count") ?? 0;
-        count++;
-
-        await prefs.setInt("notice_count", count);
-
-        setState(() {
-          newNoticeCount = count;
-        });
-      }
+  void initNotificationListener() {
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
+      await fetchNotices();
     });
   }
 
-  Future<void> resetNotification() async {
-    SharedPreferences prefs =
-    await SharedPreferences.getInstance();
+  Future<void> fetchNotices() async {
+    SharedPreferences pref = await SharedPreferences.getInstance();
+    String apiToken = pref.getString("token") ?? "";
 
-    setState(() {
-      newNoticeCount = 0;
-    });
+    try {
+      final response = await http.post(
+        Uri.parse("https://truescoreedu.com/api/active-notices"),
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        body: {"apiToken": apiToken},
+      );
 
-    await prefs.setInt("notice_count", 0);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        if (data["status"] == 1) {
+          List<dynamic> notices = data["data"] ?? [];
+
+          int currentCount = notices.length;
+
+          int lastCount = pref.getInt("last_notice_count") ?? 0;
+          setState(() {
+            newNoticeCount =
+                currentCount > lastCount ? currentCount - lastCount : 0;
+          });
+          print(
+            "currentCount--$currentCount---lastCount$lastCount--newNoticeCount$newNoticeCount",
+          );
+        }
+      }
+    } catch (e) {
+      print("Error: $e");
+    }
   }
 
   @override
@@ -303,8 +264,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       builder: (context) => const NotificationScreen1(),
                     ),
                   );
-
-                  resetNotification();
+                  setState(() {
+                    newNoticeCount = 0;
+                  });
                 },
               ),
 
@@ -320,8 +282,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                           builder: (context) => const NotificationScreen1(),
                         ),
                       );
-
-                      resetNotification();
+                      setState(() {
+                        newNoticeCount = 0;
+                      });
                     },
                     child: Container(
                       padding: const EdgeInsets.all(5),

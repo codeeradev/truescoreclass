@@ -1,4 +1,4 @@
-package com.testora.student
+package com.truescore.app.sales
 
 import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity

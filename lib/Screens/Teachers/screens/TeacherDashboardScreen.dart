@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:online_classes/Screens/AddQuestionsScreen.dart';
@@ -13,6 +16,7 @@ import 'TeacherMeetingsScreen.dart';
 import 'addmeetingscreen.dart';
 import 'cleareddoubtsscreen.dart';
 import 'getmeeting.dart';
+import 'package:http/http.dart' as http;
 
 class TeacherDashboardScreen extends StatefulWidget {
   const TeacherDashboardScreen({Key? key}) : super(key: key);
@@ -68,6 +72,8 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
   void initState() {
     super.initState();
     getname();
+    fetchNotices();
+    initNotificationListener();
   }
 
   Future<void> getname() async {
@@ -123,7 +129,47 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
       Navigator.push(context, MaterialPageRoute(builder: (_) => targetScreen!));
     }
   }
+  int newNoticeCount = 0;
 
+  void initNotificationListener() {
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
+      await fetchNotices();
+    });
+  }
+
+  Future<void> fetchNotices() async {
+    SharedPreferences pref = await SharedPreferences.getInstance();
+    String apiToken = pref.getString("token") ?? "";
+
+    try {
+      final response = await http.post(
+        Uri.parse("https://truescoreedu.com/api/active-notices"),
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        body: {"apiToken": apiToken},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        if (data["status"] == 1) {
+          List<dynamic> notices = data["data"] ?? [];
+
+          int currentCount = notices.length;
+
+          int lastCount = pref.getInt("last_notice_count_teacher") ?? 0;
+          setState(() {
+            newNoticeCount =
+            currentCount > lastCount ? currentCount - lastCount : 0;
+          });
+          print(
+            "currentCount--$currentCount---lastCount$lastCount--newNoticeCount$newNoticeCount",
+          );
+        }
+      }
+    } catch (e) {
+      print("Error: $e");
+    }
+  }
   @override
   Widget build(BuildContext context) {
     // Get screen size
@@ -203,20 +249,59 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                         ),
                       ),
                     ),
-                    IconButton(
-                      icon: Icon(
-                        Icons.notifications_outlined,
-                        size: screenWidth < 400 ? 28 : 32,
-                      ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const NoticesScreen(),
+                    Stack(
+                      children: [
+                        IconButton(
+                          icon:  Icon(Icons.notifications_outlined,
+                              size: screenWidth < 400 ? 28 : 32),
+                          onPressed: () async {
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const NoticesScreen(),
+                              ),
+                            );
+                            setState(() {
+                              newNoticeCount = 0;
+                            });
+                          },
+                        ),
+
+                        if (newNoticeCount > 0)
+                          Positioned(
+                            right: 6,
+                            top: 6,
+                            child: GestureDetector(
+                              onTap: () async {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const NoticesScreen(),
+                                  ),
+                                );
+                                setState(() {
+                                  newNoticeCount = 0;
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(5),
+                                decoration: const BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Text(
+                                  "$newNoticeCount",
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
-                        );
-                      },
-                    ),
+                      ],
+                    )
                   ],
                 ),
               ),

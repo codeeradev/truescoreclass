@@ -13,7 +13,6 @@ Future<void> firebaseMessagingBackgroundHandler(
   await Firebase.initializeApp();
 
   log("Background Message: ${message.messageId}");
-
   final notification = message.notification;
 
   if (notification != null) {
@@ -22,12 +21,6 @@ Future<void> firebaseMessagingBackgroundHandler(
       notification.body ?? '',
     );
   }
-  SharedPreferences prefs = await SharedPreferences.getInstance();
-
-  int count = prefs.getInt("notice_count") ?? 0;
-  count++;
-
-  await prefs.setInt("notice_count", count);
 }
 
 class AppNotificationService {
@@ -58,9 +51,7 @@ class AppNotificationService {
 
     await _initLocalNotifications();
 
-    FirebaseMessaging.onBackgroundMessage(
-      firebaseMessagingBackgroundHandler,
-    );
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
     _listenToMessages();
 
@@ -136,7 +127,6 @@ class AppNotificationService {
   }
 
   void _listenToMessages() {
-    /// Foreground
     FirebaseMessaging.onMessage.listen((
         RemoteMessage message,
         ) {

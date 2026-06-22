@@ -40,7 +40,10 @@ class _NoticesScreenState extends State<NoticesScreen> {
 
         if (data["status"] == 1) {
           setState(() => notices = data["data"]);
+          await pref.setInt("last_notice_count_teacher", notices.length);
+
         }
+
       }
     } catch (e) {
       print("Error: $e");
