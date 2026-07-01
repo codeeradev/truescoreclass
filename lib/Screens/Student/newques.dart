@@ -19,10 +19,10 @@ String removeHtml(String html) {
 /// HELPER: Check if all questions in a list are attempted
 /// =================================================
 Future<bool> isAllQuestionsAttempted(
-    List<dynamic> questionList,
-    String batchId,
-    String questionType,
-    ) async {
+  List<dynamic> questionList,
+  String batchId,
+  String questionType,
+) async {
   final prefs = await SharedPreferences.getInstance();
   for (var q in questionList) {
     final qId = q['id']?.toString() ?? q['question_id']?.toString() ?? "";
@@ -43,6 +43,8 @@ class AttemptPaperScreen extends StatefulWidget {
   final String questionType;
   final String batchId;
   final String subjectName;
+  final String subjectId;
+  final String chapterId;
 
   const AttemptPaperScreen({
     super.key,
@@ -50,6 +52,8 @@ class AttemptPaperScreen extends StatefulWidget {
     required this.questionType,
     required this.batchId,
     required this.subjectName,
+    required this.subjectId,
+    required this.chapterId,
   });
 
   @override
@@ -57,7 +61,6 @@ class AttemptPaperScreen extends StatefulWidget {
 }
 
 class _AttemptPaperScreenState extends State<AttemptPaperScreen> {
-
   int currentIndex = 0;
   int? selectedIndex;
   bool submitted = false;
@@ -67,11 +70,12 @@ class _AttemptPaperScreenState extends State<AttemptPaperScreen> {
   @override
   void initState() {
     super.initState();
-    chapterName = widget.questions.isNotEmpty
-        ? (widget.questions[0]['chapter_name']?.toString() ?? "Syllabus")
-        : "Syllabus";
+    chapterName =
+        widget.questions.isNotEmpty
+            ? (widget.questions[0]['chapter_name']?.toString() ?? "Syllabus")
+            : "Syllabus";
     progressKey =
-    "batch_${widget.batchId}_progress_${widget.questionType}_${widget.subjectName}_$chapterName";
+        "batch_${widget.batchId}_progress_${widget.questionType}_${widget.subjectName}_$chapterName";
     _loadProgress();
   }
 
@@ -86,7 +90,10 @@ class _AttemptPaperScreenState extends State<AttemptPaperScreen> {
 
     // Check if chapter is completed
     final isCompleted = await isAllQuestionsAttempted(
-        widget.questions, widget.batchId, widget.questionType);
+      widget.questions,
+      widget.batchId,
+      widget.questionType,
+    );
     if (isCompleted) {
       _showResetDialog();
     }
@@ -95,21 +102,23 @@ class _AttemptPaperScreenState extends State<AttemptPaperScreen> {
   Future<void> _showResetDialog() async {
     final shouldReset = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Chapter Completed"),
-        content: const Text(
-            "This chapter is already completed. Do you want to attempt again from the start?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text("No"),
+      builder:
+          (context) => AlertDialog(
+            title: const Text("Chapter Completed"),
+            content: const Text(
+              "This chapter is already completed. Do you want to attempt again from the start?",
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text("No"),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text("Yes"),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text("Yes"),
-          ),
-        ],
-      ),
     );
 
     if (shouldReset == true) {
@@ -140,22 +149,25 @@ class _AttemptPaperScreenState extends State<AttemptPaperScreen> {
     if (selectedIndex == null) return;
     final q = widget.questions[currentIndex];
     final questionId =
-        q['id']?.toString() ?? q['question_id']?.toString() ?? currentIndex.toString();
+        q['id']?.toString() ??
+        q['question_id']?.toString() ??
+        currentIndex.toString();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_getAttemptedKey(questionId), true);
   }
 
-
   void openDoubtDialog(
-      BuildContext context, String des, String batchId, List<String> options) {
-
+    BuildContext context,
+    String des,
+    String batchId,
+    List<String> options,
+  ) {
     final TextEditingController problemController = TextEditingController();
 
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) {
-
         bool isLoading = true;
         String? teacherAnswer;
         double matchPercent = 0;
@@ -163,7 +175,6 @@ class _AttemptPaperScreenState extends State<AttemptPaperScreen> {
 
         return StatefulBuilder(
           builder: (context, setState) {
-
             /// 🔹 Prepare static question (NO user input)
             String optionsText = options
                 .asMap()
@@ -185,7 +196,7 @@ Options: $optionsText
                 final response = await http.post(
                   Uri.parse('https://truescoreedu.com/api/similar-doubts'),
                   headers: {
-                    "Content-Type": "application/x-www-form-urlencoded"
+                    "Content-Type": "application/x-www-form-urlencoded",
                   },
                   body: {
                     "apiToken": token,
@@ -196,22 +207,17 @@ Options: $optionsText
                 final json = jsonDecode(response.body);
 
                 if (json['status'] == "true" && json['data'] != null) {
-
-                  matchPercent = double.tryParse(
-                      json['match_percent'].toString()) ?? 0;
+                  matchPercent =
+                      double.tryParse(json['match_percent'].toString()) ?? 0;
 
                   if (matchPercent >= 80) {
-                    teacherAnswer =
-                    json['data']['teacher_description'];
+                    teacherAnswer = json['data']['teacher_description'];
                   } else {
                     teacherAnswer = "No strong match found";
                   }
-
                 } else {
-                  teacherAnswer =
-                      json['msg'] ?? "No close match found";
+                  teacherAnswer = json['msg'] ?? "No close match found";
                 }
-
               } catch (e) {
                 teacherAnswer = "Error checking match";
               }
@@ -230,10 +236,10 @@ Options: $optionsText
               });
             }
 
-
             return AlertDialog(
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
+                borderRadius: BorderRadius.circular(16),
+              ),
 
               title: const Text(
                 "Your Doubt",
@@ -244,35 +250,36 @@ Options: $optionsText
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-
                     /// 🔄 LOADING
                     if (isLoading) const CircularProgressIndicator(),
 
                     /// ✅ MATCH RESULT
                     if (!isLoading && teacherAnswer != null) ...[
-                     // print('object');
-                      teacherAnswer.toString()=="No close match found"?SizedBox():  Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade50,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                           Text(
-                              "Available Solution on this Doubt",
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.green,
-                              ),
+                      // print('object');
+                      teacherAnswer.toString() == "No close match found"
+                          ? SizedBox()
+                          : Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            const SizedBox(height: 6),
-                            Text("${teacherAnswer!}"),
-                          ],
-                        ),
-                      ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Available Solution on this Doubt",
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text("${teacherAnswer!}"),
+                              ],
+                            ),
+                          ),
                       const SizedBox(height: 12),
                     ],
 
@@ -292,7 +299,6 @@ Options: $optionsText
               ),
 
               actions: [
-
                 TextButton(
                   onPressed: () => Navigator.pop(context),
                   child: const Text("Cancel"),
@@ -303,7 +309,8 @@ Options: $optionsText
                     if (problemController.text.trim().isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                            content: Text("Please enter your problem")),
+                          content: Text("Please enter your problem"),
+                        ),
                       );
                       return;
                     }
@@ -319,8 +326,12 @@ $des
 Options: $optionsText
 My problem: ${problemController.text.trim()}
 """;
-
-                    submitDoubt(finalDescription, batchId);
+                    submitDoubt(
+                      des: finalDescription,
+                      id: batchId,
+                      subjectId: widget.subjectId,
+                      chapterId: widget.subjectId,
+                    );
                     Navigator.pop(context);
                   },
                   child: const Text("Submit"),
@@ -333,15 +344,21 @@ My problem: ${problemController.text.trim()}
     );
   }
 
-  Future<void> submitDoubt(String des, String id) async {
+  Future<void> submitDoubt({
+    required String des,
+    required String id,
+    required String chapterId,
+    required String subjectId,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? '';
-    print(token);
     try {
       final Map<String, String> body = {
         "apiToken": token,
         "batch_id": id,
         "description": des,
+        "subject_id": subjectId,
+        "chapter_id": chapterId,
       };
       final response = await http.post(
         Uri.parse('https://truescoreedu.com/api/add-doubt'),
@@ -358,15 +375,13 @@ My problem: ${problemController.text.trim()}
       _showSnackBar("Network error. Please try again.", isError: true);
     }
   }
-  Future<void> check(String des,) async {
+
+  Future<void> check(String des) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? '';
     print(token);
     try {
-      final Map<String, String> body = {
-        "apiToken": token,
-        "question": des,
-      };
+      final Map<String, String> body = {"apiToken": token, "question": des};
       final response = await http.post(
         Uri.parse('https://truescoreedu.com/api/similar-doubts'),
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
@@ -383,11 +398,13 @@ My problem: ${problemController.text.trim()}
     }
   }
 
-
   void _showSnackBar(String message, {required bool isError}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: const TextStyle(fontWeight: FontWeight.w600)),
+        content: Text(
+          message,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
         backgroundColor: isError ? Colors.red.shade600 : Colors.green.shade600,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -397,7 +414,6 @@ My problem: ${problemController.text.trim()}
   }
 
   Widget buildQuestionText(String question) {
-
     bool hasMath(String text) {
       return text.contains(r"\frac") ||
           text.contains(r"\sqrt") ||
@@ -414,10 +430,7 @@ My problem: ${problemController.text.trim()}
     if (hasMath(question) && !hasHtml(question)) {
       return Math.tex(
         question,
-        textStyle: const TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-        ),
+        textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
       );
     }
 
@@ -427,10 +440,7 @@ My problem: ${problemController.text.trim()}
         data: question,
 
         style: {
-          "*": Style(
-            fontSize: FontSize(18),
-            fontWeight: FontWeight.bold,
-          ),
+          "*": Style(fontSize: FontSize(18), fontWeight: FontWeight.bold),
         },
 
         /// 👇 handle math inside html
@@ -456,16 +466,10 @@ My problem: ${problemController.text.trim()}
               final text = context.element?.text ?? "";
 
               if (hasMath(text)) {
-                return Math.tex(
-                  text,
-                  textStyle: const TextStyle(fontSize: 20),
-                );
+                return Math.tex(text, textStyle: const TextStyle(fontSize: 20));
               }
 
-              return Text(
-                text,
-                style: const TextStyle(fontSize: 18),
-              );
+              return Text(text, style: const TextStyle(fontSize: 18));
             },
           ),
         ],
@@ -475,14 +479,11 @@ My problem: ${problemController.text.trim()}
     /// 🔥 CASE 3: NORMAL TEXT
     return Text(
       formatQuestion(question),
-      style: const TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-      ),
+      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
     );
   }
-  Widget buildQuestionWidget(String question) {
 
+  Widget buildQuestionWidget(String question) {
     bool isMath(String text) {
       return text.contains(r"\frac") ||
           text.contains("^") ||
@@ -495,10 +496,7 @@ My problem: ${problemController.text.trim()}
     if (isMath(question)) {
       return Math.tex(
         question,
-        textStyle: const TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-        ),
+        textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
       );
     }
 
@@ -510,10 +508,7 @@ My problem: ${problemController.text.trim()}
     /// Normal text
     return Text(
       formatQuestion(question),
-      style: const TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-      ),
+      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
     );
   }
 
@@ -523,7 +518,6 @@ My problem: ${problemController.text.trim()}
 
     return text[0].toUpperCase() + text.substring(1);
   }
-
 
   Widget buildOptionText(String option) {
     bool isMath(String text) {
@@ -536,22 +530,14 @@ My problem: ${problemController.text.trim()}
 
     /// 🧮 If math detected → render equation
     if (isMath(option)) {
-      return Math.tex(
-        option,
-        textStyle: const TextStyle(
-          fontSize: 18,
-        ),
-      );
+      return Math.tex(option, textStyle: const TextStyle(fontSize: 18));
     }
 
     /// 🔤 Normal text
-    return Text(formatQuestion(option),style:    const TextStyle(
-      fontSize: 16,
-    ));
+    return Text(formatQuestion(option), style: const TextStyle(fontSize: 16));
   }
 
   Widget buildOptionWidget(String option) {
-
     bool isMath(String text) {
       return text.contains(r"\frac") ||
           text.contains("^") ||
@@ -561,22 +547,14 @@ My problem: ${problemController.text.trim()}
     }
 
     if (isMath(option)) {
-      return Math.tex(
-        option,
-        textStyle: const TextStyle(
-          fontSize: 18,
-        ),
-      );
+      return Math.tex(option, textStyle: const TextStyle(fontSize: 18));
     }
 
     if (option.contains("<")) {
       return Html(data: option);
     }
 
-    return Text(
-      option,
-      style: const TextStyle(fontSize: 16),
-    );
+    return Text(option, style: const TextStyle(fontSize: 16));
   }
 
   @override
@@ -588,10 +566,9 @@ My problem: ${problemController.text.trim()}
     String image = q['question_image'] ?? "";
 
     final options =
-    (q['options'] as List).map((e) => removeHtml(e.toString())).toList();
+        (q['options'] as List).map((e) => removeHtml(e.toString())).toList();
 
-    final correctIndex =
-    "ABCD".indexOf(q['right_answer']?.toString() ?? "");
+    final correctIndex = "ABCD".indexOf(q['right_answer']?.toString() ?? "");
 
     final answerType = q['answer_type'];
     final answerValue = q['answer_value'];
@@ -605,13 +582,13 @@ My problem: ${problemController.text.trim()}
     // final correctIndex = "ABCD".indexOf(q['right_answer']?.toString() ?? "");
     // final answerType = q['answer_type'];
     // final answerValue = q['answer_value'];
-   // print(answerValue);
-
+    // print(answerValue);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
-            "${widget.subjectName} • Question ${currentIndex + 1}/${widget.questions.length}"),
+          "${widget.subjectName} • Question ${currentIndex + 1}/${widget.questions.length}",
+        ),
         actions: [
           InkWell(
             onTap: () {
@@ -631,11 +608,9 @@ My problem: ${problemController.text.trim()}
               ),
               child: const Row(
                 children: [
-                  Text("Raise Doubt",
-                      style: TextStyle(color: Colors.white)),
+                  Text("Raise Doubt", style: TextStyle(color: Colors.white)),
                   SizedBox(width: 6),
-                  Icon(Icons.question_mark,
-                      color: Colors.white, size: 18),
+                  Icon(Icons.question_mark, color: Colors.white, size: 18),
                 ],
               ),
             ),
@@ -649,17 +624,15 @@ My problem: ${problemController.text.trim()}
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            LinearProgressIndicator(value: (currentIndex + 1) / widget.questions.length),
-            SizedBox(height: 5,),
-
+            LinearProgressIndicator(
+              value: (currentIndex + 1) / widget.questions.length,
+            ),
+            SizedBox(height: 5),
 
             /// QUESTION INDEX
             Text(
               "Question ${currentIndex + 1}/${widget.questions.length}",
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 10),
@@ -691,8 +664,8 @@ My problem: ${problemController.text.trim()}
                   height: 200,
                   width: double.infinity,
                   fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) =>
-                  const Icon(Icons.broken_image, size: 80),
+                  errorBuilder:
+                      (_, __, ___) => const Icon(Icons.broken_image, size: 80),
                 ),
               ),
             ],
@@ -701,7 +674,6 @@ My problem: ${problemController.text.trim()}
 
             /// OPTIONS
             ...List.generate(options.length, (index) {
-
               bool isSelected = selectedIndex == index;
               bool isOptionCorrect = index == correctIndex;
 
@@ -715,27 +687,26 @@ My problem: ${problemController.text.trim()}
                 }
               }
 
-              return
-                Card(
+              return Card(
                 color: cardColor,
                 margin: const EdgeInsets.only(bottom: 12),
 
                 child: RadioListTile<int>(
-                  title:  buildOptionWidget(options[index].toString()),
+                  title: buildOptionWidget(options[index].toString()),
 
                   value: index,
                   groupValue: selectedIndex,
 
-                  onChanged: submitted
-                      ? null
-                      : (val) {
-                    setState(() {
-                      selectedIndex = val;
-                    });
-                  },
+                  onChanged:
+                      submitted
+                          ? null
+                          : (val) {
+                            setState(() {
+                              selectedIndex = val;
+                            });
+                          },
 
-                  activeColor:
-                  isCorrect ? Colors.green : Colors.deepPurple,
+                  activeColor: isCorrect ? Colors.green : Colors.deepPurple,
                 ),
               );
             }),
@@ -748,45 +719,35 @@ My problem: ${problemController.text.trim()}
                 padding: const EdgeInsets.all(16),
 
                 decoration: BoxDecoration(
-                  color: isCorrect
-                      ? Colors.green.shade50
-                      : Colors.red.shade50,
+                  color: isCorrect ? Colors.green.shade50 : Colors.red.shade50,
 
                   borderRadius: BorderRadius.circular(12),
 
                   border: Border.all(
-                    color: isCorrect
-                        ? Colors.green
-                        : Colors.red,
+                    color: isCorrect ? Colors.green : Colors.red,
                   ),
                 ),
 
                 child: Row(
                   children: [
-
                     Icon(
-                      isCorrect
-                          ? Icons.check_circle
-                          : Icons.cancel,
-                      color: isCorrect
-                          ? Colors.green
-                          : Colors.red,
+                      isCorrect ? Icons.check_circle : Icons.cancel,
+                      color: isCorrect ? Colors.green : Colors.red,
                       size: 32,
                     ),
 
                     const SizedBox(width: 12),
 
                     Text(
-                      isCorrect
-                          ? "Correct Answer!"
-                          : "Wrong Answer!",
+                      isCorrect ? "Correct Answer!" : "Wrong Answer!",
 
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: isCorrect
-                            ? Colors.green.shade700
-                            : Colors.red.shade700,
+                        color:
+                            isCorrect
+                                ? Colors.green.shade700
+                                : Colors.red.shade700,
                       ),
                     ),
                   ],
@@ -795,26 +756,22 @@ My problem: ${problemController.text.trim()}
 
             /// EXPLANATION
             if (submitted && selectedIndex != correctIndex) ...[
-
               const SizedBox(height: 20),
 
-              answerValue.toString()=="No explanation required"?SizedBox(): Text(
-                "Explanation",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
+              answerValue.toString() == "No explanation required"
+                  ? SizedBox()
+                  : Text(
+                    "Explanation",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
 
               const SizedBox(height: 10),
 
               /// LINK
               if (answerType == "link" &&
-                  (answerValue.toString().isNotEmpty||answerValue!=null))
-
+                  (answerValue.toString().isNotEmpty || answerValue != null))
                 GestureDetector(
                   onTap: () async {
-
                     final url = answerValue.toString();
 
                     if (await canLaunchUrl(Uri.parse(url))) {
@@ -823,59 +780,60 @@ My problem: ${problemController.text.trim()}
                         mode: LaunchMode.externalApplication,
                       );
                     }
-
                   },
 
-                  child: answerValue.toString()=="No explanation required"?SizedBox():Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
+                  child:
+                      answerValue.toString() == "No explanation required"
+                          ? SizedBox()
+                          : Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
 
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.blue),
-                    ),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.blue),
+                            ),
 
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: const [
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: const [
+                                Icon(Icons.link, color: Colors.blue),
 
-                        Icon(Icons.link, color: Colors.blue),
+                                SizedBox(width: 8),
 
-                        SizedBox(width: 8),
-
-                        Text(
-                          "View Detailed Open Url",
-                          style: TextStyle(
-                            color: Colors.blue,
-                            fontWeight: FontWeight.bold,
+                                Text(
+                                  "View Detailed Open Url",
+                                  style: TextStyle(
+                                    color: Colors.blue,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
                 ),
 
               /// IMAGE
-              if ((answerType == "image" ||answerType == "file")
-                  &&
-                  answerValue.toString().isNotEmpty
-              )
-
+              if ((answerType == "image" || answerType == "file") &&
+                  answerValue.toString().isNotEmpty)
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
 
-                  child: answerValue==null?SizedBox():Image.network(
-                    "https://truescoreedu.com/$answerValue",
-                    height: 200,
-                    fit: BoxFit.contain,
-                  ),
+                  child:
+                      answerValue == null
+                          ? SizedBox()
+                          : Image.network(
+                            "https://truescoreedu.com/$answerValue",
+                            height: 200,
+                            fit: BoxFit.contain,
+                          ),
                 ),
 
               /// TEXT
-              if (answerType == "text" &&
-                  answerValue.toString().isNotEmpty)
-
+              if (answerType == "text" && answerValue.toString().isNotEmpty)
                 Container(
                   padding: const EdgeInsets.all(16),
 
@@ -885,7 +843,7 @@ My problem: ${problemController.text.trim()}
                     border: Border.all(color: Colors.orange),
                   ),
 
-                  child:buildQuestionText(answerValue.toString())
+                  child: buildQuestionText(answerValue.toString()),
                   // Text(
                   //   answerValue.toString(),
                   //   style: const TextStyle(fontSize: 15),
@@ -939,15 +897,17 @@ My problem: ${problemController.text.trim()}
             // ),
             Row(
               children: [
-
                 /// PREVIOUS BUTTON
                 Expanded(
                   child: SizedBox(
                     height: 54,
                     child: ElevatedButton(
-                      onPressed: currentIndex == 0 ? null : () async {
-                        await _previousQuestion();
-                      },
+                      onPressed:
+                          currentIndex == 0
+                              ? null
+                              : () async {
+                                await _previousQuestion();
+                              },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red.shade400,
                         shape: RoundedRectangleBorder(
@@ -969,25 +929,20 @@ My problem: ${problemController.text.trim()}
                   child: SizedBox(
                     height: 54,
                     child: ElevatedButton(
-                      onPressed: selectedIndex == null
-                          ? null
-                          : () async {
+                      onPressed:
+                          selectedIndex == null
+                              ? null
+                              : () async {
+                                if (!submitted) {
+                                  await _markAsAttempted();
 
-                        if (!submitted) {
-
-                          await _markAsAttempted();
-
-                          setState(() {
-                            submitted = true;
-                          });
-
-                        } else {
-
-                          await _nextQuestion();
-
-                        }
-
-                      },
+                                  setState(() {
+                                    submitted = true;
+                                  });
+                                } else {
+                                  await _nextQuestion();
+                                }
+                              },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green.shade400,
 
@@ -997,19 +952,19 @@ My problem: ${problemController.text.trim()}
                       ),
                       child: Text(
                         submitted ? "Next Question" : "Submit",
-                        style:  TextStyle(fontSize: 16,color: Colors.white),
+                        style: TextStyle(fontSize: 16, color: Colors.white),
                       ),
                     ),
                   ),
                 ),
-
               ],
-            )
+            ),
           ],
         ),
       ),
     );
   }
+
   Future<void> _previousQuestion() async {
     if (currentIndex > 0) {
       setState(() {
@@ -1021,6 +976,7 @@ My problem: ${problemController.text.trim()}
       await _saveProgress();
     }
   }
+
   Future<void> _nextQuestion() async {
     if (currentIndex < widget.questions.length - 1) {
       setState(() {
@@ -1042,15 +998,23 @@ My problem: ${problemController.text.trim()}
         children: [
           const Text(
             "Explanation",
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.red),
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+              color: Colors.red,
+            ),
           ),
           const SizedBox(height: 12),
-          if (type == "text") Text(removeHtml(value), style: const TextStyle(fontSize: 15)),
+          if (type == "text")
+            Text(removeHtml(value), style: const TextStyle(fontSize: 15)),
           if (type == "image") Image.network(value, fit: BoxFit.cover),
           if (type == "link")
             Text(
               value,
-              style: const TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+              style: const TextStyle(
+                color: Colors.blue,
+                decoration: TextDecoration.underline,
+              ),
             ),
         ],
       ),
@@ -1066,6 +1030,8 @@ class ChapterListScreen extends StatefulWidget {
   final String batchId;
   final String questionType;
   final String subjectName;
+  final String subjectId;
+  final String chapterId;
 
   const ChapterListScreen({
     super.key,
@@ -1073,6 +1039,8 @@ class ChapterListScreen extends StatefulWidget {
     required this.batchId,
     required this.questionType,
     required this.subjectName,
+    required this.subjectId,
+    required this.chapterId,
   });
 
   @override
@@ -1093,7 +1061,11 @@ class _ChapterListScreenState extends State<ChapterListScreen> {
     final Map<String, bool> status = {};
     for (var chapter in chapters) {
       final chapQs = _byChapter(chapter);
-      final done = await isAllQuestionsAttempted(chapQs, widget.batchId, widget.questionType);
+      final done = await isAllQuestionsAttempted(
+        chapQs,
+        widget.batchId,
+        widget.questionType,
+      );
       status[chapter] = done;
     }
     if (mounted) {
@@ -1114,7 +1086,11 @@ class _ChapterListScreenState extends State<ChapterListScreen> {
   List<dynamic> _byChapter(String chapter) {
     if (chapter == "Syllabus") {
       return widget.questions
-          .where((q) => q['chapter_name'] == null || q['chapter_name'].toString().isEmpty)
+          .where(
+            (q) =>
+                q['chapter_name'] == null ||
+                q['chapter_name'].toString().isEmpty,
+          )
           .toList();
     }
     return widget.questions.where((q) => q['chapter_name'] == chapter).toList();
@@ -1144,29 +1120,38 @@ class _ChapterListScreenState extends State<ChapterListScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => AttemptPaperScreen(
-                        questions: chapterQuestions,
-                        questionType: widget.questionType,
-                        batchId: widget.batchId,
-                        subjectName: widget.subjectName,
-                      ),
+                      builder:
+                          (_) => AttemptPaperScreen(
+                            questions: chapterQuestions,
+                            questionType: widget.questionType,
+                            batchId: widget.batchId,
+                            subjectName: widget.subjectName,
+                            subjectId: widget.subjectId,
+                            chapterId: widget.chapterId,
+                          ),
                     ),
                   ).then((_) => _loadChapterCompletion());
                 },
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 16,
+                  ),
                   child: Row(
                     children: [
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: isCompleted
-                              ? Colors.green.withOpacity(0.2)
-                              : Colors.purple.withOpacity(0.12),
+                          color:
+                              isCompleted
+                                  ? Colors.green.withOpacity(0.2)
+                                  : Colors.purple.withOpacity(0.12),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
-                          isCompleted ? Icons.check_circle : Icons.menu_book_rounded,
+                          isCompleted
+                              ? Icons.check_circle
+                              : Icons.menu_book_rounded,
                           color: isCompleted ? Colors.green : Colors.purple,
                           size: 24,
                         ),
@@ -1183,21 +1168,35 @@ class _ChapterListScreenState extends State<ChapterListScreen> {
                               style: TextStyle(
                                 fontSize: 16.5,
                                 fontWeight: FontWeight.w600,
-                                color: isCompleted ? Colors.green.shade800 : Colors.black87,
+                                color:
+                                    isCompleted
+                                        ? Colors.green.shade800
+                                        : Colors.black87,
                               ),
                             ),
                             const SizedBox(height: 6),
                             Text(
                               "${chapterQuestions.length} Questions",
-                              style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey.shade700,
+                              ),
                             ),
                           ],
                         ),
                       ),
                       if (isCompleted)
-                        const Icon(Icons.check_circle, color: Colors.green, size: 24)
+                        const Icon(
+                          Icons.check_circle,
+                          color: Colors.green,
+                          size: 24,
+                        )
                       else
-                        const Icon(Icons.arrow_forward_ios_rounded, size: 18, color: Colors.grey),
+                        const Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          size: 18,
+                          color: Colors.grey,
+                        ),
                     ],
                   ),
                 ),
@@ -1243,7 +1242,11 @@ class _SubjectListScreenState extends State<SubjectListScreen> {
     final Map<String, bool> status = {};
     for (var sub in subs) {
       final subQs = _bySubject(sub);
-      final done = await isAllQuestionsAttempted(subQs, widget.batchId, widget.questionType);
+      final done = await isAllQuestionsAttempted(
+        subQs,
+        widget.batchId,
+        widget.questionType,
+      );
       status[sub] = done;
     }
     if (mounted) setState(() => _subjectCompleted = status);
@@ -1284,18 +1287,26 @@ class _SubjectListScreenState extends State<SubjectListScreen> {
           final subject = subjects[index];
           final subjectQuestions = _bySubject(subject);
           final isCompleted = _subjectCompleted[subject] ?? false;
+          Map<String, dynamic> subjectId = widget.questions.firstWhere(
+            (element) => element['subject_name'] == subject,
+            orElse: () => null,
+          );
+
           return InkWell(
             borderRadius: BorderRadius.circular(18),
             onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => ChapterListScreen(
-                    questions: subjectQuestions,
-                    batchId: widget.batchId,
-                    questionType: widget.questionType,
-                    subjectName: subject,
-                  ),
+                  builder:
+                      (_) => ChapterListScreen(
+                        questions: subjectQuestions,
+                        batchId: widget.batchId,
+                        questionType: widget.questionType,
+                        subjectName: subject,
+                        subjectId: subjectId['subject_id'].toString(),
+                        chapterId: subjectId['chapter_id'].toString(),
+                      ),
                 ),
               ).then((_) => _loadSubjectCompletion());
             },
@@ -1306,7 +1317,10 @@ class _SubjectListScreenState extends State<SubjectListScreen> {
               decoration: BoxDecoration(
                 color: isCompleted ? Colors.green.shade50 : Colors.white,
                 borderRadius: BorderRadius.circular(18),
-                border: isCompleted ? Border.all(color: Colors.green, width: 1.8) : null,
+                border:
+                    isCompleted
+                        ? Border.all(color: Colors.green, width: 1.8)
+                        : null,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.06),
@@ -1321,13 +1335,16 @@ class _SubjectListScreenState extends State<SubjectListScreen> {
                     height: 52,
                     width: 52,
                     decoration: BoxDecoration(
-                      color: isCompleted
-                          ? Colors.green.withOpacity(0.15)
-                          : Colors.blue.withOpacity(0.1),
+                      color:
+                          isCompleted
+                              ? Colors.green.withOpacity(0.15)
+                              : Colors.blue.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Icon(
-                      isCompleted ? Icons.check_circle : Icons.menu_book_rounded,
+                      isCompleted
+                          ? Icons.check_circle
+                          : Icons.menu_book_rounded,
                       color: isCompleted ? Colors.green : Colors.blue,
                       size: 28,
                     ),
@@ -1339,12 +1356,18 @@ class _SubjectListScreenState extends State<SubjectListScreen> {
                       style: TextStyle(
                         fontSize: 17.5,
                         fontWeight: FontWeight.w600,
-                        color: isCompleted ? Colors.green.shade800 : Colors.black87,
+                        color:
+                            isCompleted
+                                ? Colors.green.shade800
+                                : Colors.black87,
                       ),
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: isCompleted ? Colors.green : Colors.blue,
                       borderRadius: BorderRadius.circular(20),
@@ -1360,7 +1383,9 @@ class _SubjectListScreenState extends State<SubjectListScreen> {
                   ),
                   const SizedBox(width: 10),
                   Icon(
-                    isCompleted ? Icons.check_circle : Icons.arrow_forward_ios_rounded,
+                    isCompleted
+                        ? Icons.check_circle
+                        : Icons.arrow_forward_ios_rounded,
                     size: 18,
                     color: isCompleted ? Colors.green : Colors.grey,
                   ),
@@ -1414,33 +1439,36 @@ class QuestionTypeSelectionScreen extends StatelessWidget {
   }
 
   Widget _typeCard(
-      BuildContext context,
-      String title,
-      String questionType,
-      List<dynamic> list,
-      Color color,
-      ) {
+    BuildContext context,
+    String title,
+    String questionType,
+    List<dynamic> list,
+    Color color,
+  ) {
     final bool isEmpty = list.isEmpty;
     return InkWell(
       // Disable tap when empty
-      onTap: isEmpty
-          ? null
-          : () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => SubjectListScreen(
-              questions: list,
-              batchId: batchId,
-              questionType: questionType,
-            ),
-          ),
-        );
-      },
+      onTap:
+          isEmpty
+              ? null
+              : () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder:
+                        (_) => SubjectListScreen(
+                          questions: list,
+                          batchId: batchId,
+                          questionType: questionType,
+                        ),
+                  ),
+                );
+              },
       child: Container(
         height: 100,
         decoration: BoxDecoration(
-          color: isEmpty ? Colors.grey.withOpacity(0.08) : color.withOpacity(0.12),
+          color:
+              isEmpty ? Colors.grey.withOpacity(0.08) : color.withOpacity(0.12),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isEmpty ? Colors.grey.shade400 : color,

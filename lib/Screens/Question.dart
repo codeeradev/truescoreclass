@@ -12,6 +12,7 @@ import 'Student/result.dart';
 
 class PaperTypeScreen extends StatefulWidget {
   const PaperTypeScreen({super.key});
+
   @override
   State<PaperTypeScreen> createState() => _PaperTypeScreenState();
 }
@@ -229,6 +230,7 @@ class _PaperTypeScreenState extends State<PaperTypeScreen> {
 class PapersListScreen extends StatefulWidget {
   final List papers;
   final String title;
+
   const PapersListScreen({
     super.key,
     required this.papers,
@@ -241,6 +243,7 @@ class PapersListScreen extends StatefulWidget {
 
 class _PapersListScreenState extends State<PapersListScreen> {
   final Set<String> _completedPaperIds = <String>{};
+
   bool get _isPracticeList => widget.title.toLowerCase().contains("practice");
 
   @override
@@ -403,6 +406,7 @@ class _ExamScreenState extends State<ExamScreen> {
   // Unique key for saving progress: e.g., "practice_12" or "mock_15"
   String get _progressKey =>
       "${widget.title.replaceAll(' ', '_').toLowerCase()}_${widget.paperData['paper_id']}";
+
   String get _completedKey =>
       "paper_completed_${widget.title.replaceAll(' ', '_').toLowerCase()}_${widget.paperData['paper_id']}";
 
@@ -555,16 +559,14 @@ class _ExamScreenState extends State<ExamScreen> {
       ).showSnackBar(SnackBar(content: Text("Error: $e")));
     }
   }
-  void openDoubtDialog(
-      BuildContext context, String des, String batchId,) {
 
+  void openDoubtDialog(BuildContext context, String des, String batchId) {
     final TextEditingController problemController = TextEditingController();
 
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) {
-
         bool isLoading = true;
         String? teacherAnswer;
         double matchPercent = 0;
@@ -572,7 +574,6 @@ class _ExamScreenState extends State<ExamScreen> {
 
         return StatefulBuilder(
           builder: (context, setState) {
-
             /// 🔹 Prepare static question (NO user input)
             String finalDescription =
                 "$des\n my problem is: ${problemController.text.trim()}";
@@ -586,7 +587,7 @@ class _ExamScreenState extends State<ExamScreen> {
                 final response = await http.post(
                   Uri.parse('https://truescoreedu.com/api/similar-doubts'),
                   headers: {
-                    "Content-Type": "application/x-www-form-urlencoded"
+                    "Content-Type": "application/x-www-form-urlencoded",
                   },
                   body: {
                     "apiToken": token,
@@ -597,22 +598,17 @@ class _ExamScreenState extends State<ExamScreen> {
                 final json = jsonDecode(response.body);
 
                 if (json['status'] == "true" && json['data'] != null) {
-
-                  matchPercent = double.tryParse(
-                      json['match_percent'].toString()) ?? 0;
+                  matchPercent =
+                      double.tryParse(json['match_percent'].toString()) ?? 0;
 
                   if (matchPercent >= 80) {
-                    teacherAnswer =
-                    json['data']['teacher_description'];
+                    teacherAnswer = json['data']['teacher_description'];
                   } else {
                     teacherAnswer = "No strong match found";
                   }
-
                 } else {
-                  teacherAnswer =
-                      json['msg'] ?? "No close match found";
+                  teacherAnswer = json['msg'] ?? "No close match found";
                 }
-
               } catch (e) {
                 teacherAnswer = "Error checking match";
               }
@@ -631,10 +627,10 @@ class _ExamScreenState extends State<ExamScreen> {
               });
             }
 
-
             return AlertDialog(
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
+                borderRadius: BorderRadius.circular(16),
+              ),
 
               title: const Text(
                 "Your Doubt",
@@ -645,35 +641,36 @@ class _ExamScreenState extends State<ExamScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-
                     /// 🔄 LOADING
                     if (isLoading) const CircularProgressIndicator(),
 
                     /// ✅ MATCH RESULT
                     if (!isLoading && teacherAnswer != null) ...[
                       // print('object');
-                      teacherAnswer.toString()=="No close match found"?SizedBox():  Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade50,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "Available Solution on this Doubt",
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.green,
-                              ),
+                      teacherAnswer.toString() == "No close match found"
+                          ? SizedBox()
+                          : Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            const SizedBox(height: 6),
-                            Text("${teacherAnswer!}"),
-                          ],
-                        ),
-                      ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Available Solution on this Doubt",
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text("${teacherAnswer!}"),
+                              ],
+                            ),
+                          ),
                       const SizedBox(height: 12),
                     ],
 
@@ -693,7 +690,6 @@ class _ExamScreenState extends State<ExamScreen> {
               ),
 
               actions: [
-
                 TextButton(
                   onPressed: () => Navigator.pop(context),
                   child: const Text("Cancel"),
@@ -704,7 +700,8 @@ class _ExamScreenState extends State<ExamScreen> {
                     if (problemController.text.trim().isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                            content: Text("Please enter your problem")),
+                          content: Text("Please enter your problem"),
+                        ),
                       );
                       return;
                     }
@@ -712,7 +709,12 @@ class _ExamScreenState extends State<ExamScreen> {
                     String finalDescription =
                         "$des\n my problem is: ${problemController.text.trim()}";
 
-                    submitDoubt(finalDescription, batchId);
+                    submitDoubt(
+                      des: finalDescription,
+                      id: batchId,
+                      subjectId: '',
+                      chapterId: ''
+                    );
                     Navigator.pop(context);
                   },
                   child: const Text("Submit"),
@@ -773,7 +775,7 @@ class _ExamScreenState extends State<ExamScreen> {
                 String finalDescription =
                     "$des\n my problem is: ${problemController.text.trim()}";
 
-                submitDoubt(finalDescription, batchId);
+                submitDoubt(des: finalDescription, id: batchId, subjectId: '',chapterId: '');
 
                 Navigator.pop(context);
               },
@@ -785,10 +787,12 @@ class _ExamScreenState extends State<ExamScreen> {
     );
   }
 
-  Future<void> submitDoubt(String des, String id) async {
-    print(des);
-    print(id);
-
+  Future<void> submitDoubt({
+    required String des,
+    required String id,
+    required String subjectId,
+    required String chapterId,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? '';
 
@@ -797,10 +801,9 @@ class _ExamScreenState extends State<ExamScreen> {
         "apiToken": token,
         "batch_id": id,
         "description": des,
-        // "chapter_id": "4",
+        "subject_id": subjectId,
+        "chapter_id": chapterId,
       };
-      print(body);
-
       // if (selectedChapter != null) {
       //   body["chapter_id"] = selectedChapter!['id'].toString();
       // }
@@ -914,7 +917,7 @@ class _ExamScreenState extends State<ExamScreen> {
         selectedOption == q['right_answer'].toString().toUpperCase();
     final isPracticePaper = widget.title.toLowerCase().contains("practice");
     // print(q['answer_value'].toString());
-
+print("paper---${widget.paperData}");
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.paperData['paper_name']),

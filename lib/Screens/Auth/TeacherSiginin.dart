@@ -110,7 +110,7 @@ class _TeacherSigninScreenState extends State<TeacherSigninScreen> with TickerPr
         await prefs.setString('teachername', data['data']['name']?.toString() ?? '');
         await prefs.setString('teachermail', data['data']['email']?.toString() ?? '');
         await prefs.setString('teacherno', data['data']['phone']?.toString() ?? '');
-
+print("fcm_token---${prefs.getString('fcm_token').toString()}");
         if (!mounted) return;
         Navigator.pushReplacement(
           context,
@@ -276,7 +276,7 @@ class _TeacherSigninScreenState extends State<TeacherSigninScreen> with TickerPr
                         alignment: Alignment.centerRight,
                         child: TextButton(
                           onPressed: () {
-                            Navigator.push(context, MaterialPageRoute(builder: (context)=>ForgotPasswordScreen()));
+                            Navigator.push(context, MaterialPageRoute(builder: (context)=>ForgotPasswordScreen(type: 'user',)));
                           },
                           child: const Text(
                             "Forgot Password?",

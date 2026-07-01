@@ -5,7 +5,9 @@ import 'package:http/http.dart' as http;
 import 'chnagepassword.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
-  const ForgotPasswordScreen({super.key});
+  final String type;
+
+  const ForgotPasswordScreen({super.key, required this.type});
 
   @override
   State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
@@ -28,23 +30,27 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     try {
       final res = await http.post(
         Uri.parse("https://truescoreedu.com/api/forgot-passowrd"),
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: {
-          "username": email, // 👈 API KEY
-        },
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        body: {"username": email, "user_type": widget.type},
       );
 
       final json = jsonDecode(res.body);
-      print(json);
+      print('submit--forgot--$json');
 
       if (res.statusCode == 200 && json["status"] == true) {
         _showSnack(
           json["message"] ?? "Password reset link sent to your email",
           isError: false,
         );
-        Navigator.push(context, MaterialPageRoute(builder: (context)=>ChangePasswordScreen()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) => ChangePasswordScreen(
+                  userType: json['user_type'] ?? widget.type,
+                ),
+          ),
+        );
         //Navigator.pop(context);
       } else {
         _showSnack(
@@ -71,18 +77,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Forgot Password"),
-        centerTitle: true,
-      ),
-      body: Padding(
+      appBar: AppBar(title: const Text("Forgot Password"), centerTitle: true),
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 30),
-
-            /// ICON
             Center(
               child: CircleAvatar(
                 radius: 40,
@@ -96,14 +97,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             ),
 
             const SizedBox(height: 30),
-
-            /// TITLE
             const Text(
               "Forgot your password?",
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 8),
@@ -142,23 +138,24 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                child: isLoading
-                    ? const SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-                    : const Text(
-                  "Send Reset Link",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                child:
+                    isLoading
+                        ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                        : const Text(
+                          "Send Reset Link",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
               ),
             ),
           ],

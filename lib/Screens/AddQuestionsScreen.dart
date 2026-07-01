@@ -808,6 +808,7 @@ class _AddQuestionScreenState extends State<AddQuestionScreen>
       items: items.map((item) {
         return DropdownMenuItem(value: item, child: Text(displayText(item)));
       }).toList(),
+      isExpanded: true,
       onChanged: enabled ? onChanged : null,
       validator: (v) => v == null ? "Required" : null,
     );

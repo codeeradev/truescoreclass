@@ -171,6 +171,7 @@ class _VideosState extends State<Videos> {
 
         if (json['status'] == "1" && json['data'] != null) {
           final List data = json['data'];
+          print("data--${data.first}");
           setState(() {
             mockPapers = data.where((e) => e['paper_type'] == "1").toList();
             practicePapers = data.where((e) => e['paper_type'] == "2").toList();
@@ -340,7 +341,6 @@ class _VideosState extends State<Videos> {
   })
   {
     final bool isEnabled = count > 0 && onTap != null;
-
     return
       Opacity(
       opacity: isEnabled ? 1.0 : 0.6,

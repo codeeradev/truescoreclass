@@ -74,6 +74,7 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
 
   @override
   Widget build(BuildContext context) {
+    print("image--$image");
     return Scaffold(
       backgroundColor: Colors.white,
 
@@ -107,7 +108,7 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
                       backgroundImage:
                           image.isNotEmpty
                               ? NetworkImage(
-                                "https://truescoreedu.com/uploads/students/${image}",
+                                'https://truescoreedu.com/$image',
                               )
                               : null,
                       child:

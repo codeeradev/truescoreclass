@@ -5,7 +5,8 @@ import 'package:online_classes/Screens/Auth/asktype.dart';
 
 
 class ChangePasswordScreen extends StatefulWidget {
-  const ChangePasswordScreen({super.key});
+  final String userType;
+  const ChangePasswordScreen({super.key,required this.userType});
 
   @override
   State<ChangePasswordScreen> createState() => _ChangePasswordScreenState();
@@ -52,11 +53,12 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
           "otp": otp,
           "password": password,
           "confirm_password": confirm,
+          "user_type":widget.userType
         },
       );
 
       final json = jsonDecode(res.body);
-      print(json);
+      print('change-passowrd--$json');
       print(res.statusCode);
 
       if (res.statusCode == 200 && json["status"] == true) {

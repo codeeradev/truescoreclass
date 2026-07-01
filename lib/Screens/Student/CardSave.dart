@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:online_classes/Screens/Auth/asktype.dart';
 import 'package:online_classes/Screens/Auth/signinScreen.dart';
 
 class RegistrationSuccessCard extends StatelessWidget {
@@ -17,119 +16,154 @@ class RegistrationSuccessCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 18,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-
-          /// ✅ SUCCESS HEADER
-          Row(
-            children: const [
-              Icon(Icons.check_circle_rounded,
-                  color: Colors.green, size: 28),
-              SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  "Registration Successful",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+    return SafeArea(
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 500),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(.08),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  /// Success Icon
+                  Container(
+                    height: 90,
+                    width: 90,
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.check_circle,
+                      color: Colors.green,
+                      size: 60,
+                    ),
+                  ),
 
-          const SizedBox(height: 8),
+                  const SizedBox(height: 20),
 
-          Text(
-            message,
-            style: TextStyle(
-              color: Colors.grey.shade600,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 12),
+                  const Text(
+                    "Registration Successful 🎉",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
 
-          Text(
-            "Carefully Save these for login",
-            style: TextStyle(
-              color: Colors.grey.shade600,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 12),
+                  const SizedBox(height: 10),
 
-          Center(
-            child: Text(
-              "You will recieve a mail shortly",
-              style: TextStyle(
-                color: Colors.green,
-                fontSize: 16,
+                  Text(
+                    message,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.grey.shade700,
+                      fontSize: 15,
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  Text(
+                    "Please save your login credentials.",
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  Text(
+                    "A confirmation email will be sent shortly.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.green.shade700,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  _infoRow(
+                    context,
+                    label: "Enrollment ID",
+                    value: enrollmentId,
+                  ),
+
+                  const SizedBox(height: 15),
+
+                  _infoRow(
+                    context,
+                    label: "Password",
+                    value: password,
+                  ),
+
+                  const SizedBox(height: 35),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 55,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => SigninScreen(),
+                          ),
+                        );
+                      },
+                      child: const Text(
+                        "Finish",
+                        style: TextStyle(
+                          fontSize: 17,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-
-          const SizedBox(height: 20),
-
-          /// 🔐 ENROLLMENT ID
-          _infoRow(
-            context,
-            label: "Enrollment ID",
-            value: enrollmentId,
-          ),
-
-          const SizedBox(height: 12),
-
-          /// 🔑 PASSWORD
-          _infoRow(
-            context,
-            label: "Password",
-            value: password,
-            isSensitive: false,
-          ),
-          const SizedBox(height: 42),
-          InkWell(onTap: (){
-            Navigator.push(context, MaterialPageRoute(builder: (context)=>SigninScreen()));
-          },
-            child: Container(height: 55,width: double.maxFinite,
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(20),color: Colors.blue),
-            child: Center(
-              child: Text("Finish",style: TextStyle(color: Colors.white),),
-
-            ),),
-          )
-
-        ],
+        ),
       ),
     );
   }
 
-  /// 🔹 Row with Copy Button
   Widget _infoRow(
       BuildContext context, {
         required String label,
         required String value,
-        bool isSensitive = false,
       }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 14,
+      ),
       decoration: BoxDecoration(
-        color: const Color(0xFFF4F7FF),
-        borderRadius: BorderRadius.circular(16),
+        color: const Color(0xffF5F7FF),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
         children: [
@@ -140,30 +174,34 @@ class RegistrationSuccessCard extends StatelessWidget {
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 12,
                     color: Colors.grey.shade600,
+                    fontSize: 13,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  isSensitive ? "••••••••" : value,
+                const SizedBox(height: 5),
+                SelectableText(
+                  value,
                   style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
             ),
           ),
-
-          /// 📋 COPY BUTTON
           IconButton(
-            icon: const Icon(Icons.copy_rounded, color: Colors.blue),
+            icon: const Icon(
+              Icons.copy_rounded,
+              color: Colors.blue,
+            ),
             onPressed: () {
-              Clipboard.setData(ClipboardData(text: value));
+              Clipboard.setData(
+                ClipboardData(text: value),
+              );
+
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text("$label copied to clipboard"),
+                  content: Text("$label copied"),
                   behavior: SnackBarBehavior.floating,
                 ),
               );

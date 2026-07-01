@@ -3,16 +3,16 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
+import 'package:online_classes/Screens/Student/otp_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 
 import 'CardSave.dart'; // For date formatting
 
 class SelfRegistrationScreen1 extends StatefulWidget {
-
-
   @override
-  State<SelfRegistrationScreen1> createState() => _SelfRegistrationScreen1State();
+  State<SelfRegistrationScreen1> createState() =>
+      _SelfRegistrationScreen1State();
 }
 
 class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
@@ -40,10 +40,9 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
   final mobileCtr = TextEditingController();
   final emailCtr = TextEditingController();
   final passwordCtr = TextEditingController();
-  List roles = [];          // full list
-  String? selectedRoleId;   // stores id for API
+  List roles = []; // full list
+  String? selectedRoleId; // stores id for API
   String? selectedRoleName; // for dropdown UI
-
 
   // Geo Data
   List<dynamic> states = [];
@@ -58,6 +57,7 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
 
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
+
   Future<void> pickImage(Function(File) onSelect) async {
     final picked = await picker.pickImage(source: ImageSource.gallery);
     if (picked != null) {
@@ -65,8 +65,8 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
       setState(() {});
     }
   }
-  String stu="";
 
+  String stu = "";
 
   @override
   void initState() {
@@ -74,7 +74,10 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
     getlist();
     fetchStates();
     fetchSubjects(); // Load subjects
-    _fadeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
     );
@@ -95,12 +98,19 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 20,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
-                    BoxShadow(blurRadius: 12, color: Colors.black26, offset: Offset(0, 4)),
+                    BoxShadow(
+                      blurRadius: 12,
+                      color: Colors.black26,
+                      offset: Offset(0, 4),
+                    ),
                   ],
                 ),
                 child: Column(
@@ -110,7 +120,11 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
                     const SizedBox(height: 12),
                     Text(
                       message,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black87),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -123,7 +137,6 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
     );
   }
 
-
   @override
   void dispose() {
     _fadeController.dispose();
@@ -133,7 +146,9 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
   // Fetch States (unchanged)
   Future<void> fetchStates() async {
     try {
-      final response = await http.get(Uri.parse('https://truescoreedu.com/api/geo-full'));
+      final response = await http.get(
+        Uri.parse('https://truescoreedu.com/api/geo-full'),
+      );
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);
         final List<dynamic> stateList = jsonResponse['states'] ?? [];
@@ -151,7 +166,9 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
   Future<void> fetchSubjects() async {
     setState(() => isLoadingSubjects = true);
     try {
-      final response = await http.get(Uri.parse('https://truescoreedu.com/api/get-subjects'));
+      final response = await http.get(
+        Uri.parse('https://truescoreedu.com/api/get-subjects'),
+      );
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
         setState(() {
@@ -193,9 +210,7 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
   getlist() async {
     final response = await http.get(
       Uri.parse('https://truescoreedu.com/api/get-roles'),
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
+      headers: {"Content-Type": "application/x-www-form-urlencoded"},
     );
 
     final data = jsonDecode(response.body);
@@ -246,7 +261,8 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
       body += "email=${Uri.encodeQueryComponent(emailCtr.text.trim())}&";
       body += "password=${Uri.encodeQueryComponent(passwordCtr.text)}&";
       body += "apiToken=${stu}&";
-      body += "dob=${Uri.encodeQueryComponent(DateFormat('d-M-yyyy').format(selectedDob!))}";
+      body +=
+          "dob=${Uri.encodeQueryComponent(DateFormat('d-M-yyyy').format(selectedDob!))}";
 
       // if (widget.scan==true) {
       //   body += "apiToken=${widget.userid}&";
@@ -269,9 +285,7 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
 
       final response = await http.post(
         Uri.parse('https://truescoreedu.com/api/register-user'),
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: body,
       );
 
@@ -279,28 +293,27 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
       print(response.statusCode);
       var jsonData = jsonDecode(response.body);
 
-
-
       if (response.statusCode == 200) {
-        print('true');
-
         final jsonData = jsonDecode(response.body);
 
         // ✅ optional: check API status also
         if (jsonData['status'] == 1) {
-
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (_) => Dialog(
-              backgroundColor: Colors.transparent,
-              insetPadding: const EdgeInsets.all(16),
-              child: RegistrationSuccessCard(
-                message: jsonData['msg'], // ✅ FIXED KEY
-                enrollmentId: jsonData['enrollment_id'].toString(),
-                password: jsonData['password'].toString(),
-              ),
+          if(jsonData['requires_verification']==true){
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => OtpStudentPage(),
+              settings: RouteSettings(
+                arguments: {
+                  "user_id": jsonData["student_id"],
+                  "user_type": jsonData["user_type"],
+                },
+              )
             ),
+          );}
+          _showSnackBar(
+            jsonData['msg'],
+            isError: false,
           );
 
         } else {
@@ -311,12 +324,8 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
         }
       } else {
         final error = jsonDecode(response.body);
-        _showSnackBar(
-          error['msg'] ?? "Registration failed",
-          isError: true,
-        );
+        _showSnackBar(error['msg'] ?? "Registration failed", isError: true);
       }
-
     } catch (e) {
       _showSnackBar("Network error: $e", isError: true);
     } finally {
@@ -361,19 +370,18 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text("Register New User", style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          "Register New User",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
         foregroundColor: Colors.white,
         flexibleSpace: Container(
-          decoration:  BoxDecoration(
-           color: Colors.blue.shade800
-          ),
+          decoration: BoxDecoration(color: Colors.blue.shade800),
         ),
       ),
       body: Container(
-        decoration: const BoxDecoration(
-         color: Colors.white
-        ),
+        decoration: const BoxDecoration(color: Colors.white),
         child: SafeArea(
           child: FadeTransition(
             opacity: _fadeAnimation,
@@ -393,9 +401,20 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
                     ),
                     child: Column(
                       children: const [
-                        Icon(Icons.person_add_alt_1, size: 60, color: Colors.black),
+                        Icon(
+                          Icons.person_add_alt_1,
+                          size: 60,
+                          color: Colors.black,
+                        ),
                         SizedBox(height: 12),
-                        Text("Register as New Student", style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.black)),
+                        Text(
+                          "Register as New Student",
+                          style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
                         //Text("Fill in the details to onboard a new member", style: TextStyle(fontSize: 15, color: Colors.black)),
                       ],
                     ),
@@ -409,7 +428,12 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
                       color: Colors.blue.shade800,
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(color: Colors.white.withOpacity(0.2)),
-                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 20)],
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 20,
+                        ),
+                      ],
                     ),
                     child: Form(
                       key: _formKey,
@@ -427,70 +451,100 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
                           //     print("Selected Role ID: $selectedRoleId");
                           //   },
                           // ),
-
-
                           const SizedBox(height: 20),
-
 
                           const SizedBox(height: 20),
 
                           // Multi-Select Subjects (Only for Teacher)
-                          if (selectedRoleId=="3") ...[
+                          if (selectedRoleId == "3") ...[
                             isLoadingSubjects
-                                ? const LinearProgressIndicator(backgroundColor: Colors.white24)
-                                :
-                            DropdownButtonFormField<dynamic>(
-                              isExpanded: true,
-                              decoration: InputDecoration(
-                                labelText: "Select Subjects (Hold to select multiple)",
-                                labelStyle: const TextStyle(color: Colors.white),
-                                filled: true,
-                                fillColor: Colors.white.withOpacity(0.1),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Colors.white, width: 2)),
-                              ),
-                              dropdownColor: Colors.black87,
-                              value: null,
-                              items: subjects.map((sub) {
-                                bool isSelected = selectedSubjects.any((s) => s['id'] == sub['id']);
-                                return DropdownMenuItem(
-                                  value: sub,
-                                  child: StatefulBuilder(
-                                    builder: (context, setStateItem) {
-                                      return InkWell(
-                                        onTap: () {
-                                          setState(() {
-                                            if (isSelected) {
-                                              selectedSubjects.removeWhere((s) => s['id'] == sub['id']);
-                                            } else {
-                                              selectedSubjects.add(sub);
-                                            }
-                                          });
-                                          setStateItem(() {});
-                                        },
-                                        child: Row(
-                                          children: [
-                                            Icon(
-                                              isSelected ? Icons.check_box : Icons.check_box_outline_blank,
-                                              color: isSelected ? Colors.green : Colors.white,
-                                            ),
-                                            const SizedBox(width: 10),
-                                            Text(sub['subject_name'], style: const TextStyle(color: Colors.white)),
-                                          ],
-                                        ),
-                                      );
-                                    },
+                                ? const LinearProgressIndicator(
+                                  backgroundColor: Colors.white24,
+                                )
+                                : DropdownButtonFormField<dynamic>(
+                                  isExpanded: true,
+                                  decoration: InputDecoration(
+                                    labelText:
+                                        "Select Subjects (Hold to select multiple)",
+                                    labelStyle: const TextStyle(
+                                      color: Colors.white,
+                                    ),
+                                    filled: true,
+                                    fillColor: Colors.white.withOpacity(0.1),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                      borderSide: const BorderSide(
+                                        color: Colors.white,
+                                        width: 2,
+                                      ),
+                                    ),
                                   ),
-                                );
-                              }).toList(),
-                              onChanged: (_) {}, // Required but we handle manually
-                              hint: Text(
-                                selectedSubjects.isEmpty
-                                    ? "Choose subjects"
-                                    : "${selectedSubjects.length} subject(s) selected",
-                                style: const TextStyle(color: Colors.white),
-                              ),
-                            ),
+                                  dropdownColor: Colors.black87,
+                                  value: null,
+                                  items:
+                                      subjects.map((sub) {
+                                        bool isSelected = selectedSubjects.any(
+                                          (s) => s['id'] == sub['id'],
+                                        );
+                                        return DropdownMenuItem(
+                                          value: sub,
+                                          child: StatefulBuilder(
+                                            builder: (context, setStateItem) {
+                                              return InkWell(
+                                                onTap: () {
+                                                  setState(() {
+                                                    if (isSelected) {
+                                                      selectedSubjects
+                                                          .removeWhere(
+                                                            (s) =>
+                                                                s['id'] ==
+                                                                sub['id'],
+                                                          );
+                                                    } else {
+                                                      selectedSubjects.add(sub);
+                                                    }
+                                                  });
+                                                  setStateItem(() {});
+                                                },
+                                                child: Row(
+                                                  children: [
+                                                    Icon(
+                                                      isSelected
+                                                          ? Icons.check_box
+                                                          : Icons
+                                                              .check_box_outline_blank,
+                                                      color:
+                                                          isSelected
+                                                              ? Colors.green
+                                                              : Colors.white,
+                                                    ),
+                                                    const SizedBox(width: 10),
+                                                    Text(
+                                                      sub['subject_name'],
+                                                      style: const TextStyle(
+                                                        color: Colors.white,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        );
+                                      }).toList(),
+                                  onChanged: (_) {},
+                                  // Required but we handle manually
+                                  hint: Text(
+                                    selectedSubjects.isEmpty
+                                        ? "Choose subjects"
+                                        : "${selectedSubjects.length} subject(s) selected",
+                                    style: const TextStyle(color: Colors.white),
+                                  ),
+                                ),
                             const SizedBox(height: 20),
                           ],
 
@@ -498,7 +552,11 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
 
                           // Rest of your fields (unchanged)
                           _buildTextField(nameCtr, "Full Name", Icons.person),
-                          _buildTextField(fatherCtr, "Father/Husband Name", Icons.family_restroom),
+                          _buildTextField(
+                            fatherCtr,
+                            "Father/Husband Name",
+                            Icons.family_restroom,
+                          ),
                           _buildGlassDropdown(
                             value: selectedGender,
                             label: "Gender",
@@ -506,13 +564,14 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
 
                             onChanged: (val) {
                               setState(() {
-                                selectedGender = val.toString(); // 🔥 store as string
+                                selectedGender =
+                                    val.toString(); // 🔥 store as string
                               });
 
                               print("Selected Gender: $selectedGender");
                             },
                           ),
-                          SizedBox(height: 15,),
+                          SizedBox(height: 15),
 
                           // DOB Picker
                           InkWell(
@@ -520,53 +579,88 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
                             child: InputDecorator(
                               decoration: InputDecoration(
                                 labelText: "Date of Birth",
-                                labelStyle: const TextStyle(color: Colors.white),
+                                labelStyle: const TextStyle(
+                                  color: Colors.white,
+                                ),
                                 filled: true,
                                 fillColor: Colors.white.withOpacity(0.1),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Colors.white, width: 2)),
-                                prefixIcon: const Icon(Icons.calendar_today, color: Colors.white),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: BorderSide.none,
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: const BorderSide(
+                                    color: Colors.white,
+                                    width: 2,
+                                  ),
+                                ),
+                                prefixIcon: const Icon(
+                                  Icons.calendar_today,
+                                  color: Colors.white,
+                                ),
                               ),
                               child: Text(
                                 selectedDob == null
                                     ? "Select DOB"
-                                    : DateFormat('dd-MM-yyyy').format(selectedDob!),
-                                style: TextStyle(color: selectedDob == null ? Colors.white54 : Colors.white),
+                                    : DateFormat(
+                                      'dd-MM-yyyy',
+                                    ).format(selectedDob!),
+                                style: TextStyle(
+                                  color:
+                                      selectedDob == null
+                                          ? Colors.white54
+                                          : Colors.white,
+                                ),
                               ),
                             ),
                           ),
-                          SizedBox(height: 15,),
-
+                          SizedBox(height: 15),
 
                           _buildTextField(houseCtr, "House No.", Icons.home),
-                          _buildTextField(streetCtr, "Street / Village / City", Icons.location_on),
-                          _buildTextField(pinCtr, "Pin Code", Icons.pin, keyboardType: TextInputType.number),
+                          _buildTextField(
+                            streetCtr,
+                            "Street / Village / City",
+                            Icons.location_on,
+                          ),
+                          _buildTextField(
+                            pinCtr,
+                            "Pin Code",
+                            Icons.pin,
+                            keyboardType: TextInputType.number,
+                          ),
 
                           isLoadingStates
-                              ? const LinearProgressIndicator(backgroundColor: Colors.white24)
+                              ? const LinearProgressIndicator(
+                                backgroundColor: Colors.white24,
+                              )
                               : _buildGlassDropdown(
-                            value: selectedState,
-                            items: states,
-                            itemBuilder: (s) => s['name'],
-                            onChanged: (state) => setState(() {
-                              selectedState = state;
-                              selectedDistrict = null;
-                              selectedCity = null;
-                              districts = state['districts'] ?? [];
-                              cities = [];
-                            }),
-                            label: "Select State",
-                          ),
+                                value: selectedState,
+                                items: states,
+                                itemBuilder: (s) => s['name'],
+                                onChanged:
+                                    (state) => setState(() {
+                                      selectedState = state;
+                                      selectedDistrict = null;
+                                      selectedCity = null;
+                                      districts = state['districts'] ?? [];
+                                      cities = [];
+                                    }),
+                                label: "Select State",
+                              ),
                           const SizedBox(height: 15),
                           _buildGlassDropdown(
                             value: selectedDistrict,
                             items: districts,
                             itemBuilder: (d) => d['name'],
-                            onChanged: districts.isEmpty ? null : (district) => setState(() {
-                              selectedDistrict = district;
-                              selectedCity = null;
-                              cities = district['cities'] ?? [];
-                            }),
+                            onChanged:
+                                districts.isEmpty
+                                    ? null
+                                    : (district) => setState(() {
+                                      selectedDistrict = district;
+                                      selectedCity = null;
+                                      cities = district['cities'] ?? [];
+                                    }),
                             label: "Select District",
                           ),
                           const SizedBox(height: 15),
@@ -574,20 +668,31 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
                             value: selectedCity,
                             items: cities,
                             itemBuilder: (c) => c['name'],
-                            onChanged: cities.isEmpty ? null : (city) => setState(() => selectedCity = city),
+                            onChanged:
+                                cities.isEmpty
+                                    ? null
+                                    : (city) =>
+                                        setState(() => selectedCity = city),
                             label: "Select City / Tehsil",
                           ),
                           const SizedBox(height: 15),
-                          _buildTextField(mobileCtr, "Mobile Number", Icons.phone, keyboardType: TextInputType.phone),
-                          _buildTextField(emailCtr, "Email Address", Icons.email, keyboardType: TextInputType.emailAddress),
+                          _buildTextField(
+                            mobileCtr,
+                            "Mobile Number",
+                            Icons.phone,
+                            keyboardType: TextInputType.phone,
+                          ),
+                          _buildTextField(
+                            emailCtr,
+                            "Email Address",
+                            Icons.email,
+                            keyboardType: TextInputType.emailAddress,
+                          ),
+
                           //_buildTextField(passwordCtr, "Password", Icons.lock, obscure: true),
-
                           const SizedBox(height: 25),
-                         // const Text("Details", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                          // const Text("Details", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                           const SizedBox(height: 15),
-
-
-
 
                           const SizedBox(height: 30),
 
@@ -596,15 +701,28 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
                             child: ElevatedButton(
                               onPressed: isSubmitting ? null : _submitForm,
                               style: ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 18),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 18,
+                                ),
                                 backgroundColor: Colors.white,
                                 foregroundColor: const Color(0xFF667eea),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
                                 elevation: 10,
                               ),
-                              child: isSubmitting
-                                  ? const CircularProgressIndicator(color: Color(0xFF667eea))
-                                  : const Text("Register Now", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                              child:
+                                  isSubmitting
+                                      ? const CircularProgressIndicator(
+                                        color: Color(0xFF667eea),
+                                      )
+                                      : const Text(
+                                        "Register Now",
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
                             ),
                           ),
                         ],
@@ -620,11 +738,17 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
       ),
     );
   }
+
   String? selectedGender;
-  Widget _buildTextField(TextEditingController controller, String label, IconData icon,
-      {bool obscure = false, TextInputType keyboardType = TextInputType.text}) {
-    return
-      Padding(
+
+  Widget _buildTextField(
+    TextEditingController controller,
+    String label,
+    IconData icon, {
+    bool obscure = false,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: TextFormField(
         controller: controller,
@@ -637,8 +761,14 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
           prefixIcon: Icon(icon, color: Colors.white),
           filled: true,
           fillColor: Colors.white.withOpacity(0.1),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide.none,
+          ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
             borderSide: const BorderSide(color: Colors.white, width: 2),
@@ -665,12 +795,22 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
         labelStyle: const TextStyle(color: Colors.white),
         filled: true,
         fillColor: Colors.white.withOpacity(0.1),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Colors.white, width: 2)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Colors.white, width: 2),
+        ),
       ),
-      items: items.map((item) {
-        return DropdownMenuItem(value: item, child: Text(itemBuilder?.call(item) ?? item.toString()));
-      }).toList(),
+      items:
+          items.map((item) {
+            return DropdownMenuItem(
+              value: item,
+              child: Text(itemBuilder?.call(item) ?? item.toString()),
+            );
+          }).toList(),
       onChanged: onChanged,
       validator: (v) => v == null ? "Required" : null,
     );
@@ -702,24 +842,33 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
       ),
 
       // 👇 Now items are map: {id: '3', role_name: 'Teacher'}
-      items: items.map((role) {
-        return DropdownMenuItem(
-          value: role['id'], // user selects ID internally
-          child: Text(role['role_name'], style: const TextStyle(color: Colors.white)),
-        );
-      }).toList(),
+      items:
+          items.map((role) {
+            return DropdownMenuItem(
+              value: role['id'], // user selects ID internally
+              child: Text(
+                role['role_name'],
+                style: const TextStyle(color: Colors.white),
+              ),
+            );
+          }).toList(),
 
       onChanged: onChanged,
       validator: (v) => v == null ? "Required" : null,
     );
   }
 
-
   Widget _buildPhotoPicker(String label, File? file, Function(File) onPick) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
         const SizedBox(height: 8),
         GestureDetector(
           onTap: () => pickImage(onPick),
@@ -730,14 +879,22 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.white.withOpacity(0.3)),
             ),
-            child: file == null
-                ? const Center(child: Icon(Icons.add_a_photo, color: Colors.white, size: 36))
-                : ClipRRect(borderRadius: BorderRadius.circular(16), child: Image.file(file, fit: BoxFit.cover)),
+            child:
+                file == null
+                    ? const Center(
+                      child: Icon(
+                        Icons.add_a_photo,
+                        color: Colors.white,
+                        size: 36,
+                      ),
+                    )
+                    : ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.file(file, fit: BoxFit.cover),
+                    ),
           ),
         ),
       ],
     );
   }
-
-
 }

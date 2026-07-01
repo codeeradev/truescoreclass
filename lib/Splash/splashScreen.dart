@@ -1,9 +1,12 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:online_classes/Screens/Auth/signinScreen.dart';
 import 'package:online_classes/Screens/Teachers/screens/TeacherDashboardScreen.dart';
 import 'package:online_classes/widgets/BottomNavigationBar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:upgrader/upgrader.dart';
 
 import '../Screens/IntroScreen.dart';
 import '../Screens/Student/Bottombar.dart';
@@ -17,11 +20,15 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  Future<void> checkForUpdate() async {
+    final upgrader = Upgrader();
 
-  @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
+    await upgrader.initialize();
+
+    if (upgrader.isUpdateAvailable()) {
+      return;
+    }
+
     Future.delayed(const Duration(seconds: 3), () async {
       if (!mounted) return; // widget might be disposed
 
@@ -50,6 +57,11 @@ class _SplashScreenState extends State<SplashScreen> {
       }
     });
 
+  }
+  @override
+  void initState() {
+    super.initState();
+    checkForUpdate();
   }
 
   @override

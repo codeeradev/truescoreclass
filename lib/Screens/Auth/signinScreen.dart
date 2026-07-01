@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:online_classes/Screens/Student/otp_page.dart';
 import 'package:online_classes/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -65,8 +66,6 @@ class _SigninScreenState extends State<SigninScreen>
     super.dispose();
   }
 
-
-
   Future<void> signin() async {
     setState(() => isLoading = true);
 
@@ -98,63 +97,83 @@ class _SigninScreenState extends State<SigninScreen>
         },
       );
       print("fcm_token---${preferences.getString('fcm_token').toString()}");
-      //print(response.body);
       final data = jsonDecode(response.body);
-      print(data);
+      print('data--signin--$data');
       print(response.statusCode);
 
       if (response.statusCode == 200) {
-        if (data['status'].toString() == "false") {
-          print('yes');
-          _showError("Check ID-Password");
+        if (data['status'].toString() == "1"||data['status'].toString()=='true') {
+          if (data['requires_verification'] == true) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => OtpStudentPage(),
+                settings: RouteSettings(
+                  arguments: {
+                    "user_id": data["student_id"],
+                    "user_type": data["user_type"],
+                  },
+                ),
+              ),
+            );
+            _showError(
+              data['msg'],
+              isError: false,
+            );
+          } else {
+            await preferences.setString(
+              "studentData",
+              data['studentData']['enrollmentId'],
+            );
+            await preferences.setString(
+              "token",
+              data['studentData']['apiToken'],
+            );
+            await preferences.setString('type', 'student');
+            await preferences.setString(
+              "studentname",
+              data['studentData']['fullName'],
+            );
+            await preferences.setString(
+              "studentimage",
+              data['studentData']['image'].toString(),
+            );
+            await preferences.setString(
+              "studentmail",
+              data['studentData']['userEmail'].toString(),
+            );
+            await preferences.setString(
+              "studentph",
+              data['studentData']['mobile'].toString(),
+            );
+
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => ModernBottomNav()),
+            );
+            _showError(
+              data['msg'],
+              isError: false,
+            );
+          }
         } else {
-          await preferences.setString(
-            "studentData",
-            data['studentData']['enrollmentId'],
-          );
-          await preferences.setString("token", data['studentData']['apiToken']);
-          await preferences.setString('type', 'student');
-          await preferences.setString(
-            "studentname",
-            data['studentData']['fullName'],
-          );
-          await preferences.setString(
-            "studentimage",
-            data['studentData']['image'].toString(),
-          );
-          await preferences.setString(
-            "studentmail",
-            data['studentData']['userEmail'].toString(),
-          );
-          await preferences.setString(
-            "studentph",
-            data['studentData']['mobile'].toString(),
-          );
-
-          print(data['studentData']['enrollmentId']);
-
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => ModernBottomNav()),
-          );
+          _showError("Check ID-Password");
         }
-        //  showSnack(context,data['msg'].toString());
       } else {
         _showError("Check ID-Password");
       }
     } catch (e) {
       print("error sign in ---$e");
-    }finally{
+    } finally {
       setState(() => isLoading = false);
-
     }
   }
 
-  void _showError(String message) {
+  void _showError(String message, {isError = true}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red.shade700,
+        backgroundColor: isError?Colors.red.shade700:Colors.green.shade700,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
@@ -337,7 +356,7 @@ class _SigninScreenState extends State<SigninScreen>
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => ForgotPasswordScreen(),
+                                  builder: (context) => ForgotPasswordScreen(type: 'student',),
                                 ),
                               );
                             },

@@ -9,6 +9,7 @@ import 'package:online_classes/servcies.dart';
 import 'package:online_classes/widgets/BottomNavigationBar.dart';
 import 'package:provider/provider.dart';
 import 'package:online_classes/Splash/splashScreen.dart';
+import 'package:upgrader/upgrader.dart';
 import 'Screens/All Courses.dart';
 import 'Screens/Auth/signinScreen.dart';
 import 'Screens/Batchscreen.dart';
@@ -42,7 +43,14 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: SplashScreen(),
+      home: UpgradeAlert(
+        showIgnore: false,
+        showLater: false,
+          barrierDismissible: true,
+          upgrader: Upgrader(
+            durationUntilAlertAgain: Duration.zero,
+          ),
+          child: SplashScreen()),
     );
   }
 }

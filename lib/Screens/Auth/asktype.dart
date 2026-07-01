@@ -71,7 +71,7 @@ class _AskTypeState extends State<AskType> with TickerProviderStateMixin {
     });
 
     await _centerZoomController.forward();
-    await AppNotificationService.instance.init();
+    await AppNotificationService.instance.tokenFCM();
     if (context.mounted) {
       if(teacher==true){
 

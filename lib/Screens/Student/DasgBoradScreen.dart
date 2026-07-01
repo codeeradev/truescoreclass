@@ -228,7 +228,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   void dispose() {
     SecureScreen.disable();
 
-    // TODO: implement dispose
     super.dispose();
   }
 
