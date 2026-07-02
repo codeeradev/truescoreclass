@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "482721524804",
+    "project_id": "testora-b71a0",
+    "storage_bucket": "testora-b71a0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:482721524804:android:42d75f3bb7de2fef37a011",
+        "android_client_info": {
+          "package_name": "com.testora.student"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAmz7-LZdXVGDP-dTJ2KPDRfnnTabyfbyc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:482721524804:android:6044251d1c0a14d437a011",
+        "android_client_info": {
+          "package_name": "com.truescore.app.sales"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAmz7-LZdXVGDP-dTJ2KPDRfnnTabyfbyc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:482721524804:android:d3d0848bbc1f387037a011",
+        "android_client_info": {
+          "package_name": "com.truescore.edusales"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAmz7-LZdXVGDP-dTJ2KPDRfnnTabyfbyc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
