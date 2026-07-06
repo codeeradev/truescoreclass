@@ -256,8 +256,9 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
       body += "district=${selectedDistrict['id']}&";
       body += "city=${selectedCity['id']}&";
       body += "phone=${Uri.encodeQueryComponent(mobileCtr.text.trim())}&";
-      body += "address=${Uri.encodeQueryComponent(houseCtr.text.trim())}&";
-
+      body += "house_no=${Uri.encodeQueryComponent(houseCtr.text.trim())}&";
+      body += "street=${Uri.encodeQueryComponent(streetCtr.text.trim())}&";
+      body += "pincode=${Uri.encodeQueryComponent(pinCtr.text.trim())}&";
       body += "email=${Uri.encodeQueryComponent(emailCtr.text.trim())}&";
       body += "password=${Uri.encodeQueryComponent(passwordCtr.text)}&";
       body += "apiToken=${stu}&";

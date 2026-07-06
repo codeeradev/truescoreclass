@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:online_classes/Screens/Student/ALLNewCourses.dart';
 import 'package:online_classes/Screens/Student/percentage.dart';
 import 'package:online_classes/Screens/Student/videos.dart';
 import 'package:online_classes/Screens/Teachers/meetings_screen.dart';
@@ -14,16 +15,20 @@ import 'newques.dart';
 
 class PurchasedCourseVideosScreen extends StatefulWidget {
   final String courseId;
+
   const PurchasedCourseVideosScreen({super.key, required this.courseId});
 
   @override
-  State<PurchasedCourseVideosScreen> createState() => _PurchasedCourseVideosScreenState();
+  State<PurchasedCourseVideosScreen> createState() =>
+      _PurchasedCourseVideosScreenState();
 }
 
-class _PurchasedCourseVideosScreenState extends State<PurchasedCourseVideosScreen>
+class _PurchasedCourseVideosScreenState
+    extends State<PurchasedCourseVideosScreen>
     with TickerProviderStateMixin {
   bool isLoading = true;
   bool isPurchased = false;
+  bool isTrialOver = false;
   Map<String, dynamic>? courseData;
   List<dynamic> videoLectures = [];
   List<dynamic> allQuestions = [];
@@ -33,6 +38,7 @@ class _PurchasedCourseVideosScreenState extends State<PurchasedCourseVideosScree
   List<String> availableTabs = [];
   bool isLoading2 = true;
   List<dynamic> notes = [];
+
   //String? errorMessage;
   Future<void> fetchNotes() async {
     setState(() {
@@ -54,10 +60,7 @@ class _PurchasedCourseVideosScreenState extends State<PurchasedCourseVideosScree
     try {
       final response = await http.post(
         Uri.parse("https://truescoreedu.com/api/get-notes"),
-        body: {
-          "apiToken": token,
-          "course_id":widget.courseId.toString()
-        },
+        body: {"apiToken": token, "course_id": widget.courseId.toString()},
       );
       print(response.body);
       print(response.statusCode);
@@ -74,9 +77,7 @@ class _PurchasedCourseVideosScreenState extends State<PurchasedCourseVideosScree
             errorMessage = json['message'] ?? "No notes found";
             isLoading2 = false;
           });
-
         }
-
       } else {
         throw Exception("Server error");
       }
@@ -96,7 +97,6 @@ class _PurchasedCourseVideosScreenState extends State<PurchasedCourseVideosScree
 
   @override
   void initState() {
-
     super.initState();
     SecureScreen.enable();
 
@@ -107,7 +107,6 @@ class _PurchasedCourseVideosScreenState extends State<PurchasedCourseVideosScree
   Future<void> fetchCourseDetails() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('token');
-
 
     if (token == null) {
       setState(() {
@@ -120,17 +119,15 @@ class _PurchasedCourseVideosScreenState extends State<PurchasedCourseVideosScree
     try {
       final response = await http.post(
         Uri.parse("https://truescoreedu.com/api/get-batche-details"),
-        body: {
-          "apiToken": token,
-          "courseId": widget.courseId,
-        },
+        body: {"apiToken": token, "courseId": widget.courseId},
       );
 
       final data = jsonDecode(response.body);
 
-      if (data["status"] == "true" && data["data"]["isPurchased"] == true) {
+      if (data["status"] == "true") {
         setState(() {
-          isPurchased = true;
+          isPurchased = data["data"]["isPurchased"] ?? false;
+          isTrialOver = data['data']['isTrialOver'] ?? false;
           courseData = data["data"]["course"];
           videoLectures = data["data"]["videoLectures"] ?? [];
           allQuestions = data["data"]["questions"] ?? [];
@@ -167,7 +164,13 @@ class _PurchasedCourseVideosScreenState extends State<PurchasedCourseVideosScree
             return order.indexOf(a).compareTo(order.indexOf(b));
           });
 
-          _tabController = TabController(length: availableTabs.length, vsync: this);
+          _tabController = TabController(
+            length: availableTabs.length,
+            vsync: this,
+          );
+          if(data["data"]["isPurchased"]!=true){
+            errorMessage = data["msg"] ?? "Course not purchased.";
+          }
           isLoading = false;
         });
       } else {
@@ -186,9 +189,15 @@ class _PurchasedCourseVideosScreenState extends State<PurchasedCourseVideosScree
   }
 
   Widget testoraBannerCard() {
-    return InkWell(onTap: (){
-      Navigator.push(context, MaterialPageRoute(builder: (context)=>Videos(id: widget.courseId.toString(),)));
-    },
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => Videos(id: widget.courseId.toString()),
+          ),
+        );
+      },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
         padding: const EdgeInsets.all(18),
@@ -257,7 +266,6 @@ class _PurchasedCourseVideosScreenState extends State<PurchasedCourseVideosScree
                           color: Colors.white,
                         ),
                       ),
-
                     ],
                   ),
                 ),
@@ -275,14 +283,12 @@ class _PurchasedCourseVideosScreenState extends State<PurchasedCourseVideosScree
       ),
     );
   }
+
   Widget _decorCircle(double size, Color color) {
     return Container(
       height: size,
       width: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color,
-      ),
+      decoration: BoxDecoration(shape: BoxShape.circle, color: color),
     );
   }
 
@@ -347,11 +353,13 @@ class _PurchasedCourseVideosScreenState extends State<PurchasedCourseVideosScree
                         style: TextStyle(
                           fontSize: 15,
                           color: isCorrect ? Colors.green[800] : Colors.black87,
-                          fontWeight: isCorrect ? FontWeight.bold : FontWeight.normal,
+                          fontWeight:
+                              isCorrect ? FontWeight.bold : FontWeight.normal,
                         ),
                       ),
                     ),
-                    if (isCorrect) const Icon(Icons.check, color: Colors.green, size: 22),
+                    if (isCorrect)
+                      const Icon(Icons.check, color: Colors.green, size: 22),
                   ],
                 ),
               );
@@ -361,7 +369,11 @@ class _PurchasedCourseVideosScreenState extends State<PurchasedCourseVideosScree
               alignment: Alignment.centerRight,
               child: Text(
                 "Correct Answer: $rightAnswer",
-                style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 15),
+                style: const TextStyle(
+                  color: Colors.green,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
               ),
             ),
           ],
@@ -419,39 +431,153 @@ class _PurchasedCourseVideosScreenState extends State<PurchasedCourseVideosScree
 
   @override
   Widget build(BuildContext context) {
-
     if (isLoading) {
       return Scaffold(
-        appBar: AppBar(backgroundColor: Colors.blue, title: const Text("Loading...", style: TextStyle(color: Colors.white))),
-        body: const Center(child: CircularProgressIndicator(color: Colors.blue)),
+        appBar: AppBar(
+          backgroundColor: Colors.blue,
+          title: const Text(
+            "Loading...",
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+        body: const Center(
+          child: CircularProgressIndicator(color: Colors.blue),
+        ),
       );
     }
 
     if (!isPurchased) {
       return Scaffold(
-        appBar: AppBar(backgroundColor: Colors.blue, title: const Text("Access Denied", style: TextStyle(color: Colors.white))),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.lock_outline, size: 80, color: Colors.grey[600]),
-                const SizedBox(height: 20),
-                Text(errorMessage ?? "You don't have access.", style: const TextStyle(fontSize: 18), textAlign: TextAlign.center),
-                const SizedBox(height: 30),
-                ElevatedButton(onPressed: () => Navigator.pop(context), child: const Text("Go Back")),
-              ],
-            ),
+        appBar: AppBar(
+          backgroundColor: Colors.blue,
+          title: const Text(
+            "Access Denied",
+            style: TextStyle(color: Colors.white),
           ),
         ),
+        body:
+            isTrialOver
+                ? Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  margin: EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF8E1),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: Colors.orange.shade300),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.orange.withOpacity(0.15),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircleAvatar(
+                        radius: 30,
+                        backgroundColor: Colors.orange.shade100,
+                        child: const Icon(
+                          Icons.lock_clock_rounded,
+                          color: Colors.orange,
+                          size: 32,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      const Text(
+                        "Your Trial Has Ended",
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      const Text(
+                        "Your trial period has expired. Purchase the full course to continue accessing all video lectures, notes, practice questions, and learning materials.",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: Colors.black87,
+                          height: 1.5,
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          icon: const Icon(Icons.shopping_cart_outlined),
+                          label: const Text(
+                            "Purchase Course",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => AllCoursesScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+                : Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.lock_outline,
+                          size: 80,
+                          color: Colors.grey[600],
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          errorMessage ?? "You don't have access.",
+                          style: const TextStyle(fontSize: 18),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 30),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text("Go Back"),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
       );
     }
-
     final String batchName = courseData!["batch_name"] ?? "Course";
     final String category = courseData!["cat_name"] ?? "";
     final String subCategory = courseData!["sub_cat_name"] ?? "";
-    final String description = (courseData!["description"] ?? "").toString().replaceAll("null", "").trim();
+    final String description =
+        (courseData!["description"] ?? "")
+            .toString()
+            .replaceAll("null", "")
+            .trim();
     final String imageUrl = courseData!["batch_image"] ?? "";
 
     return Scaffold(
@@ -459,7 +585,10 @@ class _PurchasedCourseVideosScreenState extends State<PurchasedCourseVideosScree
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.blue,
-        title: const Text("My Course", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text(
+          "My Course",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
@@ -470,16 +599,22 @@ class _PurchasedCourseVideosScreenState extends State<PurchasedCourseVideosScree
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Course Image
-            Container(color: Colors.blue,
+            Container(
+              color: Colors.blue,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   const Icon(Icons.check_circle, size: 30, color: Colors.white),
                   const SizedBox(width: 12),
-                  const Text("Congrats for this course!",
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
-
+                  const Text(
+                    "Congrats for this course!",
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -499,41 +634,66 @@ class _PurchasedCourseVideosScreenState extends State<PurchasedCourseVideosScree
             //   ),
             //   child: imageUrl.isEmpty ? const Icon(Icons.menu_book_rounded, size: 80, color: Colors.blue) : null,
             // ),
-
-
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(batchName, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                  Text(
+                    batchName,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 8),
-                  Text("$category ${subCategory.isNotEmpty ? '• $subCategory' : ''}",
-                      style: const TextStyle(fontSize: 16, color: Colors.black54)),
+                  Text(
+                    "$category ${subCategory.isNotEmpty ? '• $subCategory' : ''}",
+                    style: const TextStyle(fontSize: 16, color: Colors.black54),
+                  ),
                   const SizedBox(height: 20),
 
                   // Purchased Success
-
                   const SizedBox(height: 30),
                   InkWell(
-                    onTap: (){
-                      final mcqQuestions = allQuestions.where((q) => q['question_type'] == "1").toList();
-                      final caQuestions = allQuestions.where((q) => q['question_type'] == "2").toList();
-                      final pyqQuestions = allQuestions.where((q) => q['question_type'] == "3").toList();
+                    onTap: () {
+                      final mcqQuestions =
+                          allQuestions
+                              .where((q) => q['question_type'] == "1")
+                              .toList();
+                      final caQuestions =
+                          allQuestions
+                              .where((q) => q['question_type'] == "2")
+                              .toList();
+                      final pyqQuestions =
+                          allQuestions
+                              .where((q) => q['question_type'] == "3")
+                              .toList();
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => CourseProgressScreen(
-                            batchId: widget.courseId,
-                            mcqQuestions: mcqQuestions,
-                            caQuestions: caQuestions,
-                            pyqQuestions: pyqQuestions,
-                          ),
+                          builder:
+                              (_) => CourseProgressScreen(
+                                batchId: widget.courseId,
+                                mcqQuestions: mcqQuestions,
+                                caQuestions: caQuestions,
+                                pyqQuestions: pyqQuestions,
+                              ),
                         ),
-                      );                 },
-                    child: Container(decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),color: Colors.blueAccent
-                    ),height: 50,child: Center(child: Text("Progress",style: TextStyle(color: Colors.white),))
+                      );
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        color: Colors.blueAccent,
+                      ),
+                      height: 50,
+                      child: Center(
+                        child: Text(
+                          "Progress",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 30),
@@ -554,48 +714,68 @@ class _PurchasedCourseVideosScreenState extends State<PurchasedCourseVideosScree
                       //     );
                       //   },
                       // ),
-                      videoLectures.length==0?SizedBox():_optionCard(
-                        title: "Videos",
-                        icon: Icons.play_circle_fill_rounded,
-                        color: const Color(0xFF16A34A),
-                        onTap: () {
-                          Navigator.push(context, MaterialPageRoute(builder: (context)=>VideoListScreenfull(videoLectures: videoLectures,)));
-
-
-                        },
-                      ),
-                      notes.isEmpty?SizedBox(): _optionCard(
-                        title: "Notes",
-                        icon: Icons.menu_book_rounded,
-                        color: const Color(0xFFF97316),
-                        onTap: () {
-                          Navigator.push(context, MaterialPageRoute(builder: (context)=>GetNotesScreen(batchid: widget.courseId.toString(),)));
-                        },
-                      ),
-                      notes.isEmpty?SizedBox(): _optionCard(
-                        title: "Live Class",
-                        icon: Icons.live_tv,
-                        color:  Color(0xffc417ea),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const MeetingsScreen(),
-                            ),
-                          );
-                        },
-                      ),
+                      videoLectures.length == 0
+                          ? SizedBox()
+                          : _optionCard(
+                            title: "Videos",
+                            icon: Icons.play_circle_fill_rounded,
+                            color: const Color(0xFF16A34A),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) => VideoListScreenfull(
+                                        videoLectures: videoLectures,
+                                      ),
+                                ),
+                              );
+                            },
+                          ),
+                      notes.isEmpty
+                          ? SizedBox()
+                          : _optionCard(
+                            title: "Notes",
+                            icon: Icons.menu_book_rounded,
+                            color: const Color(0xFFF97316),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) => GetNotesScreen(
+                                        batchid: widget.courseId.toString(),
+                                      ),
+                                ),
+                              );
+                            },
+                          ),
+                      notes.isEmpty
+                          ? SizedBox()
+                          : _optionCard(
+                            title: "Live Class",
+                            icon: Icons.live_tv,
+                            color: Color(0xffc417ea),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const MeetingsScreen(),
+                                ),
+                              );
+                            },
+                          ),
                     ],
                   ),
-                  SizedBox(height: 30,),
+                  SizedBox(height: 30),
                   Container(
                     height: 420,
-                    child:  QuestionTypeSelectionScreen(
-                      questions: allQuestions, batchId: widget.courseId.toString(),
+                    child: QuestionTypeSelectionScreen(
+                      questions: allQuestions,
+                      batchId: widget.courseId.toString(),
                     ),
                   ),
                   testoraBannerCard(),
-
 
                   // Description
                   // if (description.isNotEmpty) ...[
@@ -676,7 +856,6 @@ class _PurchasedCourseVideosScreenState extends State<PurchasedCourseVideosScree
                   //     child: Text("No practice questions available yet.", style: TextStyle(color: Colors.grey)),
                   //   ),
                   // ],
-
                   const SizedBox(height: 40),
                 ],
               ),
