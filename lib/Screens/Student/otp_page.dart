@@ -9,7 +9,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class OtpStudentPage extends StatefulWidget {
-  const OtpStudentPage({super.key});
+  final bool isPageValue;
+  const OtpStudentPage({super.key,required this.isPageValue});
 
   @override
   State<OtpStudentPage> createState() => _OtpStudentPageState();
@@ -95,10 +96,10 @@ class _OtpStudentPageState extends State<OtpStudentPage> {
 
   @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)!.settings.arguments as Map;
+    // final args = ModalRoute.of(context)!.settings.arguments as Map??{};
 
-    final userId = args["user_id"];
-    final userType = args["user_type"];
+    // final userId = args["user_id"]??'';
+    // final userType = args["user_type"]??'';
     return Scaffold(
       backgroundColor: const Color(0xffF5F7FB),
       body: CustomScrollView(
@@ -185,6 +186,7 @@ class _OtpStudentPageState extends State<OtpStudentPage> {
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
+
                   otpField(title: "WhatsApp OTP", controller: whatsappOtp),
 
                   const SizedBox(height: 8),
@@ -239,10 +241,10 @@ class _OtpStudentPageState extends State<OtpStudentPage> {
                       ),
                       onPressed: () {
                         if (!isLoading) {
-                          verifyOtp(
-                            userId: userId.toString(),
-                            userType: userType.toString(),
-                          );
+                          // verifyOtp(
+                          //   userId: userId.toString(),
+                          //   userType: userType.toString(),
+                          // );
                         }
                       },
                       child:
@@ -278,10 +280,10 @@ class _OtpStudentPageState extends State<OtpStudentPage> {
                     TextButton(
                       onPressed: () async {
                         if (!isResendLoading) {
-                          await resendOtp(
-                            userId: userId.toString(),
-                            userType: userType.toString(),
-                          );
+                          // await resendOtp(
+                          //   userId: userId.toString(),
+                          //   userType: userType.toString(),
+                          // );
                         }
                       },
                       child: const Text(

@@ -3,6 +3,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:online_classes/Screens/AddQuestionsScreen.dart';
 import 'package:online_classes/Screens/HomeScreen.dart';
+import 'package:online_classes/Screens/Student/otp_page.dart';
 import 'package:online_classes/Screens/Teachers/screens/TeacherDashboardScreen.dart';
 import 'package:online_classes/notification_service.dart';
 import 'package:online_classes/servcies.dart';
@@ -23,7 +24,7 @@ Future<void> main() async {
 
   await Firebase.initializeApp();
 
-  await AppNotificationService.instance.init();
+  // await AppNotificationService.instance.init();
 
   runApp(
     ChangeNotifierProvider(
@@ -50,7 +51,7 @@ class MyApp extends StatelessWidget {
           upgrader: Upgrader(
             durationUntilAlertAgain: Duration.zero,
           ),
-          child: SplashScreen()),
+          child: OtpStudentPage(isPageValue: false)),
     );
   }
 }
