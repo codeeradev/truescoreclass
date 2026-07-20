@@ -27,7 +27,7 @@ class SigninScreen extends StatefulWidget {
 class _SigninScreenState extends State<SigninScreen>
     with TickerProviderStateMixin {
   final TextEditingController emailController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
+  // final TextEditingController passwordController = TextEditingController();
 
   bool _obscurePassword = true;
   bool isLoading = false;
@@ -62,7 +62,7 @@ class _SigninScreenState extends State<SigninScreen>
   void dispose() {
     _imageController.dispose();
     emailController.dispose();
-    passwordController.dispose();
+    // passwordController.dispose();
     super.dispose();
   }
 
@@ -90,7 +90,8 @@ class _SigninScreenState extends State<SigninScreen>
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: {
           "username": emailController.text.trim(),
-          "password": passwordController.text.trim(),
+          // "password": passwordController.text.trim(),
+          "otp_login":'true',
           "token": "sadfsa",
           "versionCode": "1",
           'fcm_token': preferences.getString('fcm_token').toString(),
@@ -103,15 +104,35 @@ class _SigninScreenState extends State<SigninScreen>
 
       if (response.statusCode == 200) {
         if (data['status'].toString() == "1"||data['status'].toString()=='true') {
-          if (data['requires_verification'] == true) {
+          // if (data['requires_verification'] == true) {
+          //   Navigator.push(
+          //     context,
+          //     MaterialPageRoute(
+          //       builder: (context) => OtpStudentPage(),
+          //       settings: RouteSettings(
+          //         arguments: {
+          //           "user_id": data["student_id"]??"",
+          //           "user_type": data["user_type"]??"",
+          //           "isPageValue": false,
+          //         },
+          //       ),
+          //     ),
+          //   );
+          //   _showError(
+          //     data['msg'],
+          //     isError: false,
+          //   );
+          // }
+           if (data['requires_otp_verification']==true){
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => OtpStudentPage(isPageValue: false),
+                builder: (context) => OtpStudentPage(),
                 settings: RouteSettings(
                   arguments: {
-                    "user_id": data["student_id"],
-                    "user_type": data["user_type"],
+                    "user_id": data["student_id"]??'',
+                    "enrollment_id": data["enrollment_id"]??'',
+                    "isPageValue": false,
                   },
                 ),
               ),
@@ -120,41 +141,41 @@ class _SigninScreenState extends State<SigninScreen>
               data['msg'],
               isError: false,
             );
-          } else {
-            await preferences.setString(
-              "studentData",
-              data['studentData']['enrollmentId'],
-            );
-            await preferences.setString(
-              "token",
-              data['studentData']['apiToken'],
-            );
-            await preferences.setString('type', 'student');
-            await preferences.setString(
-              "studentname",
-              data['studentData']['fullName'],
-            );
-            await preferences.setString(
-              "studentimage",
-              data['studentData']['image'].toString(),
-            );
-            await preferences.setString(
-              "studentmail",
-              data['studentData']['userEmail'].toString(),
-            );
-            await preferences.setString(
-              "studentph",
-              data['studentData']['mobile'].toString(),
-            );
-
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => ModernBottomNav()),
-            );
-            _showError(
-              data['msg'],
-              isError: false,
-            );
+          }else {
+            // await preferences.setString(
+            //   "studentData",
+            //   data['studentData']['enrollmentId'],
+            // );
+            // await preferences.setString(
+            //   "token",
+            //   data['studentData']['apiToken'],
+            // );
+            // await preferences.setString('type', 'student');
+            // await preferences.setString(
+            //   "studentname",
+            //   data['studentData']['fullName'],
+            // );
+            // await preferences.setString(
+            //   "studentimage",
+            //   data['studentData']['image'].toString(),
+            // );
+            // await preferences.setString(
+            //   "studentmail",
+            //   data['studentData']['userEmail'].toString(),
+            // );
+            // await preferences.setString(
+            //   "studentph",
+            //   data['studentData']['mobile'].toString(),
+            // );
+            //
+            // Navigator.pushReplacement(
+            //   context,
+            //   MaterialPageRoute(builder: (context) => ModernBottomNav()),
+            // );
+            // _showError(
+            //   data['msg'],
+            //   isError: false,
+            // );
           }
         } else {
           _showError("Check ID-Password");
@@ -264,19 +285,19 @@ class _SigninScreenState extends State<SigninScreen>
                           hint: "Username or ID",
                           icon: Icons.alternate_email_rounded,
                         ),
-                        const SizedBox(height: 16),
-
-                        _buildTextField(
-                          controller: passwordController,
-                          hint: "Password",
-                          icon: Icons.lock_outline_rounded,
-                          obscureText: _obscurePassword,
-                          isPassword: true,
-                          onVisibilityTap:
-                              () => setState(
-                                () => _obscurePassword = !_obscurePassword,
-                              ),
-                        ),
+                        // const SizedBox(height: 16),
+                        //
+                        // _buildTextField(
+                        //   controller: passwordController,
+                        //   hint: "Password",
+                        //   icon: Icons.lock_outline_rounded,
+                        //   obscureText: _obscurePassword,
+                        //   isPassword: true,
+                        //   onVisibilityTap:
+                        //       () => setState(
+                        //         () => _obscurePassword = !_obscurePassword,
+                        //       ),
+                        // ),
 
                         const SizedBox(height: 32),
 

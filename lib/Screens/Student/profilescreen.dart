@@ -206,7 +206,7 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
             ),
             _profileCard(
               icon: Icons.share,
-              title: "Referral register",
+              title: "Refer & Earn",
               onTap: () {
                 shareReferral();
               },

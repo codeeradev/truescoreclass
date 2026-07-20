@@ -10,6 +10,8 @@ import 'package:intl/intl.dart';
 import 'CardSave.dart'; // For date formatting
 
 class SelfRegistrationScreen1 extends StatefulWidget {
+  const SelfRegistrationScreen1({super.key});
+
   @override
   State<SelfRegistrationScreen1> createState() =>
       _SelfRegistrationScreen1State();
@@ -18,6 +20,7 @@ class SelfRegistrationScreen1 extends StatefulWidget {
 class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
     with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
+
   // String registerAs = "Teacher";
 
   // New: DOB & Subjects
@@ -33,12 +36,14 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
 
   // Controllers
   final nameCtr = TextEditingController();
+
   // final fatherCtr = TextEditingController();
   // final houseCtr = TextEditingController();
   // final streetCtr = TextEditingController();
   // final pinCtr = TextEditingController();
   final mobileCtr = TextEditingController();
   final emailCtr = TextEditingController();
+
   // final passwordCtr = TextEditingController();
   // List roles = []; // full list
   // String? selectedRoleId; // stores id for API
@@ -82,6 +87,7 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
       CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
     );
     _fadeController.forward();
+    _resetForm();
   }
 
   void showSuccessPopup(BuildContext context, String message) {
@@ -292,31 +298,30 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
 
       print("📨 RESPONSE: ${response.body}");
       print(response.statusCode);
-      var jsonData = jsonDecode(response.body);
-
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body);
 
         // ✅ optional: check API status also
         if (jsonData['status'] == 1) {
-          if(jsonData['requires_verification']==true){
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => OtpStudentPage(isPageValue: true),
-              settings: RouteSettings(
-                arguments: {
-                  "user_id": jsonData["student_id"],
-                  "user_type": jsonData["user_type"],
-                },
-              )
-            ),
-          );}
+          if (jsonData['requires_verification'] == true) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => OtpStudentPage(),
+                  settings: RouteSettings(
+                    arguments: {
+                      "user_id": jsonData["student_id"],
+                      "user_type": jsonData["user_type"],
+                      "isPageValue": true,
+                    },
+                  )),
+            );
+          }
           _showSnackBar(
             jsonData['msg'],
             isError: false,
           );
-
+          _resetForm();
         } else {
           _showSnackBar(
             jsonData['msg'] ?? "Registration failed",
@@ -336,14 +341,14 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
 
   void _resetForm() {
     _formKey.currentState!.reset();
-    setState(() {
-      // profilePhoto = addressFront = addressBack = null;
-      // selectedState = selectedDistrict = selectedCity = null;
-      // selectedDob = null;
-      // selectedSubjects.clear();
-      // districts.clear();
-      // cities.clear();
-    });
+    // setState(() {
+    //   // profilePhoto = addressFront = addressBack = null;
+    //   // selectedState = selectedDistrict = selectedCity = null;
+    //   // selectedDob = null;
+    //   // selectedSubjects.clear();
+    //   // districts.clear();
+    //   // cities.clear();
+    // });
     nameCtr.clear();
     // fatherCtr.clear();
     mobileCtr.clear();
@@ -712,18 +717,17 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
                                 ),
                                 elevation: 10,
                               ),
-                              child:
-                                  isSubmitting
-                                      ? const CircularProgressIndicator(
-                                        color: Color(0xFF667eea),
-                                      )
-                                      : const Text(
-                                        "Register Now",
-                                        style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                              child: isSubmitting
+                                  ? const CircularProgressIndicator(
+                                      color: Color(0xFF667eea),
+                                    )
+                                  : const Text(
+                                      "Register Now",
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
                                       ),
+                                    ),
                             ),
                           ),
                         ],
@@ -805,13 +809,12 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
           borderSide: const BorderSide(color: Colors.white, width: 2),
         ),
       ),
-      items:
-          items.map((item) {
-            return DropdownMenuItem(
-              value: item,
-              child: Text(itemBuilder?.call(item) ?? item.toString()),
-            );
-          }).toList(),
+      items: items.map((item) {
+        return DropdownMenuItem(
+          value: item,
+          child: Text(itemBuilder?.call(item) ?? item.toString()),
+        );
+      }).toList(),
       onChanged: onChanged,
       validator: (v) => v == null ? "Required" : null,
     );
@@ -843,59 +846,58 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1>
       ),
 
       // 👇 Now items are map: {id: '3', role_name: 'Teacher'}
-      items:
-          items.map((role) {
-            return DropdownMenuItem(
-              value: role['id'], // user selects ID internally
-              child: Text(
-                role['role_name'],
-                style: const TextStyle(color: Colors.white),
-              ),
-            );
-          }).toList(),
+      items: items.map((role) {
+        return DropdownMenuItem(
+          value: role['id'], // user selects ID internally
+          child: Text(
+            role['role_name'],
+            style: const TextStyle(color: Colors.white),
+          ),
+        );
+      }).toList(),
 
       onChanged: onChanged,
       validator: (v) => v == null ? "Required" : null,
     );
   }
 
-  // Widget _buildPhotoPicker(String label, File? file, Function(File) onPick) {
-  //   return Column(
-  //     crossAxisAlignment: CrossAxisAlignment.start,
-  //     children: [
-  //       Text(
-  //         label,
-  //         style: const TextStyle(
-  //           color: Colors.white,
-  //           fontWeight: FontWeight.w500,
-  //         ),
-  //       ),
-  //       const SizedBox(height: 8),
-  //       GestureDetector(
-  //         onTap: () => pickImage(onPick),
-  //         child: Container(
-  //           height: 110,
-  //           decoration: BoxDecoration(
-  //             color: Colors.white.withOpacity(0.1),
-  //             borderRadius: BorderRadius.circular(16),
-  //             border: Border.all(color: Colors.white.withOpacity(0.3)),
-  //           ),
-  //           child:
-  //               file == null
-  //                   ? const Center(
-  //                     child: Icon(
-  //                       Icons.add_a_photo,
-  //                       color: Colors.white,
-  //                       size: 36,
-  //                     ),
-  //                   )
-  //                   : ClipRRect(
-  //                     borderRadius: BorderRadius.circular(16),
-  //                     child: Image.file(file, fit: BoxFit.cover),
-  //                   ),
-  //         ),
-  //       ),
-  //     ],
-  //   );
-  // }
+// Widget _buildPhotoPicker(String label, File? file, Function(File) onPick) {
+//   return Column(
+//     crossAxisAlignment: CrossAxisAlignment.start,
+//     children: [
+//       Text(
+//         label,
+//         style: const TextStyle(
+//           color: Colors.white,
+//           fontWeight: FontWeight.w500,
+//         ),
+//       ),
+//       const SizedBox(height: 8),
+//       GestureDetector(
+//         onTap: () => pickImage(onPick),
+//         child: Container(
+//           height: 110,
+//           decoration: BoxDecoration(
+//             color: Colors.white.withOpacity(0.1),
+//             borderRadius: BorderRadius.circular(16),
+//             border: Border.all(color: Colors.white.withOpacity(0.3)),
+//           ),
+//           child:
+//               file == null
+//                   ? const Center(
+//                     child: Icon(
+//                       Icons.add_a_photo,
+//                       color: Colors.white,
+//                       size: 36,
+//                     ),
+//                   )
+//                   : ClipRRect(
+//                     borderRadius: BorderRadius.circular(16),
+//                     child: Image.file(file, fit: BoxFit.cover),
+//                   ),
+//         ),
+//       ),
+//     ],
+//   );
+// }
 }

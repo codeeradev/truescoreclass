@@ -51,7 +51,7 @@ class MyApp extends StatelessWidget {
           upgrader: Upgrader(
             durationUntilAlertAgain: Duration.zero,
           ),
-          child: OtpStudentPage(isPageValue: false)),
+          child: SplashScreen()),
     );
   }
 }

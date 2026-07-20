@@ -1,3 +1,6 @@
+import 'dart:developer';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:online_classes/Screens/Student/ALLNewCourses.dart';
 import 'package:online_classes/Screens/Student/percentage.dart';
@@ -24,8 +27,7 @@ class PurchasedCourseVideosScreen extends StatefulWidget {
 }
 
 class _PurchasedCourseVideosScreenState
-    extends State<PurchasedCourseVideosScreen>
-    with TickerProviderStateMixin {
+    extends State<PurchasedCourseVideosScreen> with TickerProviderStateMixin {
   bool isLoading = true;
   bool isPurchased = false;
   bool isTrialOver = false;
@@ -62,8 +64,10 @@ class _PurchasedCourseVideosScreenState
         Uri.parse("https://truescoreedu.com/api/get-notes"),
         body: {"apiToken": token, "course_id": widget.courseId.toString()},
       );
-      print(response.body);
-      print(response.statusCode);
+      if (kDebugMode) {
+        print(
+            "api--get-notes--statusCode---${response.statusCode}\ndata--${response.body}");
+      }
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
@@ -99,7 +103,6 @@ class _PurchasedCourseVideosScreenState
   void initState() {
     super.initState();
     SecureScreen.enable();
-
     fetchCourseDetails();
     fetchNotes();
   }
@@ -121,9 +124,11 @@ class _PurchasedCourseVideosScreenState
         Uri.parse("https://truescoreedu.com/api/get-batche-details"),
         body: {"apiToken": token, "courseId": widget.courseId},
       );
-
+      if (kDebugMode) {
+        log(
+            "api--get-batche-details--statusCode---${response.statusCode}\ndata--${response.body}");
+      }
       final data = jsonDecode(response.body);
-
       if (data["status"] == "true") {
         setState(() {
           isPurchased = data["data"]["isPurchased"] ?? false;
@@ -168,7 +173,7 @@ class _PurchasedCourseVideosScreenState
             length: availableTabs.length,
             vsync: this,
           );
-          if(data["data"]["isPurchased"]!=true){
+          if (data["data"]["isPurchased"] != true) {
             errorMessage = data["msg"] ?? "Course not purchased.";
           }
           isLoading = false;
@@ -455,129 +460,122 @@ class _PurchasedCourseVideosScreenState
             style: TextStyle(color: Colors.white),
           ),
         ),
-        body:
-            isTrialOver
-                ? Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  margin: EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF8E1),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: Colors.orange.shade300),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.orange.withOpacity(0.15),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CircleAvatar(
-                        radius: 30,
-                        backgroundColor: Colors.orange.shade100,
-                        child: const Icon(
-                          Icons.lock_clock_rounded,
-                          color: Colors.orange,
-                          size: 32,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      const Text(
-                        "Your Trial Has Ended",
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-
-                      const SizedBox(height: 10),
-
-                      const Text(
-                        "Your trial period has expired. Purchase the full course to continue accessing all video lectures, notes, practice questions, and learning materials.",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: Colors.black87,
-                          height: 1.5,
-                        ),
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      SizedBox(
-                        width: double.infinity,
-                        height: 50,
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          icon: const Icon(Icons.shopping_cart_outlined),
-                          label: const Text(
-                            "Purchase Course",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => AllCoursesScreen(),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-                : Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.lock_outline,
-                          size: 80,
-                          color: Colors.grey[600],
-                        ),
-                        const SizedBox(height: 20),
-                        Text(
-                          errorMessage ?? "You don't have access.",
-                          style: const TextStyle(fontSize: 18),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 30),
-                        ElevatedButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text("Go Back"),
-                        ),
-                      ],
+        body: isTrialOver
+            ? Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                margin: EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF8E1),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: Colors.orange.shade300),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.orange.withOpacity(0.15),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
                     ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircleAvatar(
+                      radius: 30,
+                      backgroundColor: Colors.orange.shade100,
+                      child: const Icon(
+                        Icons.lock_clock_rounded,
+                        color: Colors.orange,
+                        size: 32,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      "Your Trial Has Ended",
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      "Your trial period has expired. Purchase the full course to continue accessing all video lectures, notes, practice questions, and learning materials.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Colors.black87,
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        icon: const Icon(Icons.shopping_cart_outlined),
+                        label: const Text(
+                          "Purchase Course",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AllCoursesScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            : Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.lock_outline,
+                        size: 80,
+                        color: Colors.grey[600],
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        errorMessage ?? "You don't have access.",
+                        style: const TextStyle(fontSize: 18),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 30),
+                      ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text("Go Back"),
+                      ),
+                    ],
                   ),
                 ),
+              ),
       );
     }
     final String batchName = courseData!["batch_name"] ?? "Course";
     final String category = courseData!["cat_name"] ?? "";
     final String subCategory = courseData!["sub_cat_name"] ?? "";
-    final String description =
-        (courseData!["description"] ?? "")
-            .toString()
-            .replaceAll("null", "")
-            .trim();
+    final String description = (courseData!["description"] ?? "")
+        .toString()
+        .replaceAll("null", "")
+        .trim();
     final String imageUrl = courseData!["batch_image"] ?? "";
 
     return Scaffold(
@@ -657,28 +655,24 @@ class _PurchasedCourseVideosScreenState
                   const SizedBox(height: 30),
                   InkWell(
                     onTap: () {
-                      final mcqQuestions =
-                          allQuestions
-                              .where((q) => q['question_type'] == "1")
-                              .toList();
-                      final caQuestions =
-                          allQuestions
-                              .where((q) => q['question_type'] == "2")
-                              .toList();
-                      final pyqQuestions =
-                          allQuestions
-                              .where((q) => q['question_type'] == "3")
-                              .toList();
+                      final mcqQuestions = allQuestions
+                          .where((q) => q['question_type'] == "1")
+                          .toList();
+                      final caQuestions = allQuestions
+                          .where((q) => q['question_type'] == "2")
+                          .toList();
+                      final pyqQuestions = allQuestions
+                          .where((q) => q['question_type'] == "3")
+                          .toList();
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder:
-                              (_) => CourseProgressScreen(
-                                batchId: widget.courseId,
-                                mcqQuestions: mcqQuestions,
-                                caQuestions: caQuestions,
-                                pyqQuestions: pyqQuestions,
-                              ),
+                          builder: (_) => CourseProgressScreen(
+                            batchId: widget.courseId,
+                            mcqQuestions: mcqQuestions,
+                            caQuestions: caQuestions,
+                            pyqQuestions: pyqQuestions,
+                          ),
                         ),
                       );
                     },
@@ -717,54 +711,53 @@ class _PurchasedCourseVideosScreenState
                       videoLectures.length == 0
                           ? SizedBox()
                           : _optionCard(
-                            title: "Videos",
-                            icon: Icons.play_circle_fill_rounded,
-                            color: const Color(0xFF16A34A),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder:
-                                      (context) => VideoListScreenfull(
-                                        videoLectures: videoLectures,
-                                      ),
-                                ),
-                              );
-                            },
-                          ),
+                              title: "Videos",
+                              icon: Icons.play_circle_fill_rounded,
+                              color: const Color(0xFF16A34A),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => VideoListScreenfull(
+                                      videoLectures: videoLectures,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
                       notes.isEmpty
                           ? SizedBox()
                           : _optionCard(
-                            title: "Notes",
-                            icon: Icons.menu_book_rounded,
-                            color: const Color(0xFFF97316),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder:
-                                      (context) => GetNotesScreen(
-                                        batchid: widget.courseId.toString(),
-                                      ),
-                                ),
-                              );
-                            },
-                          ),
+                              title: "Notes",
+                              icon: Icons.menu_book_rounded,
+                              color: const Color(0xFFF97316),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => GetNotesScreen(
+                                      batchid: widget.courseId.toString(),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
                       notes.isEmpty
                           ? SizedBox()
                           : _optionCard(
-                            title: "Live Class",
-                            icon: Icons.live_tv,
-                            color: Color(0xffc417ea),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const MeetingsScreen(),
-                                ),
-                              );
-                            },
-                          ),
+                              title: "Live Class",
+                              icon: Icons.live_tv,
+                              color: Color(0xffc417ea),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const MeetingsScreen(),
+                                  ),
+                                );
+                              },
+                            ),
                     ],
                   ),
                   SizedBox(height: 30),
