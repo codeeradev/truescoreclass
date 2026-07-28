@@ -110,7 +110,7 @@ class AppNotificationService {
     );
 
     await _localNotifications.initialize(
-      settings: initializationSettings,
+        initializationSettings,
       onDidReceiveNotificationResponse: (
           NotificationResponse response,
           ) async {
@@ -198,10 +198,10 @@ class AppNotificationService {
     );
 
     await _localNotifications.show(
-      id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
-      title: title,
-      body: body,
-      notificationDetails: notificationDetails,
+        DateTime.now().millisecondsSinceEpoch.remainder(100000),
+        title,
+        body,
+       notificationDetails,
     );
   }
 

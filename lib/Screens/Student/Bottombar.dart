@@ -22,7 +22,7 @@ class ModernBottomNav extends StatefulWidget {
 class _ModernBottomNavState extends State<ModernBottomNav> {
   int selectedIndex = 0;
 
-  List<dynamic> doubts = [];
+  // List<dynamic> doubts = [];
   int unreadCount = 0;
 
   final List<Widget> pages = [
@@ -34,6 +34,7 @@ class _ModernBottomNavState extends State<ModernBottomNav> {
   ];
 
   bool get showFab => selectedIndex == 0 || selectedIndex == 1;
+
   bool get showBottomBar => selectedIndex != 2;
 
   @override
@@ -58,20 +59,19 @@ class _ModernBottomNavState extends State<ModernBottomNav> {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
-
+        print('json---$json');
         if (json['status'] == 1) {
-          final data = json['data'] ?? [];
-
-          /// 🔥 GET SAVED SEEN COUNT
-          int seenCount = prefs.getInt("seen_doubts_count") ?? 0;
-
-          /// 🔥 CALCULATE UNREAD
-          int newUnread = data.length - seenCount;
-          if (newUnread < 0) newUnread = 0;
+          //
+          // /// 🔥 GET SAVED SEEN COUNT
+          // int seenCount = prefs.getInt("seen_doubts_count") ?? 0;
+          //
+          // /// 🔥 CALCULATE UNREAD
+          // int newUnread = data.length - seenCount;
+          // if (newUnread < 0) newUnread = 0;
 
           setState(() {
-            doubts = data;
-            unreadCount = newUnread;
+            // doubts = data;
+            unreadCount = json['unread_count']??0;
           });
         }
       }
@@ -83,8 +83,10 @@ class _ModernBottomNavState extends State<ModernBottomNav> {
   //---------------- UI ----------------//
   @override
   Widget build(BuildContext context) {
-    final bool isKeyboardOpen =
-        MediaQuery.of(context).viewInsets.bottom > 0;
+    final bool isKeyboardOpen = MediaQuery
+        .of(context)
+        .viewInsets
+        .bottom > 0;
 
     return WillPopScope(
       onWillPop: _onWillPop,
@@ -98,7 +100,7 @@ class _ModernBottomNavState extends State<ModernBottomNav> {
         ),
 
         /// FAB
-        floatingActionButton: isKeyboardOpen
+        floatingActionButton: isKeyboardOpen || !showBottomBar
             ? null
             : FloatingActionButton(
           backgroundColor: Colors.black,
@@ -106,12 +108,10 @@ class _ModernBottomNavState extends State<ModernBottomNav> {
           onPressed: () {
             setState(() => selectedIndex = 2);
           },
-          child: const Icon(Icons.search,
-              color: Colors.white, size: 28),
+          child: const Icon(Icons.search, color: Colors.white, size: 28),
         ),
 
-        floatingActionButtonLocation:
-        FloatingActionButtonLocation.centerDocked,
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
 
         /// BOTTOM BAR
         bottomNavigationBar: isKeyboardOpen || !showBottomBar
@@ -124,16 +124,13 @@ class _ModernBottomNavState extends State<ModernBottomNav> {
           child: SizedBox(
             height: 65,
             child: Row(
-              mainAxisAlignment:
-              MainAxisAlignment.spaceAround,
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _navItem(Icons.home_rounded, "Home", 0),
-                _navItem(Icons.monetization_on,
-                    "Purchased", 1),
+                _navItem(Icons.monetization_on, "Purchased", 1),
                 const SizedBox(width: 40),
                 _navItem(Icons.help, "Doubts", 3),
-                _navItem(
-                    Icons.person_rounded, "Profile", 4),
+                _navItem(Icons.person_rounded, "Profile", 4),
               ],
             ),
           ),
@@ -146,17 +143,17 @@ class _ModernBottomNavState extends State<ModernBottomNav> {
   Widget _navItem(IconData icon, String label, int index) {
     final bool isSelected = selectedIndex == index;
     final bool showBadge = index == 3 && unreadCount > 0;
-
     return InkWell(
       onTap: () async {
-        /// 🔥 RESET COUNT WHEN OPEN DOUBTS
+        // /// 🔥 RESET COUNT WHEN OPEN DOUBTS
         if (index == 3) {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setInt("seen_doubts_count", doubts.length);
-
-          setState(() {
-            unreadCount = 0;
-          });
+          // final prefs = await SharedPreferences.getInstance();
+          // await prefs.setInt("seen_doubts_count", doubts.length);
+          //
+          // setState(() {
+          //   unreadCount = 0;
+          // });
+          fetchDoubts();
         }
 
         setState(() => selectedIndex = index);
@@ -179,8 +176,8 @@ class _ModernBottomNavState extends State<ModernBottomNav> {
                   top: -6,
                   right: -10,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 6, vertical: 2),
+                    padding:
+                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: Colors.red,
                       borderRadius: BorderRadius.circular(12),
@@ -190,9 +187,7 @@ class _ModernBottomNavState extends State<ModernBottomNav> {
                       minHeight: 18,
                     ),
                     child: Text(
-                      unreadCount > 99
-                          ? "99+"
-                          : unreadCount.toString(),
+                      unreadCount > 99 ? "99+" : unreadCount.toString(),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 10,
@@ -210,8 +205,7 @@ class _ModernBottomNavState extends State<ModernBottomNav> {
             style: TextStyle(
               fontSize: 11,
               color: isSelected ? Colors.blue : Colors.grey,
-              fontWeight:
-              isSelected ? FontWeight.w600 : FontWeight.w400,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
             ),
           ),
         ],
@@ -228,23 +222,21 @@ class _ModernBottomNavState extends State<ModernBottomNav> {
 
     return await showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Exit App"),
-        content:
-        const Text("Are you sure you want to exit?"),
-        actions: [
-          TextButton(
-            onPressed: () =>
-                Navigator.pop(context, false),
-            child: const Text("Cancel"),
+      builder: (_) =>
+          AlertDialog(
+            title: const Text("Exit App"),
+            content: const Text("Are you sure you want to exit?"),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text("Cancel"),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text("Exit"),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () =>
-                Navigator.pop(context, true),
-            child: const Text("Exit"),
-          ),
-        ],
-      ),
     ) ??
         false;
   }

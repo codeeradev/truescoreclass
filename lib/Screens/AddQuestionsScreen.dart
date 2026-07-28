@@ -625,6 +625,7 @@ class _AddQuestionScreenState extends State<AddQuestionScreen>
                                           child: Math.tex(
                                             answerTextCtr.text,
                                             textStyle: const TextStyle(fontSize: 20),
+
                                           ),
                                         ),
                                       ),

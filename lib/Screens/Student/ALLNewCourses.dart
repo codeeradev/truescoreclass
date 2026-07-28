@@ -1,7 +1,9 @@
 // File: lib/Screens/All Courses.dart
 import 'dart:convert';
+import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:online_classes/servcies.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'carddeatils.dart'; // Make sure this is your CourseDetailScreen2
 
@@ -22,12 +24,16 @@ class _AllCoursesScreenState extends State<AllCoursesScreen> {
   @override
   void initState() {
     super.initState();
+    SecureScreen.enable();
     fetchCoursesData();
   }
 
   Future<void> fetchCoursesData() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? "";
+    final enrollmentId = prefs.getString('studentData') ?? "";
+    log("token---$token");
+    log("enrollmentId---$enrollmentId");
 
     try {
       final response = await http.post(
@@ -41,7 +47,6 @@ class _AllCoursesScreenState extends State<AllCoursesScreen> {
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
         final data = json["data"];
-        print(data);
 
         List<dynamic> combined = [
           ...?data["trendingCourses"] as List?,
@@ -69,9 +74,9 @@ class _AllCoursesScreenState extends State<AllCoursesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Responsive settings
     final double screenWidth = MediaQuery.of(context).size.width;
-
+print("apiData---$apiData");
+print("allCourses---$allCourses");
     int crossAxisCount = 2;
     double childAspectRatio = 0.75;
     double horizontalPadding = 16;

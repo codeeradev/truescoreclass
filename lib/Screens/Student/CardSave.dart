@@ -5,13 +5,13 @@ import 'package:online_classes/Screens/Auth/signinScreen.dart';
 class RegistrationSuccessCard extends StatelessWidget {
   final String message;
   final String enrollmentId;
-  final String password;
+  // final String password;
 
   const RegistrationSuccessCard({
     super.key,
     required this.message,
     required this.enrollmentId,
-    required this.password,
+    // required this.password,
   });
 
   @override
@@ -103,13 +103,13 @@ class RegistrationSuccessCard extends StatelessWidget {
                     value: enrollmentId,
                   ),
 
-                  const SizedBox(height: 15),
-
-                  _infoRow(
-                    context,
-                    label: "Password",
-                    value: password,
-                  ),
+                  // const SizedBox(height: 15),
+                  //
+                  // _infoRow(
+                  //   context,
+                  //   label: "Password",
+                  //   value: password,
+                  // ),
 
                   const SizedBox(height: 35),
 

@@ -471,12 +471,9 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
 
   @override
   void initState() {
-    SecureScreen.enable();
-
     super.initState();
     SecureScreen.enable();
     fetchDoubts();
-    SecureScreen.enable();
   }
 
   Future<void> fetchDoubts() async {
@@ -512,7 +509,7 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
             isLoading = false;
           });
           final prefs = await SharedPreferences.getInstance();
-          await prefs.setInt("seen_doubts_count", doubts.length);
+          await prefs.setInt("unread_count", json['unread_count']);
         } else {
           setState(() {
             errorMessage = json['msg'] ?? "No doubts found";
@@ -543,34 +540,34 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
       appBar: AppBar(
         title: const Text(
           "My Doubts",
-          style: TextStyle(fontWeight: FontWeight.w600),
+          style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
         ),
         centerTitle: true,
         backgroundColor: Colors.blue.shade700,
+        iconTheme: IconThemeData(color: Colors.white),
       ),
-      body:
-          isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : errorMessage != null
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : errorMessage != null
               ? _errorState()
               : doubts.isEmpty
-              ? _emptyState()
-              : RefreshIndicator(
-                onRefresh: fetchDoubts,
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: doubts.length,
-                  itemBuilder: (context, index) {
-                    final doubt = doubts[index];
-                    return _doubtCard(
-                      doubt["description"] ?? "",
-                      doubt["teacher_description"] ?? "",
-                      doubt["file"] ?? "",
-                      doubt["created_at"] ?? "",
-                    );
-                  },
-                ),
-              ),
+                  ? _emptyState()
+                  : RefreshIndicator(
+                      onRefresh: fetchDoubts,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: doubts.length,
+                        itemBuilder: (context, index) {
+                          final doubt = doubts[index];
+                          return _doubtCard(
+                            doubt["description"] ?? "",
+                            doubt["teacher_description"] ?? "",
+                            doubt["file"] ?? "",
+                            doubt["created_at"] ?? "",
+                          );
+                        },
+                      ),
+                    ),
     );
   }
 
@@ -688,14 +685,11 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
                     ],
                   ),
                   const SizedBox(height: 6),
-
                   buildMathText(question, fontSize: 15),
-
                   if (hasAnswer) ...[
                     const SizedBox(height: 14),
                     const Divider(),
                     const SizedBox(height: 6),
-
                     Row(
                       children: const [
                         Icon(
@@ -714,7 +708,6 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
                       ],
                     ),
                     const SizedBox(height: 6),
-
                     if (file.isNotEmpty)
                       InkWell(
                         onTap: () async {
@@ -746,12 +739,11 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
                               isPdf(file)
                                   ? Icons.picture_as_pdf
                                   : isVideo(file)
-                                  ? Icons.videocam
-                                  : Icons.image,
-                              color:
-                                  isPdf(file)
-                                      ? Colors.red
-                                      : isVideo(file)
+                                      ? Icons.videocam
+                                      : Icons.image,
+                              color: isPdf(file)
+                                  ? Colors.red
+                                  : isVideo(file)
                                       ? Colors.deepPurple
                                       : Colors.blue,
                             ),
@@ -760,16 +752,14 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
                               isPdf(file)
                                   ? "Open PDF"
                                   : isVideo(file)
-                                  ? "Open Video"
-                                  : "Open Image",
+                                      ? "Open Video"
+                                      : "Open Image",
                               style: const TextStyle(color: Colors.blue),
                             ),
                           ],
                         ),
                       ),
-
                     const SizedBox(height: 8),
-
                     GestureDetector(
                       onTap: () => _showFullAnswerBottomSheet(context, answer),
                       child: buildMathText(answer, fontSize: 14),
@@ -929,6 +919,7 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
 
 class ImageViewScreen extends StatelessWidget {
   final String imageUrl;
+
   const ImageViewScreen({super.key, required this.imageUrl});
 
   @override
@@ -948,6 +939,7 @@ class ImageViewScreen extends StatelessWidget {
 
 class PdfViewScreen extends StatelessWidget {
   final String pdfUrl;
+
   const PdfViewScreen({super.key, required this.pdfUrl});
 
   @override

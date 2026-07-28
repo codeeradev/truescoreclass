@@ -40,12 +40,11 @@ class _NotificationScreen1State extends State<NotificationScreen1> {
         SharedPreferences pref = await SharedPreferences.getInstance();
 
         if (data["status"] == 1) {
-
           List<dynamic> newNotices = data["data"];
-
+          print("newNotices----$newNotices");
           setState(() => notices = newNotices);
 
-          await pref.setInt("last_notice_count", newNotices.length);
+          // await pref.setInt("last_notice_count", newNotices.length);
         }
       }
     } catch (e) {

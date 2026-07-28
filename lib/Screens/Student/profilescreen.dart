@@ -1,9 +1,13 @@
+import 'dart:convert';
+import 'dart:developer';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:online_classes/Screens/Student/purchasedcourses.dart';
+import 'package:online_classes/widgets/launchGoogleUrl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../servcies.dart';
 import '../Auth/asktype.dart';
 import '../Teachers/meetings_screen.dart';
@@ -11,6 +15,7 @@ import 'Mydoubtsscreen.dart';
 import 'Querystudent.dart';
 import 'editprofile.dart';
 import 'helps.dart';
+import 'package:http/http.dart' as http;
 
 class ProfileScreen1 extends StatefulWidget {
   const ProfileScreen1({super.key});
@@ -23,16 +28,21 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
   String userName = "Student Name";
   File? profileImage;
   String image = '';
+  Map<String, dynamic> socialLinks = {};
+  bool socialLoading = true;
 
   @override
   void initState() {
     super.initState();
     SecureScreen.enable();
-
     _loadProfileData();
+    Future.microtask(
+      () {
+        _getSocialMedia();
+      },
+    );
   }
 
-  /// 🔹 Load Name & Image
   Future<void> _loadProfileData() async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -64,20 +74,43 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
     }
   }
 
+  Future<void> _getSocialMedia() async {
+    try {
+      final response = await http.get(
+        Uri.parse("https://truescoreedu.com/api/get-social-media"),
+      );
+      log("response---${response.body}");
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+
+        if (json["status"] == "true") {
+          setState(() {
+            socialLinks = json["data"] ?? {};
+            socialLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      print('_getSocialMedia--$e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          socialLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   void dispose() {
     SecureScreen.disable();
-
-    // TODO: implement dispose
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    print("image--$image");
     return Scaffold(
       backgroundColor: Colors.white,
-
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.white,
@@ -85,7 +118,6 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
         centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.black),
       ),
-
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -105,20 +137,18 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
                     child: CircleAvatar(
                       radius: 55,
                       backgroundColor: Colors.grey.shade200,
-                      backgroundImage:
-                          image.isNotEmpty
-                              ? NetworkImage(
-                                'https://truescoreedu.com/$image',
-                              )
-                              : null,
-                      child:
-                          image.isEmpty
-                              ? const Icon(
-                                Icons.person,
-                                size: 55,
-                                color: Colors.grey,
-                              )
-                              : null,
+                      backgroundImage: image.isNotEmpty
+                          ? NetworkImage(
+                              'https://truescoreedu.com/uploads/students/$image',
+                            )
+                          : null,
+                      child: image.isEmpty
+                          ? const Icon(
+                              Icons.person,
+                              size: 55,
+                              color: Colors.grey,
+                            )
+                          : null,
                     ),
                   ),
                   // Container(
@@ -140,6 +170,54 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
               userName,
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
+            const SizedBox(height: 20),
+
+            if (!socialLoading)
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Row(
+                  spacing: 10,
+                  children: [
+                    _socialButton(
+                      icon: FontAwesomeIcons.facebook,
+                      color: Colors.blue,
+                      title: "Facebook",
+                      url: socialLinks["facebook_url"],
+                    ),
+                    _socialButton(
+                      icon: FontAwesomeIcons.instagram,
+                      color: Colors.pink,
+                      title: "Instagram",
+                      url: socialLinks["instagram_url"],
+                    ),
+                    _socialButton(
+                      icon: FontAwesomeIcons.youtube,
+                      color: Colors.red,
+                      title: "YouTube",
+                      url: socialLinks["youtube_url"],
+                    ),
+                    _socialButton(
+                      icon: FontAwesomeIcons.whatsapp,
+                      color: Colors.green,
+                      title: "WhatsApp",
+                      url: socialLinks["whatsapp_channel_url"],
+                    ),
+                    _socialButton(
+                      icon: FontAwesomeIcons.xTwitter,
+                      color: Colors.black,
+                      title: "X",
+                      url: socialLinks["twitter_url"],
+                    ),
+                    _socialButton(
+                      icon: FontAwesomeIcons.linkedinIn,
+                      color: Colors.blueAccent,
+                      title: "LinkedIn",
+                      url: socialLinks["linkedin_url"],
+                    ),
+                  ],
+                ),
+              ),
 
             const SizedBox(height: 24),
             _profileCard(
@@ -155,30 +233,6 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
               },
             ),
 
-            /// 🔹 MENU CARDS
-            _profileCard(
-              icon: Icons.monetization_on,
-              title: "Purchased Courses",
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => MyOnlyPurchased()),
-                );
-                // Navigate to Doubts Screen
-              },
-            ),
-            _profileCard(
-              icon: Icons.document_scanner,
-              title: "My Doubts",
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => GetDoubtsScreenstudent(),
-                  ),
-                );
-              },
-            ),
             _profileCard(
               icon: Icons.support_agent_rounded,
               title: "Help & Support",
@@ -194,15 +248,38 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
               },
             ),
 
+            // _profileCard(
+            //   icon: Icons.help,
+            //   title: "Any Query",
+            //   onTap: () {
+            //     Navigator.push(
+            //       context,
+            //       MaterialPageRoute(builder: (context) => QueryScreen()),
+            //     );
+            //   },
+            // ),
             _profileCard(
-              icon: Icons.help,
-              title: "Any Query",
+              icon: Icons.chat,
+              title: "Mentor Chat",
               onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => QueryScreen()),
-                );
+                if ((socialLinks["whatsapp_url"] ?? '').toString().isNotEmpty) {
+                  launchGoogleUrl(socialLinks["whatsapp_url"]);
+                }
               },
+            ),
+            _profileCard(
+              icon: Icons.chat,
+              title: "Rate App",
+              onTap: () async {
+              //   final InAppReview inAppReview = InAppReview.instance;
+              //   if (await inAppReview.isAvailable()) {
+              //     await inAppReview.requestReview();
+              //   } else {
+              //     await inAppReview.openStoreListing();
+              //   }
+                rateApp();
+              },
+
             ),
             _profileCard(
               icon: Icons.share,
@@ -228,6 +305,31 @@ class _ProfileScreen1State extends State<ProfileScreen1> {
     );
   }
 
+  Future<void> rateApp() async {
+    const packageName = "com.testora.student";
+
+    final Uri playStoreApp =
+    Uri.parse("market://details?id=$packageName");
+
+    final Uri playStoreWeb =
+    Uri.parse("https://play.google.com/store/apps/details?id=$packageName");
+
+    try {
+      if (await canLaunchUrl(playStoreApp)) {
+        await launchUrl(
+          playStoreApp,
+          mode: LaunchMode.externalApplication,
+        );
+      } else {
+        await launchUrl(
+          playStoreWeb,
+          mode: LaunchMode.externalApplication,
+        );
+      }
+    } catch (e) {
+      print("Error: $e");
+    }
+  }
   Future<void> shareReferral() async {
     SharedPreferences preferences = await SharedPreferences.getInstance();
     String token = preferences.getString('fcm_token').toString();
@@ -244,6 +346,56 @@ Start your learning journey today!
 ''';
 
     SharePlus.instance.share(ShareParams(text: message));
+  }
+
+  Widget _socialButton({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String? url,
+  }) {
+    if (url == null || url.trim().isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return InkWell(
+      onTap: () {
+        launchGoogleUrl(url);
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 60,
+        height: 70,
+        padding: const EdgeInsets.all(8.0),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 4,
+          children: [
+            Expanded(
+              flex: 2,
+                child: Icon(icon, color: color, size: 28)),
+            Expanded(
+              flex: 1,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void showLogoutWarningDialog(BuildContext context) {
@@ -370,10 +522,9 @@ Start your learning journey today!
         leading: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color:
-                isLogout
-                    ? Colors.red.withOpacity(0.1)
-                    : Colors.blue.withOpacity(0.1),
+            color: isLogout
+                ? Colors.red.withOpacity(0.1)
+                : Colors.blue.withOpacity(0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(icon, color: isLogout ? Colors.red : Colors.blue),

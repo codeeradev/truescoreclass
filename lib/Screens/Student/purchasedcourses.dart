@@ -21,6 +21,7 @@ class _PurchasedCoursesHorizontalState
   @override
   void initState() {
     super.initState();
+    SecureScreen.enable();
     fetchPurchasedCourses();
   }
 
@@ -250,12 +251,12 @@ class _MyOnlyPurchasedState extends State<MyOnlyPurchased> {
 
     final int crossAxisCount = screenWidth < 360 ? 1 : 2;
     final double childRatio = screenWidth < 360 ? 1.25 : 0.78;
-
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: const Text("My Purchased Courses"),
+        title:  Text("My Purchased Courses",style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.blue,
+        iconTheme: IconThemeData(color: Colors.white),
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())

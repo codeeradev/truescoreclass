@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_math_fork/flutter_math.dart';
+// import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_html/flutter_html.dart';
@@ -521,8 +521,8 @@ class _ExamScreenState extends State<ExamScreen> {
           "time_duration": widget.paperData['time_duration'].toString(),
         },
       );
-      print(response.body);
       print(response.statusCode);
+      print("submitExam--${response.body}");
 
       if (!mounted) return;
 
@@ -859,12 +859,12 @@ class _ExamScreenState extends State<ExamScreen> {
     }
 
     /// Math equation
-    if (isMath(text)) {
-      return Math.tex(
-        text,
-        textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-      );
-    }
+    // if (isMath(text)) {
+    //   return Math.tex(
+    //     text,
+    //     textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+    //   );
+    // }
 
     /// HTML content
     if (text.contains("<")) {
@@ -889,7 +889,7 @@ class _ExamScreenState extends State<ExamScreen> {
 
     /// Math equation
     if (isMath(text)) {
-      return Math.tex(text, textStyle: TextStyle(fontSize: fontSize));
+      // return Math.tex(text, textStyle: TextStyle(fontSize: fontSize));
     }
 
     /// HTML content

@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:online_classes/Screens/Student/ALLNewCourses.dart';
+import 'package:online_classes/Screens/Student/carddeatils.dart';
 import 'package:online_classes/Screens/Student/percentage.dart';
 import 'package:online_classes/Screens/Student/videos.dart';
 import 'package:online_classes/Screens/Teachers/meetings_screen.dart';
@@ -27,17 +28,19 @@ class PurchasedCourseVideosScreen extends StatefulWidget {
 }
 
 class _PurchasedCourseVideosScreenState
-    extends State<PurchasedCourseVideosScreen> with TickerProviderStateMixin {
+    extends State<PurchasedCourseVideosScreen> {
   bool isLoading = true;
   bool isPurchased = false;
+  bool isTrial = false;
   bool isTrialOver = false;
   Map<String, dynamic>? courseData;
-  List<dynamic> videoLectures = [];
-  List<dynamic> allQuestions = [];
   String? errorMessage;
+  String videoLecturesCount = '';
+  String mcqCount = '';
+  String currentAffairCount = '';
+  String pyqCount = '';
 
-  late TabController _tabController;
-  List<String> availableTabs = [];
+  // late TabController _tabController;
   bool isLoading2 = true;
   List<dynamic> notes = [];
 
@@ -71,7 +74,7 @@ class _PurchasedCourseVideosScreenState
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
-        if (json['status'] == 1) {
+        if (json['status'].toString() == '1') {
           setState(() {
             notes = json['notes'] ?? [];
             isLoading2 = false;
@@ -92,12 +95,6 @@ class _PurchasedCourseVideosScreenState
       });
     }
   }
-
-  Map<String, List<dynamic>> questionsByType = {
-    "MCQ": [],
-    "Current Affairs": [],
-    "PYQ": [],
-  };
 
   @override
   void initState() {
@@ -124,58 +121,24 @@ class _PurchasedCourseVideosScreenState
         Uri.parse("https://truescoreedu.com/api/get-batche-details"),
         body: {"apiToken": token, "courseId": widget.courseId},
       );
-      if (kDebugMode) {
-        log(
-            "api--get-batche-details--statusCode---${response.statusCode}\ndata--${response.body}");
+
+      if (response.body.trim().isEmpty) {
+        throw Exception("Empty response");
       }
       final data = jsonDecode(response.body);
-      if (data["status"] == "true") {
+      if (kDebugMode) {
+        log("api--get-batche-details--statusCode---${response.statusCode}\ndata--$data");
+      }
+      if (data["status"].toString() == "true") {
         setState(() {
           isPurchased = data["data"]["isPurchased"] ?? false;
           isTrialOver = data['data']['isTrialOver'] ?? false;
+          isTrial = data['data']['isTrial'] ?? false;
           courseData = data["data"]["course"];
-          videoLectures = data["data"]["videoLectures"] ?? [];
-          allQuestions = data["data"]["questions"] ?? [];
-
-          // Group questions by type
-          questionsByType = {"MCQ": [], "Current Affairs": [], "PYQ": []};
-          availableTabs.clear();
-
-          for (var q in allQuestions) {
-            String type = q["question_type"]?.toString() ?? "1";
-            List<dynamic> targetList;
-            String tabName;
-
-            if (type == "1") {
-              tabName = "MCQ";
-              targetList = questionsByType["MCQ"]!;
-            } else if (type == "2") {
-              tabName = "Current Affairs";
-              targetList = questionsByType["Current Affairs"]!;
-            } else if (type == "3") {
-              tabName = "PYQ";
-              targetList = questionsByType["PYQ"]!;
-            } else {
-              continue;
-            }
-
-            targetList.add(q);
-            if (!availableTabs.contains(tabName)) availableTabs.add(tabName);
-          }
-
-          // Sort tabs: MCQ → Current Affairs → PYQ
-          availableTabs.sort((a, b) {
-            List<String> order = ["MCQ", "Current Affairs", "PYQ"];
-            return order.indexOf(a).compareTo(order.indexOf(b));
-          });
-
-          _tabController = TabController(
-            length: availableTabs.length,
-            vsync: this,
-          );
-          if (data["data"]["isPurchased"] != true) {
-            errorMessage = data["msg"] ?? "Course not purchased.";
-          }
+          videoLecturesCount = data["data"]["videoLecturesCount"].toString();
+          mcqCount = data["data"]["mcqCount"].toString();
+          currentAffairCount = data["data"]["currentAffairCount"].toString();
+          pyqCount = data["data"]["pyqCount"].toString();
           isLoading = false;
         });
       } else {
@@ -186,6 +149,7 @@ class _PurchasedCourseVideosScreenState
         });
       }
     } catch (e) {
+      print('error--$e');
       setState(() {
         errorMessage = "Network error. Please try again.";
         isLoading = false;
@@ -300,8 +264,6 @@ class _PurchasedCourseVideosScreenState
   @override
   void dispose() {
     SecureScreen.disable();
-
-    if (availableTabs.isNotEmpty) _tabController.dispose();
     super.dispose();
   }
 
@@ -451,123 +413,212 @@ class _PurchasedCourseVideosScreenState
       );
     }
 
-    if (!isPurchased) {
-      return Scaffold(
-        appBar: AppBar(
-          backgroundColor: Colors.blue,
-          title: const Text(
-            "Access Denied",
-            style: TextStyle(color: Colors.white),
-          ),
-        ),
-        body: isTrialOver
-            ? Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                margin: EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF8E1),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: Colors.orange.shade300),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.orange.withOpacity(0.15),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircleAvatar(
-                      radius: 30,
-                      backgroundColor: Colors.orange.shade100,
-                      child: const Icon(
-                        Icons.lock_clock_rounded,
-                        color: Colors.orange,
-                        size: 32,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      "Your Trial Has Ended",
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      "Your trial period has expired. Purchase the full course to continue accessing all video lectures, notes, practice questions, and learning materials.",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: Colors.black87,
-                        height: 1.5,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        icon: const Icon(Icons.shopping_cart_outlined),
-                        label: const Text(
-                          "Purchase Course",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => AllCoursesScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            : Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.lock_outline,
-                        size: 80,
-                        color: Colors.grey[600],
-                      ),
-                      const SizedBox(height: 20),
-                      Text(
-                        errorMessage ?? "You don't have access.",
-                        style: const TextStyle(fontSize: 18),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 30),
-                      ElevatedButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text("Go Back"),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-      );
+    if (!isTrial && !isPurchased) {
+      // return Scaffold(
+      //   appBar: AppBar(
+      //     backgroundColor: Colors.blue,
+      //     title: const Text(
+      //       "Access Denied",
+      //       style: TextStyle(color: Colors.white),
+      //     ),
+      //   ),
+      //   body: isTrialOver
+      //       ? Container(
+      //           width: double.infinity,
+      //           padding: const EdgeInsets.all(20),
+      //           margin:
+      //               const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      //           decoration: BoxDecoration(
+      //             color: const Color(0xFFFFF8E1),
+      //             borderRadius: BorderRadius.circular(18),
+      //             border: Border.all(color: Colors.orange.shade300),
+      //             boxShadow: [
+      //               BoxShadow(
+      //                 color: Colors.orange.withOpacity(0.15),
+      //                 blurRadius: 10,
+      //                 offset: const Offset(0, 4),
+      //               ),
+      //             ],
+      //           ),
+      //           child: Column(
+      //             mainAxisSize: MainAxisSize.min,
+      //             children: [
+      //               CircleAvatar(
+      //                 radius: 30,
+      //                 backgroundColor: Colors.orange.shade100,
+      //                 child: const Icon(
+      //                   Icons.lock_clock_rounded,
+      //                   color: Colors.orange,
+      //                   size: 32,
+      //                 ),
+      //               ),
+      //               const SizedBox(height: 16),
+      //               const Text(
+      //                 "Your Trial Has Ended",
+      //                 style: TextStyle(
+      //                   fontSize: 22,
+      //                   fontWeight: FontWeight.bold,
+      //                 ),
+      //                 textAlign: TextAlign.center,
+      //               ),
+      //               const SizedBox(height: 10),
+      //               const Text(
+      //                 "Your trial period has expired. Purchase the full course to continue accessing all video lectures, notes, practice questions, and learning materials.",
+      //                 textAlign: TextAlign.center,
+      //                 style: TextStyle(
+      //                   fontSize: 15,
+      //                   color: Colors.black87,
+      //                   height: 1.5,
+      //                 ),
+      //               ),
+      //               const SizedBox(height: 24),
+      //               SizedBox(
+      //                 width: double.infinity,
+      //                 height: 50,
+      //                 child: ElevatedButton.icon(
+      //                   style: ElevatedButton.styleFrom(
+      //                     backgroundColor: Colors.blue,
+      //                     foregroundColor: Colors.white,
+      //                     shape: RoundedRectangleBorder(
+      //                       borderRadius: BorderRadius.circular(12),
+      //                     ),
+      //                   ),
+      //                   icon: const Icon(Icons.shopping_cart_outlined),
+      //                   label: const Text(
+      //                     "Purchase Course",
+      //                     style: TextStyle(
+      //                       fontSize: 16,
+      //                       fontWeight: FontWeight.w600,
+      //                     ),
+      //                   ),
+      //                   onPressed: () {
+      //                     Navigator.push(
+      //                       context,
+      //                       MaterialPageRoute(
+      //                         builder: (context) => AllCoursesScreen(),
+      //                       ),
+      //                     );
+      //                   },
+      //                 ),
+      //               ),
+      //             ],
+      //           ),
+      //         )
+      //       : !isPurchased
+      //           ? Container(
+      //               width: double.infinity,
+      //               padding: const EdgeInsets.all(20),
+      //               margin: const EdgeInsets.symmetric(
+      //                   horizontal: 16, vertical: 20),
+      //               decoration: BoxDecoration(
+      //                 color: const Color(0xFFE8F0FE),
+      //                 borderRadius: BorderRadius.circular(18),
+      //                 border: Border.all(color: Colors.blue.shade200),
+      //                 boxShadow: [
+      //                   BoxShadow(
+      //                     color: Colors.blue.withOpacity(0.12),
+      //                     blurRadius: 10,
+      //                     offset: const Offset(0, 4),
+      //                   ),
+      //                 ],
+      //               ),
+      //               child: Column(
+      //                 mainAxisSize: MainAxisSize.min,
+      //                 children: [
+      //                   CircleAvatar(
+      //                     radius: 30,
+      //                     backgroundColor: Colors.blue.shade100,
+      //                     child: const Icon(
+      //                       Icons.lock_outline_rounded,
+      //                       color: Colors.blue,
+      //                       size: 32,
+      //                     ),
+      //                   ),
+      //                   const SizedBox(height: 16),
+      //                   const Text(
+      //                     "Course Not Purchased",
+      //                     style: TextStyle(
+      //                       fontSize: 22,
+      //                       fontWeight: FontWeight.bold,
+      //                     ),
+      //                     textAlign: TextAlign.center,
+      //                   ),
+      //                   const SizedBox(height: 10),
+      //                   const Text(
+      //                     "Aapne abhi is course ko purchase nahi kiya hai. Video lectures, notes aur practice questions access karne ke liye pehle course purchase karein.",
+      //                     textAlign: TextAlign.center,
+      //                     style: TextStyle(
+      //                       fontSize: 15,
+      //                       color: Colors.black87,
+      //                       height: 1.5,
+      //                     ),
+      //                   ),
+      //                   const SizedBox(height: 24),
+      //                   SizedBox(
+      //                     width: double.infinity,
+      //                     height: 50,
+      //                     child: ElevatedButton.icon(
+      //                       style: ElevatedButton.styleFrom(
+      //                         backgroundColor: Colors.blue,
+      //                         foregroundColor: Colors.white,
+      //                         shape: RoundedRectangleBorder(
+      //                           borderRadius: BorderRadius.circular(12),
+      //                         ),
+      //                       ),
+      //                       icon: const Icon(Icons.shopping_cart_outlined),
+      //                       label: const Text(
+      //                         "Purchase Course",
+      //                         style: TextStyle(
+      //                           fontSize: 16,
+      //                           fontWeight: FontWeight.w600,
+      //                         ),
+      //                       ),
+      //                       onPressed: () {
+      //                         Navigator.push(
+      //                           context,
+      //                           MaterialPageRoute(
+      //                             builder: (context) => AllCoursesScreen(),
+      //                           ),
+      //                         );
+      //                       },
+      //                     ),
+      //                   ),
+      //                   const SizedBox(height: 10),
+      //                   TextButton(
+      //                     onPressed: () => Navigator.pop(context),
+      //                     child: const Text("Go Back"),
+      //                   ),
+      //                 ],
+      //               ),
+      //             )
+      //           : Center(
+      //               child: Padding(
+      //                 padding: const EdgeInsets.all(20),
+      //                 child: Column(
+      //                   mainAxisAlignment: MainAxisAlignment.center,
+      //                   children: [
+      //                     Icon(
+      //                       Icons.lock_outline,
+      //                       size: 80,
+      //                       color: Colors.grey[600],
+      //                     ),
+      //                     const SizedBox(height: 20),
+      //                     Text(
+      //                       errorMessage ?? "You don't have access.",
+      //                       style: const TextStyle(fontSize: 18),
+      //                       textAlign: TextAlign.center,
+      //                     ),
+      //                     const SizedBox(height: 30),
+      //                     ElevatedButton(
+      //                       onPressed: () => Navigator.pop(context),
+      //                       child: const Text("Go Back"),
+      //                     ),
+      //                   ],
+      //                 ),
+      //               ),
+      //             ),
+      // );
+     return CourseDetailScreen2(courseData: courseData??{});
     }
     final String batchName = courseData!["batch_name"] ?? "Course";
     final String category = courseData!["cat_name"] ?? "";
@@ -655,24 +706,10 @@ class _PurchasedCourseVideosScreenState
                   const SizedBox(height: 30),
                   InkWell(
                     onTap: () {
-                      final mcqQuestions = allQuestions
-                          .where((q) => q['question_type'] == "1")
-                          .toList();
-                      final caQuestions = allQuestions
-                          .where((q) => q['question_type'] == "2")
-                          .toList();
-                      final pyqQuestions = allQuestions
-                          .where((q) => q['question_type'] == "3")
-                          .toList();
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => CourseProgressScreen(
-                            batchId: widget.courseId,
-                            mcqQuestions: mcqQuestions,
-                            caQuestions: caQuestions,
-                            pyqQuestions: pyqQuestions,
-                          ),
+                          builder: (_) => CourseProgressScreen(),
                         ),
                       );
                     },
@@ -708,152 +745,143 @@ class _PurchasedCourseVideosScreenState
                       //     );
                       //   },
                       // ),
-                      videoLectures.length == 0
-                          ? SizedBox()
-                          : _optionCard(
-                              title: "Videos",
-                              icon: Icons.play_circle_fill_rounded,
-                              color: const Color(0xFF16A34A),
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => VideoListScreenfull(
-                                      videoLectures: videoLectures,
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                      notes.isEmpty
-                          ? SizedBox()
-                          : _optionCard(
-                              title: "Notes",
-                              icon: Icons.menu_book_rounded,
-                              color: const Color(0xFFF97316),
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => GetNotesScreen(
-                                      batchid: widget.courseId.toString(),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                      notes.isEmpty
-                          ? SizedBox()
-                          : _optionCard(
-                              title: "Live Class",
-                              icon: Icons.live_tv,
-                              color: Color(0xffc417ea),
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const MeetingsScreen(),
-                                  ),
-                                );
-                              },
-                            ),
+                      if (videoLecturesCount.toString() != "0")
+                        _optionCard(
+                          title: "Videos",
+                          icon: Icons.play_circle_fill_rounded,
+                          color: const Color(0xFF16A34A),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => VideoListScreenfull(
+                                    courseId: widget.courseId),
+                              ),
+                            );
+                          },
+                        ),
+                      if (notes.isNotEmpty)
+                        _optionCard(
+                          title: "Notes",
+                          icon: Icons.menu_book_rounded,
+                          color: const Color(0xFFF97316),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => GetNotesScreen(
+                                  batchid: widget.courseId.toString(),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      if (notes.isNotEmpty)
+                        _optionCard(
+                          title: "Live Class",
+                          icon: Icons.live_tv,
+                          color: Color(0xffc417ea),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const MeetingsScreen(),
+                              ),
+                            );
+                          },
+                        ),
                     ],
                   ),
                   SizedBox(height: 30),
                   Container(
-                    height: 420,
-                    child: QuestionTypeSelectionScreen(
-                      questions: allQuestions,
-                      batchId: widget.courseId.toString(),
-                    ),
-                  ),
+                      height: 420,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _typeCard(
+                                context, "MCQ", "1", mcqCount, Colors.blue),
+                            const SizedBox(height: 16),
+                            _typeCard(context, "Current Affairs", "2",
+                                currentAffairCount, Colors.orange),
+                            const SizedBox(height: 16),
+                            _typeCard(
+                                context, "PYQ", "3", pyqCount, Colors.green),
+                          ],
+                        ),
+                      )),
+
                   testoraBannerCard(),
 
-                  // Description
-                  // if (description.isNotEmpty) ...[
-                  //   const Text("About this Course", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  //   const SizedBox(height: 10),
-                  //   Text(description, style: const TextStyle(fontSize: 15, height: 1.6)),
-                  //   const SizedBox(height: 30),
-                  // ],
-
-                  // Video Lectures
-                  // if (videoLectures.isNotEmpty) ...[
-                  //   const Text("Video Lectures", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  //   const SizedBox(height: 12),
-                  //   ListView.builder(
-                  //     shrinkWrap: true,
-                  //     physics: const NeverScrollableScrollPhysics(),
-                  //     itemCount: videoLectures.length,
-                  //     itemBuilder: (context, index) {
-                  //       final video = videoLectures[index];
-                  //       final String title = video["title"] ?? "Untitled";
-                  //       final String url = video["url"] ?? "";
-                  //
-                  //       return Card(
-                  //         margin: const EdgeInsets.symmetric(vertical: 8),
-                  //         child: ListTile(
-                  //           leading: Container(
-                  //             width: 50,
-                  //             height: 50,
-                  //             decoration: BoxDecoration(color: Colors.red.shade100, borderRadius: BorderRadius.circular(8)),
-                  //             child: const Icon(Icons.play_circle_fill, color: Colors.red, size: 34),
-                  //           ),
-                  //           title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-                  //           subtitle: Text(video["subject"] ?? "", style: TextStyle(color: Colors.grey[600])),
-                  //           trailing: const Icon(Icons.arrow_forward_ios),
-                  //           onTap: url.isNotEmpty
-                  //               ? () => Navigator.push(
-                  //             context,
-                  //             MaterialPageRoute(
-                  //               builder: (_) => VideoPlayerScreen(videoTitle: title, youtubeUrl: url),
-                  //             ),
-                  //           )
-                  //               : null,
-                  //         ),
-                  //       );
-                  //     },
-                  //   ),
-                  //   const SizedBox(height: 30),
-                  // ],
-                  //
-                  // // Practice Questions (at bottom)
-                  // if (availableTabs.isNotEmpty) ...[
-                  //   const Text("Practice Questions", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  //   const SizedBox(height: 16),
-                  //   TabBar(
-                  //     controller: _tabController,
-                  //     isScrollable: availableTabs.length > 2,
-                  //     labelColor: Colors.blue,
-                  //     unselectedLabelColor: Colors.grey,
-                  //     indicatorColor: Colors.blue,
-                  //     tabs: availableTabs.map((tab) => Tab(text: tab)).toList(),
-                  //   ),
-                  //   SizedBox(
-                  //     height: 600,
-                  //     child: TabBarView(
-                  //       controller: _tabController,
-                  //       children: availableTabs.map((tabName) {
-                  //         final questions = questionsByType[tabName] ?? [];
-                  //         return ListView.builder(
-                  //           padding: const EdgeInsets.only(top: 16),
-                  //           itemCount: questions.length,
-                  //           itemBuilder: (context, index) => buildQuestionCard(questions[index]),
-                  //         );
-                  //       }).toList(),
-                  //     ),
-                  //   ),
-                  // ] else ...[
-                  //   const Center(
-                  //     child: Text("No practice questions available yet.", style: TextStyle(color: Colors.grey)),
-                  //   ),
-                  // ],
                   const SizedBox(height: 40),
                 ],
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _typeCard(
+    BuildContext context,
+    String title,
+    String questionType,
+    String count,
+    Color color,
+  ) {
+    final bool isEmpty = (count.isEmpty || count == '0');
+    return InkWell(
+      // Disable tap when empty
+      onTap: isEmpty
+          ? null
+          : () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => SubjectListScreen(
+                      courseId: widget.courseId, questionType: questionType),
+                ),
+              );
+            },
+      child: Container(
+        height: 100,
+        decoration: BoxDecoration(
+          color:
+              isEmpty ? Colors.grey.withOpacity(0.08) : color.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isEmpty ? Colors.grey.shade400 : color,
+            width: 1.5,
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                "$title ($count)",
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: isEmpty ? Colors.grey.shade600 : color,
+                ),
+              ),
+              if (isEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(top: 6),
+                  child: Text(
+                    "No questions available",
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

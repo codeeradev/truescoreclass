@@ -1,31 +1,27 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get_connect/http/src/utils/utils.dart';
-import 'package:ionicons/ionicons.dart';
 import 'package:http/http.dart' as http;
-import 'package:online_classes/Screens/AddQuestionsScreen.dart';
-import 'package:online_classes/Screens/Auth/asktype.dart';
 import 'package:online_classes/Screens/Student/notificcationstudents.dart';
-import 'package:online_classes/Screens/Student/purchasedcourses.dart';
-import 'package:online_classes/Screens/Student/result.dart';
-import 'package:online_classes/Screens/Student/videos.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../mcq.dart';
 import '../../servcies.dart';
 import '../All Courses.dart';
 import '../Auth/signinScreen.dart';
-import '../MCQQuestion.dart';
-import '../Notification/notificationScreen.dart';
-import '../Question.dart';
 import '../SearchScreen.dart';
 import '../Teachers/screens/getmeeting.dart';
-import 'ADDdoubtsbystudents.dart';
 import 'ALLNewCourses.dart';
 import 'carddeatils.dart';
-import 'courses.dart';
-import 'getnotes.dart';
-import 'mydoubts.dart'; // Keep if you still need it
+
+import 'dart:async';
+import 'dart:convert';
+import 'dart:developer';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class StudentDashboardScreen extends StatefulWidget {
   const StudentDashboardScreen({super.key});
@@ -45,6 +41,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   List<dynamic> liveClasses = [];
   bool isLoading1 = true;
   bool hasError = false;
+  List<dynamic> vacancies = [];
+  final ScrollController _scrollController = ScrollController();
+  Timer? _scrollTimer;
 
   Future<void> fetchLiveClasses() async {
     setState(() {
@@ -103,6 +102,110 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     fetchNotices();
     fetchLiveClasses();
     initNotificationListener();
+    fetchVacancies();
+    _startAutoScroll();
+  }
+
+  void _showVacancyDialog(
+    BuildContext context,
+    Map<String, dynamic> vacancy,
+  ) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.campaign_rounded, color: Colors.blue),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      vacancy["title"]?.toString() ?? "",
+                      style:
+                          TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(dialogContext),
+                  ),
+                ],
+              ),
+              const Divider(height: 20),
+              _VacancyDetail(
+                vacancy: vacancy,
+                onOpenFile: _openUrl,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> fetchVacancies() async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse("https://truescoreedu.com/api/get-vacancies"),
+          )
+          .timeout(const Duration(seconds: 15));
+
+      if (kDebugMode) {
+        print("fetchVacancies STATUS: ${response.statusCode}");
+        print("fetchVacancies BODY: ${response.body}");
+      }
+
+      if (response.statusCode != 200) return;
+      if (response.body.trim().isEmpty) return;
+      if (response.body.trim().startsWith('<')) return;
+
+      final data = jsonDecode(response.body);
+      if (!mounted) return;
+
+      final bool success = data["status"].toString() == "1" ||
+          data["status"].toString() == "true";
+
+      if (success) {
+        setState(() {
+          vacancies = data["data"] ?? [];
+        });
+      }
+    } catch (e) {
+      if (kDebugMode) print("fetchVacancies error--$e");
+      // Fails silently on purpose — this is a promo banner, not a
+      // critical screen, so it just stays hidden if the call fails.
+    }
+  }
+
+  void _startAutoScroll() {
+    _scrollTimer = Timer.periodic(const Duration(milliseconds: 20), (_) {
+      if (!_scrollController.hasClients) return;
+
+      _scrollController.jumpTo(_scrollController.offset + 1);
+    });
+  }
+
+  Future<void> _openUrl(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    try {
+      final launched =
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!launched && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Couldn't open the notice.")),
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) print("openUrl error--$e");
+    }
   }
 
   Future<void> fetchCourses() async {
@@ -181,7 +284,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     }
   }
 
-  bool hasNewNotice = false;
+  // bool hasNewNotice = false;
   int newNoticeCount = 0;
 
   void initNotificationListener() {
@@ -200,23 +303,22 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: {"apiToken": apiToken},
       );
-
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
         if (data["status"] == 1) {
-          List<dynamic> notices = data["data"] ?? [];
+          // List<dynamic> notices = data["data"] ?? [];
 
-          int currentCount = notices.length;
-
-          int lastCount = pref.getInt("last_notice_count") ?? 0;
+          // int currentCount = notices.length;
+          //
+          // int lastCount = pref.getInt("last_notice_count") ?? 0;
+          // setState(() {
+          //   newNoticeCount =
+          //       currentCount > lastCount ? currentCount - lastCount : 0;
+          // });
           setState(() {
-            newNoticeCount =
-                currentCount > lastCount ? currentCount - lastCount : 0;
+            newNoticeCount = data['unread_count'] ?? 0;
           });
-          print(
-            "currentCount--$currentCount---lastCount$lastCount--newNoticeCount$newNoticeCount",
-          );
         }
       }
     } catch (e) {
@@ -224,10 +326,16 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     }
   }
 
+  String get _tickerText => vacancies
+      .map((v) => v["title"]?.toString() ?? "")
+      .where((t) => t.isNotEmpty)
+      .join("     •     ");
+
   @override
   void dispose() {
     SecureScreen.disable();
-
+    _scrollTimer?.cancel();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -256,34 +364,35 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             children: [
               IconButton(
                 icon: const Icon(Icons.notifications, color: Colors.white),
-                onPressed: () async {
-                  await Navigator.push(
+                onPressed: () {
+                  Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => const NotificationScreen1(),
                     ),
+                  ).whenComplete(
+                    () {
+                      fetchNotices();
+                    },
                   );
-                  setState(() {
-                    newNoticeCount = 0;
-                  });
                 },
               ),
-
               if (newNoticeCount > 0)
                 Positioned(
                   right: 6,
                   top: 6,
                   child: GestureDetector(
-                    onTap: () async {
-                      await Navigator.push(
+                    onTap: () {
+                      Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => const NotificationScreen1(),
                         ),
+                      ).whenComplete(
+                        () {
+                          fetchNotices();
+                        },
                       );
-                      setState(() {
-                        newNoticeCount = 0;
-                      });
                     },
                     child: Container(
                       padding: const EdgeInsets.all(5),
@@ -292,7 +401,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                         shape: BoxShape.circle,
                       ),
                       child: Text(
-                        "$newNoticeCount",
+                        newNoticeCount > 99 ? "99+" : newNoticeCount.toString(),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 11,
@@ -304,293 +413,313 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                 ),
             ],
           ),
-
           const SizedBox(width: 10),
         ],
       ),
-      body:
-          isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Greeting with name (small text)
-                    Row(
-                      children: [
-                        if (simage.isNotEmpty)
-                          // CircleAvatar(
-                          //   radius: 20,
-                          //   backgroundImage: NetworkImage(simage),
-                          // ),
-                          const SizedBox(width: 12),
-                        Text(
-                          "Hi, $sname",
-                          style: const TextStyle(
-                            fontSize: 26,
-                            color: Colors.black,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-
-                    liveClasses.isEmpty
-                        ? SizedBox()
-                        : InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => getclassscreen(),
-                              ),
-                            );
-                          },
-                          child: Container(
-                            margin: EdgeInsets.symmetric(horizontal: 10),
-                            height: 50,
-                            width: double.maxFinite,
-                            decoration: BoxDecoration(
-                              color: Colors.blue,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Center(
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    height: 50,
+                    child: ListView.builder(
+                      controller: _scrollController,
+                      scrollDirection: Axis.horizontal,
+                      padding: EdgeInsets.symmetric(horizontal: 10),
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: 100000,
+                      itemBuilder: (context, index) {
+                        final vacancy = vacancies[index % vacancies.length];
+                        return InkWell(
+                          onTap: () => _showVacancyDialog(context, vacancy),
+                          child: Center(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 10),
                               child: Text(
-                                'Check Your Google Meeting',
-                                style: TextStyle(color: Colors.white),
+                                vacancy["title"] ?? "",
+                                style: TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    decoration: TextDecoration.underline,
+                                    decorationColor: Colors.red),
                               ),
                             ),
-                          ),
-                        ),
-                    const SizedBox(height: 20),
-
-                    // Find your lesson today
-                    const Text(
-                      "Find your Courses today",
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    // Search bar
-                    TextField(
-                      readOnly:
-                          true, // Important: Prevents keyboard from opening
-                      onTap: () {
-                        // Navigate to the Course Search Screen
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const CourseSearchScreen(),
                           ),
                         );
                       },
-                      decoration: InputDecoration(
-                        hintText: "Search Courses...",
-                        prefixIcon: const Icon(
-                          Icons.search,
-                          color: Colors.blue,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        filled: true,
-                        fillColor: Colors.grey.shade100,
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 16,
-                          horizontal: 16,
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      // if (simage.isNotEmpty)
+                      // CircleAvatar(
+                      //   radius: 20,
+                      //   backgroundImage: NetworkImage(simage),
+                      // ),
+                      // const SizedBox(width: 12),
+                      Text(
+                        "Hi, $sname",
+                        style: const TextStyle(
+                          fontSize: 26,
+                          color: Colors.black,
                         ),
                       ),
+                    ],
+                  ),
+                  // SizedBox(height: 20),
+                  // if (liveClasses.isNotEmpty)
+                  //   InkWell(
+                  //     onTap: () {
+                  //       Navigator.push(
+                  //         context,
+                  //         MaterialPageRoute(
+                  //           builder: (context) => getclassscreen(),
+                  //         ),
+                  //       );
+                  //     },
+                  //     child: Container(
+                  //       margin: EdgeInsets.symmetric(horizontal: 10),
+                  //       height: 50,
+                  //       width: double.maxFinite,
+                  //       decoration: BoxDecoration(
+                  //         color: Colors.blue,
+                  //         borderRadius: BorderRadius.circular(10),
+                  //       ),
+                  //       child: Center(
+                  //         child: Text(
+                  //           'Check Your Google Meeting',
+                  //           style: TextStyle(color: Colors.white),
+                  //         ),
+                  //       ),
+                  //     ),
+                  //   ),
+                  const SizedBox(height: 20),
+
+                  // Find your lesson today
+                  const Text(
+                    "Find your Courses today",
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(height: 15),
-                    // Explore section
-                    // const Text(
-                    //   "Explore",
-                    //   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    // ),
-                    const Padding(
-                      padding: EdgeInsets.all(12),
-                      child: Text(
-                        "Course Categories",
+                  ),
+                  const SizedBox(height: 12),
+                  // Search bar
+                  TextField(
+                    readOnly: true,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const CourseSearchScreen(),
+                        ),
+                      );
+                    },
+                    decoration: InputDecoration(
+                      hintText: "Search Courses...",
+                      prefixIcon: const Icon(
+                        Icons.search,
+                        color: Colors.blue,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey.shade100,
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 16,
+                        horizontal: 16,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+                  // Explore section
+                  // const Text(
+                  //   "Explore",
+                  //   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  // ),
+                  const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: Text(
+                      "Course Categories",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+
+                  if (categories.isNotEmpty)
+                    SizedBox(
+                      height: 120,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: categories.length,
+                        padding: EdgeInsets.zero,
+                        itemBuilder: (context, index) {
+                          final cat = categories[index] ?? {};
+                          final name = cat["name"]?.toString() ?? "Category";
+                          final id = cat["id"]?.toString() ?? "";
+
+                          return InkWell(
+                            onTap: id.isEmpty
+                                ? null
+                                : () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => CategoryDetailScreen(
+                                          categoryId: id,
+                                          categoryName: name,
+                                          allData: apiData ?? {},
+                                        ),
+                                      ),
+                                    );
+                                  },
+                            child: Column(
+                              children: [
+                                Material(
+                                  elevation: 2,
+                                  shape: const CircleBorder(),
+                                  child: Container(
+                                    margin: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                    ),
+                                    height: 80,
+                                    width: 80,
+                                    decoration: const BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.blueAccent,
+                                    ),
+                                    child: const Icon(
+                                      Icons.menu_book,
+                                      color: Colors.white,
+                                      size: 32,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                SizedBox(
+                                  width: 80,
+                                  child: Text(
+                                    name,
+                                    textAlign: TextAlign.center,
+                                    maxLines: 2,
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  // Container(height: 100,width: double.maxFinite
+                  //   ,decoration: BoxDecoration(
+                  //     borderRadius: BorderRadius.circular(20),color: Colors.blueAccent
+                  //   ),)
+
+                  // GridView.count(
+                  //   shrinkWrap: true,
+                  //   physics: const NeverScrollableScrollPhysics(),
+                  //   crossAxisCount: 4,
+                  //   mainAxisSpacing: 16,
+                  //   crossAxisSpacing: 16,
+                  //   children: [
+                  //     InkWell(
+                  //       onTap: () => Navigator.push(
+                  //           context, MaterialPageRoute(builder: (_) => const CoursesScreen())),
+                  //       child: _dashboardButton(Icons.book_outlined, "Courses"),
+                  //     ),
+                  //     InkWell(
+                  //       onTap: () => Navigator.push(
+                  //           context, MaterialPageRoute(builder: (_) => const PaperTypeScreen())),
+                  //       child: _dashboardButton(Icons.assignment_outlined, "MCQ Test"),
+                  //     ),
+                  //     InkWell(
+                  //       onTap: () => Navigator.push(
+                  //           context,
+                  //           MaterialPageRoute(
+                  //               builder: (_) => ResultScreen(paperId: '2', paperType: '2'))),
+                  //       child: _dashboardButton(Icons.person_outline, "Result"),
+                  //     ),
+                  //     InkWell(
+                  //       onTap: () {
+                  //         Navigator.push(
+                  //             context, MaterialPageRoute(builder: (context) => AskType()));
+                  //       },
+                  //       child: _dashboardButton(Icons.logout, "Logout"),
+                  //     ),
+                  //     InkWell(
+                  //       onTap: () => Navigator.push(
+                  //           context, MaterialPageRoute(builder: (_) => CreateDoubtScreen())),
+                  //       child: _dashboardButton(Icons.query_stats_sharp, "Add Doubts"),
+                  //     ),
+                  //     InkWell(
+                  //       onTap: () => Navigator.push(
+                  //           context, MaterialPageRoute(builder: (_) => MyDoubtsScreen())),
+                  //       child: _dashboardButton(Icons.assignment_outlined, "My Doubts"),
+                  //     ),
+                  //   ],
+                  // ),
+                  const SizedBox(height: 30),
+                  // Courses in horizontal card view
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "Courses",
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ),
-
-                    if (categories.isNotEmpty)
-                      SizedBox(
-                        height: 120,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: categories.length,
-                          padding: EdgeInsets.zero,
-                          itemBuilder: (context, index) {
-                            final cat = categories[index] ?? {};
-                            final name = cat["name"]?.toString() ?? "Category";
-                            final id = cat["id"]?.toString() ?? "";
-
-                            return InkWell(
-                              onTap:
-                                  id.isEmpty
-                                      ? null
-                                      : () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder:
-                                                (_) => CategoryDetailScreen(
-                                                  categoryId: id,
-                                                  categoryName: name,
-                                                  allData: apiData ?? {},
-                                                ),
-                                          ),
-                                        );
-                                      },
-                              child: Column(
-                                children: [
-                                  Material(
-                                    elevation: 2,
-                                    shape: const CircleBorder(),
-                                    child: Container(
-                                      margin: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                      ),
-                                      height: 80,
-                                      width: 80,
-                                      decoration: const BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: Colors.blueAccent,
-                                      ),
-                                      child: const Icon(
-                                        Icons.menu_book,
-                                        color: Colors.white,
-                                        size: 32,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  SizedBox(
-                                    width: 80,
-                                    child: Text(
-                                      name,
-                                      textAlign: TextAlign.center,
-                                      maxLines: 2,
-                                      style: const TextStyle(fontSize: 12),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    // Container(height: 100,width: double.maxFinite
-                    //   ,decoration: BoxDecoration(
-                    //     borderRadius: BorderRadius.circular(20),color: Colors.blueAccent
-                    //   ),)
-
-                    // GridView.count(
-                    //   shrinkWrap: true,
-                    //   physics: const NeverScrollableScrollPhysics(),
-                    //   crossAxisCount: 4,
-                    //   mainAxisSpacing: 16,
-                    //   crossAxisSpacing: 16,
-                    //   children: [
-                    //     InkWell(
-                    //       onTap: () => Navigator.push(
-                    //           context, MaterialPageRoute(builder: (_) => const CoursesScreen())),
-                    //       child: _dashboardButton(Icons.book_outlined, "Courses"),
-                    //     ),
-                    //     InkWell(
-                    //       onTap: () => Navigator.push(
-                    //           context, MaterialPageRoute(builder: (_) => const PaperTypeScreen())),
-                    //       child: _dashboardButton(Icons.assignment_outlined, "MCQ Test"),
-                    //     ),
-                    //     InkWell(
-                    //       onTap: () => Navigator.push(
-                    //           context,
-                    //           MaterialPageRoute(
-                    //               builder: (_) => ResultScreen(paperId: '2', paperType: '2'))),
-                    //       child: _dashboardButton(Icons.person_outline, "Result"),
-                    //     ),
-                    //     InkWell(
-                    //       onTap: () {
-                    //         Navigator.push(
-                    //             context, MaterialPageRoute(builder: (context) => AskType()));
-                    //       },
-                    //       child: _dashboardButton(Icons.logout, "Logout"),
-                    //     ),
-                    //     InkWell(
-                    //       onTap: () => Navigator.push(
-                    //           context, MaterialPageRoute(builder: (_) => CreateDoubtScreen())),
-                    //       child: _dashboardButton(Icons.query_stats_sharp, "Add Doubts"),
-                    //     ),
-                    //     InkWell(
-                    //       onTap: () => Navigator.push(
-                    //           context, MaterialPageRoute(builder: (_) => MyDoubtsScreen())),
-                    //       child: _dashboardButton(Icons.assignment_outlined, "My Doubts"),
-                    //     ),
-                    //   ],
-                    // ),
-                    const SizedBox(height: 30),
-                    // Courses in horizontal card view
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          "Courses",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                      if (courses.length >= 4)
                         TextButton(
-                          onPressed:
-                              () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const AllCoursesScreen(),
-                                ),
-                              ),
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const AllCoursesScreen(),
+                            ),
+                          ),
                           child: const Text(
                             "See all",
                             style: TextStyle(color: Colors.blue),
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 15),
-                    if (courses.isNotEmpty)
-                      SizedBox(
-                        height: 210,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: courses.length,
-                          itemBuilder: (context, index) {
-                            final course = courses[index];
-                            return Padding(
-                              padding: const EdgeInsets.only(right: 12),
-                              child: SizedBox(
-                                width:
-                                    (MediaQuery.of(context).size.width - 56) /
-                                    2.2,
-                                child: _recommendedCourseCard(course),
-                              ),
-                            );
-                          },
-                        ),
-                      )
-                    else
-                      const Center(child: Text("No courses available")),
-                    const SizedBox(height: 30),
-                  ],
-                ),
+                    ],
+                  ),
+                  const SizedBox(height: 15),
+                  if (courses.isNotEmpty)
+                    SizedBox(
+                      height: 210,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: min(4, courses.length),
+                        itemBuilder: (context, index) {
+                          final course = courses[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 12),
+                            child: SizedBox(
+                              width: (MediaQuery.of(context).size.width - 56) /
+                                  2.2,
+                              child: _recommendedCourseCard(course),
+                            ),
+                          );
+                        },
+                      ),
+                    )
+                  else
+                    const Center(child: Text("No courses available")),
+                  const SizedBox(height: 30),
+                ],
               ),
+            ),
     );
   }
 
@@ -745,43 +874,34 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           children: [
             Container(
               width: double.infinity,
-
               height: 100,
-
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-
                 color: Colors.white,
-
-                image:
-                    item["batch_image"] != null
-                        ? DecorationImage(
-                          image: NetworkImage(
-                            'https://truescoreedu.com/uploads/batch_image/${item["batch_image"]}',
-                          ),
-                          fit: BoxFit.cover,
-                        )
-                        : null,
-              ),
-              child:
-                  item["batch_image"] == null
-                      ? const Icon(
-                        Icons.menu_book,
-                        size: 36,
-                        color: Colors.blue,
+                image: item["batch_image"] != null
+                    ? DecorationImage(
+                        image: NetworkImage(
+                          'https://truescoreedu.com/uploads/batch_image/${item["batch_image"]}',
+                        ),
+                        fit: BoxFit.cover,
                       )
-                      : null,
+                    : null,
+              ),
+              child: item["batch_image"] == null
+                  ? const Icon(
+                      Icons.menu_book,
+                      size: 36,
+                      color: Colors.blue,
+                    )
+                  : null,
             ),
-
             const SizedBox(height: 8),
-
             Text(
               item["batch_name"] ?? "Untitled Course",
               style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-
             const SizedBox(height: 4),
             Text(
               "${item["cat_name"] ?? ""} • ${item["sub_cat_name"] ?? ""}",
@@ -789,6 +909,92 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _VacancyDetail extends StatelessWidget {
+  final Map<String, dynamic> vacancy;
+  final ValueChanged<String> onOpenFile;
+
+  const _VacancyDetail({required this.vacancy, required this.onOpenFile});
+
+  @override
+  Widget build(BuildContext context) {
+    final String description = vacancy["description"]?.toString() ?? "";
+    final String startDate = vacancy["start_date"]?.toString() ?? "";
+    final String lastDate = vacancy["last_date"]?.toString() ?? "";
+    final String mode = vacancy["mode"]?.toString() ?? "";
+    final String fileUrl = vacancy["file_url"]?.toString() ?? "";
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (description.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Text(
+            description,
+            style: const TextStyle(
+                fontSize: 13.5, color: Colors.black87, height: 1.4),
+          ),
+        ],
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            if (startDate.isNotEmpty)
+              _infoChip(Icons.play_circle_outline_rounded, "Starts $startDate"),
+            if (lastDate.isNotEmpty)
+              _infoChip(Icons.event_busy_rounded, "Last date $lastDate"),
+            if (mode.isNotEmpty)
+              _infoChip(Icons.laptop_chromebook_rounded, mode),
+          ],
+        ),
+        if (fileUrl.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => onOpenFile(fileUrl),
+              icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
+              label: const Text("View Notice"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _infoChip(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: Colors.blue.shade700),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11.5,
+              color: Colors.blue.shade700,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -16,7 +16,6 @@ class CourseSearchScreen extends StatefulWidget {
 }
 
 class _CourseSearchScreenState extends State<CourseSearchScreen> {
-
   final TextEditingController _searchController = TextEditingController();
   List<dynamic> courses = [];
 
@@ -26,12 +25,12 @@ class _CourseSearchScreenState extends State<CourseSearchScreen> {
 
   // Debounce timer
   Timer? _debounce;
+
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
     SecureScreen.enable();
-
   }
 
   @override
@@ -131,15 +130,15 @@ class _CourseSearchScreenState extends State<CourseSearchScreen> {
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    _searchController.clear();
-                    setState(() {
-                      courses = [];
-                      hasSearched = false;
-                    });
-                  },
-                )
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {
+                            courses = [];
+                            hasSearched = false;
+                          });
+                        },
+                      )
                     : null,
                 filled: true,
                 fillColor: Colors.white,
@@ -147,7 +146,8 @@ class _CourseSearchScreenState extends State<CourseSearchScreen> {
                   borderRadius: BorderRadius.circular(16),
                   borderSide: BorderSide.none,
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               ),
             ),
           ),
@@ -157,42 +157,48 @@ class _CourseSearchScreenState extends State<CourseSearchScreen> {
             child: isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : !hasSearched
-                ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.search, size: 80, color: Colors.grey[400]),
-                  const SizedBox(height: 16),
-                  Text(
-                    "Start typing to search courses",
-                    style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-                  ),
-                ],
-              ),
-            )
-                : courses.isEmpty
-                ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.sentiment_dissatisfied, size: 80, color: Colors.grey[400]),
-                  const SizedBox(height: 16),
-                  Text(
-                    errorMessage.isEmpty ? "No courses found" : errorMessage,
-                    style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            )
-                : ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: courses.length,
-              itemBuilder: (context, index) {
-                final course = courses[index];
-                return _buildCourseCard(course);
-              },
-            ),
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.search,
+                                size: 80, color: Colors.grey[400]),
+                            const SizedBox(height: 16),
+                            Text(
+                              "Start typing to search courses",
+                              style: TextStyle(
+                                  fontSize: 18, color: Colors.grey[600]),
+                            ),
+                          ],
+                        ),
+                      )
+                    : courses.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.sentiment_dissatisfied,
+                                    size: 80, color: Colors.grey[400]),
+                                const SizedBox(height: 16),
+                                Text(
+                                  errorMessage.isEmpty
+                                      ? "No courses found"
+                                      : errorMessage,
+                                  style: TextStyle(
+                                      fontSize: 18, color: Colors.grey[600]),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            itemCount: courses.length,
+                            itemBuilder: (context, index) {
+                              final course = courses[index];
+                              return _buildCourseCard(course);
+                            },
+                          ),
           ),
         ],
       ),
@@ -206,11 +212,11 @@ class _CourseSearchScreenState extends State<CourseSearchScreen> {
     final String startDate = course['start_date'] ?? '';
     final String endDate = course['end_date'] ?? '';
     final String price = course['batch_price']?.isEmpty ?? true
-        ? (course['batch_offer_price']?.isEmpty ?? true ? 'Free' : '₹${course['batch_offer_price']}')
+        ? (course['batch_offer_price']?.isEmpty ?? true
+            ? 'Free'
+            : '₹${course['batch_offer_price']}')
         : '₹${course['batch_price']}';
     final String imageUrl = course["batch_image"]?.toString() ?? "";
-
-
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -219,7 +225,12 @@ class _CourseSearchScreenState extends State<CourseSearchScreen> {
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
         onTap: () {
-          Navigator.push(context, MaterialPageRoute(builder: (context)=>CourseDetailScreen2(courseData: course,)));
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => CourseDetailScreen2(
+                        courseData: course,
+                      )));
 
           // TODO: Navigate to course details screen
           // ScaffoldMessenger.of(context).showSnackBar(
@@ -239,25 +250,26 @@ class _CourseSearchScreenState extends State<CourseSearchScreen> {
           child: Row(
             children: [
               // Placeholder for course image
-            imageUrl.isNotEmpty?
-            Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: Colors.indigo[100],
-                  borderRadius: BorderRadius.circular(16),
-
-                ),
-                child: Image.network('https://truescoreedu.com/uploads/batch_image/${imageUrl}'),
-              ):Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: Colors.indigo[100],
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Icon(Icons.book),
-            ),
+              imageUrl.isNotEmpty
+                  ? Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: Colors.indigo[100],
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Image.network(
+                          'https://truescoreedu.com/uploads/batch_image/${imageUrl}'),
+                    )
+                  : Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: Colors.indigo[100],
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Icon(Icons.book),
+                    ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
@@ -265,7 +277,8 @@ class _CourseSearchScreenState extends State<CourseSearchScreen> {
                   children: [
                     Text(
                       name,
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.bold),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -278,11 +291,13 @@ class _CourseSearchScreenState extends State<CourseSearchScreen> {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
+                        Icon(Icons.calendar_today,
+                            size: 16, color: Colors.grey[600]),
                         const SizedBox(width: 4),
                         Text(
                           "$startDate to $endDate",
-                          style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                          style:
+                              TextStyle(color: Colors.grey[600], fontSize: 13),
                         ),
                       ],
                     ),

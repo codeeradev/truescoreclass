@@ -1,3 +1,6 @@
+import 'dart:developer';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
@@ -38,8 +41,8 @@ Future<bool> isAllQuestionsAttempted(
 /// =================================================
 /// SCREEN 3: ATTEMPT PAPER (ONE QUESTION AT A TIME)
 /// =================================================
+
 class AttemptPaperScreen extends StatefulWidget {
-  final List<dynamic> questions;
   final String questionType;
   final String batchId;
   final String subjectName;
@@ -48,7 +51,6 @@ class AttemptPaperScreen extends StatefulWidget {
 
   const AttemptPaperScreen({
     super.key,
-    required this.questions,
     required this.questionType,
     required this.batchId,
     required this.subjectName,
@@ -64,61 +66,154 @@ class _AttemptPaperScreenState extends State<AttemptPaperScreen> {
   int currentIndex = 0;
   int? selectedIndex;
   bool submitted = false;
-  late String chapterName;
   late String progressKey;
+
+  List<dynamic> questions = [];
+  String questionTotal='0';
+
+  bool isLoading = true;
+  bool isLoadingMore = false;
+  bool hasMore = true;
+  int currentPage = 1;
+  final int pageSize = 10;
 
   @override
   void initState() {
     super.initState();
-    chapterName =
-        widget.questions.isNotEmpty
-            ? (widget.questions[0]['chapter_name']?.toString() ?? "Syllabus")
-            : "Syllabus";
     progressKey =
-        "batch_${widget.batchId}_progress_${widget.questionType}_${widget.subjectName}_$chapterName";
-    _loadProgress();
+        "batch_${widget.batchId}_progress_${widget.questionType}_${widget.subjectId}_${widget.chapterId}";
+    _init();
   }
 
-  Future<void> _loadProgress() async {
+  Future<void> _init() async {
+    await fetchApiCourseQuestions();
+
     final prefs = await SharedPreferences.getInstance();
     final savedIndex = prefs.getInt(progressKey) ?? 0;
+    while (questions.length <= savedIndex && hasMore) {
+      await fetchApiCourseQuestions(loadMore: true);
+    }
+
+    if (!mounted) return;
     setState(() {
-      currentIndex = savedIndex < widget.questions.length ? savedIndex : 0;
+      currentIndex = savedIndex < questions.length ? savedIndex : 0;
       selectedIndex = null;
       submitted = false;
     });
 
-    // Check if chapter is completed
-    final isCompleted = await isAllQuestionsAttempted(
-      widget.questions,
-      widget.batchId,
-      widget.questionType,
-    );
-    if (isCompleted) {
-      _showResetDialog();
+    if (questions.isNotEmpty && !hasMore) {
+      final isCompleted = await isAllQuestionsAttempted(
+        questions,
+        widget.batchId,
+        widget.questionType,
+      );
+      if (isCompleted) {
+        _showResetDialog();
+      }
+    }
+  }
+
+  Future<void> fetchApiCourseQuestions({bool loadMore = false}) async {
+    if (loadMore && (isLoadingMore || !hasMore)) return;
+
+    if (loadMore) {
+      setState(() => isLoadingMore = true);
+    } else {
+      setState(() => isLoading = true);
+    }
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('token');
+
+    final int offset = (currentPage - 1) * pageSize;
+
+    try {
+      final response = await http.post(
+        Uri.parse("https://truescoreedu.com/api/get-course-questions"),
+        body: {
+          "apiToken": token,
+          "courseId": widget.batchId,
+          "page": currentPage.toString(),
+          "offset": offset.toString(),
+          "question_type": widget.questionType,
+          "subjectId": widget.subjectId,
+          "chapterId": widget.chapterId,
+        },
+      ).timeout(const Duration(seconds: 15));
+
+      if (kDebugMode) {
+        log("fetchApiCourseQuestions STATUS: ${response.statusCode}");
+        log("fetchApiCourseQuestions BODY: ${response.body}");
+      }
+
+      if (response.statusCode != 200) {
+        throw Exception("Server error: ${response.statusCode}");
+      }
+      if (response.body.trim().isEmpty) {
+        throw Exception("Empty response");
+      }
+      if (response.body.trim().startsWith('<')) {
+        throw Exception("Server returned HTML instead of JSON");
+      }
+
+      final data = jsonDecode(response.body);
+
+      final bool success = data["status"].toString() == "true" ||
+          data["status"].toString() == "1";
+
+      if (success) {
+        final List newQuestions = data["data"]["questions"] ?? [];
+
+        if (newQuestions.isEmpty) {
+          hasMore = false;
+        } else {
+          questions.addAll(newQuestions);
+          currentPage++;
+          if (newQuestions.length < pageSize) {
+            hasMore = false;
+          }
+        }
+        setState(() {
+          questionTotal = data["data"]["pagination"]["total"].toString();
+        });
+      } else {
+        hasMore = false;
+      }
+    } on TimeoutException {
+      if (kDebugMode) log('fetchApiCourseQuestions error--Request timed out');
+      hasMore = false;
+    } catch (e) {
+      if (kDebugMode) log('fetchApiCourseQuestions error--$e');
+      hasMore = false;
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+          isLoadingMore = false;
+        });
+      }
     }
   }
 
   Future<void> _showResetDialog() async {
     final shouldReset = await showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text("Chapter Completed"),
-            content: const Text(
-              "This chapter is already completed. Do you want to attempt again from the start?",
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text("No"),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text("Yes"),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text("Chapter Completed"),
+        content: const Text(
+          "This chapter is already completed. Do you want to attempt again from the start?",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("No"),
           ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Yes"),
+          ),
+        ],
+      ),
     );
 
     if (shouldReset == true) {
@@ -147,9 +242,8 @@ class _AttemptPaperScreenState extends State<AttemptPaperScreen> {
 
   Future<void> _markAsAttempted() async {
     if (selectedIndex == null) return;
-    final q = widget.questions[currentIndex];
-    final questionId =
-        q['id']?.toString() ??
+    final q = questions[currentIndex];
+    final questionId = q['id']?.toString() ??
         q['question_id']?.toString() ??
         currentIndex.toString();
     final prefs = await SharedPreferences.getInstance();
@@ -171,11 +265,10 @@ class _AttemptPaperScreenState extends State<AttemptPaperScreen> {
         bool isLoading = true;
         String? teacherAnswer;
         double matchPercent = 0;
-        bool apiCalled = false; // ✅ prevent loop
+        bool apiCalled = false;
 
         return StatefulBuilder(
           builder: (context, setState) {
-            /// 🔹 Prepare static question (NO user input)
             String optionsText = options
                 .asMap()
                 .entries
@@ -187,7 +280,6 @@ $des
 Options: $optionsText
 """;
 
-            /// 🔥 API CALL FUNCTION
             Future<void> checkSimilarity() async {
               try {
                 final prefs = await SharedPreferences.getInstance();
@@ -200,7 +292,7 @@ Options: $optionsText
                   },
                   body: {
                     "apiToken": token,
-                    "question": finalDescription, // ✅ only question + options
+                    "question": finalDescription,
                   },
                 );
 
@@ -227,10 +319,8 @@ Options: $optionsText
               });
             }
 
-            /// ✅ CALL API ONLY ONCE (NO LOOP)
             if (!apiCalled) {
               apiCalled = true;
-
               Future.microtask(() {
                 checkSimilarity();
               });
@@ -240,50 +330,42 @@ Options: $optionsText
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
-
               title: const Text(
                 "Your Doubt",
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
-
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    /// 🔄 LOADING
                     if (isLoading) const CircularProgressIndicator(),
-
-                    /// ✅ MATCH RESULT
                     if (!isLoading && teacherAnswer != null) ...[
-                      // print('object');
                       teacherAnswer.toString() == "No close match found"
-                          ? SizedBox()
+                          ? const SizedBox()
                           : Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: Colors.green.shade50,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "Available Solution on this Doubt",
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.green,
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.green.shade50,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    "Available Solution on this Doubt",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.green,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text("${teacherAnswer!}"),
-                              ],
+                                  const SizedBox(height: 6),
+                                  Text("${teacherAnswer!}"),
+                                ],
+                              ),
                             ),
-                          ),
                       const SizedBox(height: 12),
                     ],
-
-                    /// ✍️ USER PROBLEM INPUT (NO AUTO API)
                     TextField(
                       controller: problemController,
                       maxLines: 4,
@@ -297,13 +379,11 @@ Options: $optionsText
                   ],
                 ),
               ),
-
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
                   child: const Text("Cancel"),
                 ),
-
                 ElevatedButton(
                   onPressed: () {
                     if (problemController.text.trim().isEmpty) {
@@ -330,7 +410,7 @@ My problem: ${problemController.text.trim()}
                       des: finalDescription,
                       id: batchId,
                       subjectId: widget.subjectId,
-                      chapterId: widget.subjectId,
+                      chapterId: widget.chapterId,
                     );
                     Navigator.pop(context);
                   },
@@ -365,6 +445,14 @@ My problem: ${problemController.text.trim()}
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: body,
       );
+      if (kDebugMode) {
+        log('body---$body');
+        log('statusCode---${response.statusCode}');
+        log('data---${response.body}');
+      }
+      if (response.body.trim().isEmpty) {
+        throw Exception("Empty response");
+      }
       final json = jsonDecode(response.body);
       if (response.statusCode == 200 && json['status'] == 1) {
         _showSnackBar("Doubt submitted successfully!", isError: false);
@@ -372,28 +460,7 @@ My problem: ${problemController.text.trim()}
         _showSnackBar(json['msg'] ?? "Failed to submit doubt", isError: true);
       }
     } catch (e) {
-      _showSnackBar("Network error. Please try again.", isError: true);
-    }
-  }
-
-  Future<void> check(String des) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token') ?? '';
-    print(token);
-    try {
-      final Map<String, String> body = {"apiToken": token, "question": des};
-      final response = await http.post(
-        Uri.parse('https://truescoreedu.com/api/similar-doubts'),
-        headers: {"Content-Type": "application/x-www-form-urlencoded"},
-        body: body,
-      );
-      final json = jsonDecode(response.body);
-      if (response.statusCode == 200 && json['status'] == 1) {
-        _showSnackBar("Doubt submitted successfully!", isError: false);
-      } else {
-        _showSnackBar(json['msg'] ?? "Failed to submit doubt", isError: true);
-      }
-    } catch (e) {
+      if (kDebugMode) log("error-submitDoubt-$e");
       _showSnackBar("Network error. Please try again.", isError: true);
     }
   }
@@ -426,7 +493,6 @@ My problem: ${problemController.text.trim()}
       return text.contains("<") && text.contains(">");
     }
 
-    /// 🔥 CASE 1: PURE MATH (no html, only latex)
     if (hasMath(question) && !hasHtml(question)) {
       return Math.tex(
         question,
@@ -434,16 +500,12 @@ My problem: ${problemController.text.trim()}
       );
     }
 
-    /// 🔥 CASE 2: HTML (with or without math inside)
     if (hasHtml(question)) {
       return Html(
         data: question,
-
         style: {
           "*": Style(fontSize: FontSize(18), fontWeight: FontWeight.bold),
         },
-
-        /// 👇 handle math inside html
         extensions: [
           TagExtension(
             tagsToExtend: {"math"},
@@ -458,17 +520,13 @@ My problem: ${problemController.text.trim()}
               );
             },
           ),
-
-          /// 👇 AUTO detect latex inside normal html text
           TagExtension(
             tagsToExtend: {"span", "p", "div"},
             builder: (context) {
               final text = context.element?.text ?? "";
-
               if (hasMath(text)) {
                 return Math.tex(text, textStyle: const TextStyle(fontSize: 20));
               }
-
               return Text(text, style: const TextStyle(fontSize: 18));
             },
           ),
@@ -476,7 +534,6 @@ My problem: ${problemController.text.trim()}
       );
     }
 
-    /// 🔥 CASE 3: NORMAL TEXT
     return Text(
       formatQuestion(question),
       style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -492,7 +549,6 @@ My problem: ${problemController.text.trim()}
           text.contains(r"\sum");
     }
 
-    /// If math equation
     if (isMath(question)) {
       return Math.tex(
         question,
@@ -500,12 +556,10 @@ My problem: ${problemController.text.trim()}
       );
     }
 
-    /// If HTML content exists
     if (question.contains("<")) {
       return Html(data: question);
     }
 
-    /// Normal text
     return Text(
       formatQuestion(question),
       style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -515,7 +569,6 @@ My problem: ${problemController.text.trim()}
   String formatQuestion(String text) {
     text = text.trim();
     if (text.isEmpty) return text;
-
     return text[0].toUpperCase() + text.substring(1);
   }
 
@@ -528,12 +581,10 @@ My problem: ${problemController.text.trim()}
           text.contains(r"\sum");
     }
 
-    /// 🧮 If math detected → render equation
     if (isMath(option)) {
       return Math.tex(option, textStyle: const TextStyle(fontSize: 18));
     }
 
-    /// 🔤 Normal text
     return Text(formatQuestion(option), style: const TextStyle(fontSize: 16));
   }
 
@@ -558,10 +609,32 @@ My problem: ${problemController.text.trim()}
   }
 
   @override
-  @override
   Widget build(BuildContext context) {
-    final q = widget.questions[currentIndex];
+    if (isLoading && questions.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.blue,
+          title: Text(widget.subjectName,
+              style: const TextStyle(color: Colors.white)),
+          iconTheme: const IconThemeData(color: Colors.white),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
 
+    if (questions.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.blue,
+          title: Text(widget.subjectName,
+              style: const TextStyle(color: Colors.white)),
+          iconTheme: const IconThemeData(color: Colors.white),
+        ),
+        body: const Center(child: Text("No questions available")),
+      );
+    }
+
+    final q = questions[currentIndex];
     final question = q['question']?.toString() ?? "";
     String image = q['question_image'] ?? "";
 
@@ -574,30 +647,16 @@ My problem: ${problemController.text.trim()}
     final answerValue = q['answer_value'];
 
     bool isCorrect = selectedIndex == correctIndex;
-    // final q = widget.questions[currentIndex];
-    // final question = removeHtml(q['question']?.toString() ?? "");
-    // String image = q['question_image'] ?? "";
-    // final options =
-    // (q['options'] as List).map((e) => removeHtml(e.toString())).toList();
-    // final correctIndex = "ABCD".indexOf(q['right_answer']?.toString() ?? "");
-    // final answerType = q['answer_type'];
-    // final answerValue = q['answer_value'];
-    // print(answerValue);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          "${widget.subjectName} • Question ${currentIndex + 1}/${widget.questions.length}",
+          "${widget.subjectName} • Question ${currentIndex + 1}/$questionTotal",
         ),
         actions: [
           InkWell(
             onTap: () {
-              openDoubtDialog(
-                context,
-                question,
-                widget.batchId.toString(),
-                options,
-              );
+              openDoubtDialog(context, question, widget.batchId, options);
             },
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -617,46 +676,32 @@ My problem: ${problemController.text.trim()}
           ),
         ],
       ),
-
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             LinearProgressIndicator(
-              value: (currentIndex + 1) / widget.questions.length,
+              value: (currentIndex + 1) /int.parse(questionTotal),
             ),
-            SizedBox(height: 5),
-
-            /// QUESTION INDEX
+            const SizedBox(height: 5),
             Text(
-              "Question ${currentIndex + 1}/${widget.questions.length}",
+              "Question ${currentIndex + 1}/$questionTotal",
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-
             const SizedBox(height: 10),
-
-            /// QUESTION CARD
             Card(
               elevation: 2,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: buildQuestionWidget(question),
-                ),
+                child: buildQuestionWidget(question),
               ),
             ),
-
-            /// QUESTION IMAGE
             if (image.isNotEmpty) ...[
               const SizedBox(height: 16),
-
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Image.network(
@@ -664,21 +709,17 @@ My problem: ${problemController.text.trim()}
                   height: 200,
                   width: double.infinity,
                   fit: BoxFit.contain,
-                  errorBuilder:
-                      (_, __, ___) => const Icon(Icons.broken_image, size: 80),
+                  errorBuilder: (_, __, ___) =>
+                      const Icon(Icons.broken_image, size: 80),
                 ),
               ),
             ],
-
             const SizedBox(height: 20),
-
-            /// OPTIONS
             ...List.generate(options.length, (index) {
               bool isSelected = selectedIndex == index;
               bool isOptionCorrect = index == correctIndex;
 
               Color? cardColor;
-
               if (submitted) {
                 if (isOptionCorrect) {
                   cardColor = Colors.green.shade100;
@@ -690,44 +731,32 @@ My problem: ${problemController.text.trim()}
               return Card(
                 color: cardColor,
                 margin: const EdgeInsets.only(bottom: 12),
-
                 child: RadioListTile<int>(
                   title: buildOptionWidget(options[index].toString()),
-
                   value: index,
                   groupValue: selectedIndex,
-
-                  onChanged:
-                      submitted
-                          ? null
-                          : (val) {
-                            setState(() {
-                              selectedIndex = val;
-                            });
-                          },
-
+                  onChanged: submitted
+                      ? null
+                      : (val) {
+                          setState(() {
+                            selectedIndex = val;
+                          });
+                        },
                   activeColor: isCorrect ? Colors.green : Colors.deepPurple,
                 ),
               );
             }),
-
             const SizedBox(height: 20),
-
-            /// RESULT MESSAGE
             if (submitted)
               Container(
                 padding: const EdgeInsets.all(16),
-
                 decoration: BoxDecoration(
                   color: isCorrect ? Colors.green.shade50 : Colors.red.shade50,
-
                   borderRadius: BorderRadius.circular(12),
-
                   border: Border.all(
                     color: isCorrect ? Colors.green : Colors.red,
                   ),
                 ),
-
                 child: Row(
                   children: [
                     Icon(
@@ -735,179 +764,102 @@ My problem: ${problemController.text.trim()}
                       color: isCorrect ? Colors.green : Colors.red,
                       size: 32,
                     ),
-
                     const SizedBox(width: 12),
-
                     Text(
                       isCorrect ? "Correct Answer!" : "Wrong Answer!",
-
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color:
-                            isCorrect
-                                ? Colors.green.shade700
-                                : Colors.red.shade700,
+                        color: isCorrect
+                            ? Colors.green.shade700
+                            : Colors.red.shade700,
                       ),
                     ),
                   ],
                 ),
               ),
-
-            /// EXPLANATION
             if (submitted && selectedIndex != correctIndex) ...[
               const SizedBox(height: 20),
-
               answerValue.toString() == "No explanation required"
-                  ? SizedBox()
-                  : Text(
-                    "Explanation",
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-
+                  ? const SizedBox()
+                  : const Text(
+                      "Explanation",
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
               const SizedBox(height: 10),
-
-              /// LINK
               if (answerType == "link" &&
                   (answerValue.toString().isNotEmpty || answerValue != null))
                 GestureDetector(
                   onTap: () async {
                     final url = answerValue.toString();
-
-                    if (await canLaunchUrl(Uri.parse(url))) {
-                      await launchUrl(
-                        Uri.parse(url),
-                        mode: LaunchMode.externalApplication,
-                      );
+                    final uri = Uri.tryParse(url);
+                    if (uri != null && await canLaunchUrl(uri)) {
+                      await launchUrl(uri,
+                          mode: LaunchMode.externalApplication);
                     }
                   },
-
-                  child:
-                      answerValue.toString() == "No explanation required"
-                          ? SizedBox()
-                          : Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-
-                            decoration: BoxDecoration(
-                              color: Colors.blue.shade50,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.blue),
-                            ),
-
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: const [
-                                Icon(Icons.link, color: Colors.blue),
-
-                                SizedBox(width: 8),
-
-                                Text(
-                                  "View Detailed Open Url",
-                                  style: TextStyle(
-                                    color: Colors.blue,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
+                  child: answerValue.toString() == "No explanation required"
+                      ? const SizedBox()
+                      : Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
                           ),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.blue),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(Icons.link, color: Colors.blue),
+                              SizedBox(width: 8),
+                              Text(
+                                "View Detailed Open Url",
+                                style: TextStyle(
+                                  color: Colors.blue,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                 ),
-
-              /// IMAGE
               if ((answerType == "image" || answerType == "file") &&
                   answerValue.toString().isNotEmpty)
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-
-                  child:
-                      answerValue == null
-                          ? SizedBox()
-                          : Image.network(
-                            "https://truescoreedu.com/$answerValue",
-                            height: 200,
-                            fit: BoxFit.contain,
-                          ),
+                  child: Image.network(
+                    "https://truescoreedu.com/$answerValue",
+                    height: 200,
+                    fit: BoxFit.contain,
+                  ),
                 ),
-
-              /// TEXT
               if (answerType == "text" && answerValue.toString().isNotEmpty)
                 Container(
                   padding: const EdgeInsets.all(16),
-
                   decoration: BoxDecoration(
                     color: Colors.orange.shade50,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.orange),
                   ),
-
                   child: buildQuestionText(answerValue.toString()),
-                  // Text(
-                  //   answerValue.toString(),
-                  //   style: const TextStyle(fontSize: 15),
-                  // ),
                 ),
             ],
-
             const SizedBox(height: 40),
-
-            /// NEXT BUTTON
-            ///
-            ///
-
-            // SizedBox(
-            //   width: double.infinity,
-            //   height: 54,
-            //
-            //   child: ElevatedButton(
-            //
-            //     onPressed: selectedIndex == null
-            //         ? null
-            //         : () async {
-            //
-            //       if (!submitted) {
-            //
-            //         await _markAsAttempted();
-            //
-            //         setState(() {
-            //           submitted = true;
-            //         });
-            //
-            //       } else {
-            //
-            //         await _nextQuestion();
-            //
-            //       }
-            //
-            //     },
-            //
-            //     style: ElevatedButton.styleFrom(
-            //       shape: RoundedRectangleBorder(
-            //         borderRadius: BorderRadius.circular(12),
-            //       ),
-            //     ),
-            //
-            //     child: Text(
-            //       submitted ? "Next Question" : "Submit",
-            //       style: const TextStyle(fontSize: 16),
-            //     ),
-            //   ),
-            // ),
             Row(
               children: [
-                /// PREVIOUS BUTTON
                 Expanded(
                   child: SizedBox(
                     height: 54,
                     child: ElevatedButton(
-                      onPressed:
-                          currentIndex == 0
-                              ? null
-                              : () async {
-                                await _previousQuestion();
-                              },
+                      onPressed: currentIndex == 0
+                          ? null
+                          : () async {
+                              await _previousQuestion();
+                            },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red.shade400,
                         shape: RoundedRectangleBorder(
@@ -921,39 +873,43 @@ My problem: ${problemController.text.trim()}
                     ),
                   ),
                 ),
-
                 const SizedBox(width: 10),
-
-                /// SUBMIT / NEXT BUTTON
                 Expanded(
                   child: SizedBox(
                     height: 54,
                     child: ElevatedButton(
-                      onPressed:
-                          selectedIndex == null
-                              ? null
-                              : () async {
-                                if (!submitted) {
-                                  await _markAsAttempted();
-
-                                  setState(() {
-                                    submitted = true;
-                                  });
-                                } else {
-                                  await _nextQuestion();
-                                }
-                              },
+                      onPressed: (selectedIndex == null || isLoadingMore)
+                          ? null
+                          : () async {
+                              if (!submitted) {
+                                await _markAsAttempted();
+                                setState(() {
+                                  submitted = true;
+                                });
+                              } else {
+                                await _nextQuestion(q['id'].toString());
+                              }
+                            },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green.shade400,
-
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: Text(
-                        submitted ? "Next Question" : "Submit",
-                        style: TextStyle(fontSize: 16, color: Colors.white),
-                      ),
+                      child: isLoadingMore
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.4,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(
+                              submitted ? "Next Question" : "Submit",
+                              style: const TextStyle(
+                                  fontSize: 16, color: Colors.white),
+                            ),
                     ),
                   ),
                 ),
@@ -972,13 +928,20 @@ My problem: ${problemController.text.trim()}
         selectedIndex = null;
         submitted = false;
       });
-
       await _saveProgress();
     }
   }
 
-  Future<void> _nextQuestion() async {
-    if (currentIndex < widget.questions.length - 1) {
+  Future<void> _nextQuestion(String questionsId) async {
+    saveProgressApi(questionsId);
+
+    // Top up the next page proactively if we're nearing the end of what's
+    // currently loaded, so "Next" doesn't stall or bail out early.
+    if (hasMore && !isLoadingMore && questions.length - currentIndex <= 3) {
+      await fetchApiCourseQuestions(loadMore: true);
+    }
+
+    if (currentIndex < questions.length - 1) {
       setState(() {
         currentIndex++;
         selectedIndex = null;
@@ -990,43 +953,49 @@ My problem: ${problemController.text.trim()}
     }
   }
 
-  Widget _buildExplanation(String type, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Explanation",
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.bold,
-              color: Colors.red,
-            ),
-          ),
-          const SizedBox(height: 12),
-          if (type == "text")
-            Text(removeHtml(value), style: const TextStyle(fontSize: 15)),
-          if (type == "image") Image.network(value, fit: BoxFit.cover),
-          if (type == "link")
-            Text(
-              value,
-              style: const TextStyle(
-                color: Colors.blue,
-                decoration: TextDecoration.underline,
-              ),
-            ),
-        ],
-      ),
-    );
+  Future<void> saveProgressApi(String questionsId) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    try {
+      final response = await http.post(
+        Uri.parse("https://truescoreedu.com/api/save-progress"),
+        body: {
+          "apiToken": token,
+          "batch_id": widget.batchId,
+          "subject_id": widget.subjectId,
+          "chapter_id": widget.chapterId,
+          "question_id": questionsId,
+        },
+      ).timeout(const Duration(seconds: 15));
+
+      if (kDebugMode) {
+        log("saveProgressApi STATUS: ${response.statusCode}");
+        log("saveProgressApi BODY: ${response.body}");
+      }
+
+      if (response.statusCode != 200) {
+        throw Exception("Server error: ${response.statusCode}");
+      }
+      if (response.body.trim().isEmpty) {
+        throw Exception("Empty response");
+      }
+      if (response.body.trim().startsWith('<')) {
+        throw Exception("Server returned HTML instead of JSON");
+      }
+
+      jsonDecode(response.body);
+    } catch (e) {
+      if (kDebugMode) log("saveProgressApi error--$e");
+    }
   }
 }
 
 /// =================================================
 /// SCREEN 2: CHAPTER LIST
 /// =================================================
+
 class ChapterListScreen extends StatefulWidget {
-  final List<dynamic> questions;
+  final List<dynamic> chapters;
   final String batchId;
   final String questionType;
   final String subjectName;
@@ -1035,7 +1004,7 @@ class ChapterListScreen extends StatefulWidget {
 
   const ChapterListScreen({
     super.key,
-    required this.questions,
+    required this.chapters,
     required this.batchId,
     required this.questionType,
     required this.subjectName,
@@ -1048,70 +1017,36 @@ class ChapterListScreen extends StatefulWidget {
 }
 
 class _ChapterListScreenState extends State<ChapterListScreen> {
-  Map<String, bool> _chapterCompleted = {};
-
-  @override
-  void initState() {
-    super.initState();
-    _loadChapterCompletion();
-  }
-
-  Future<void> _loadChapterCompletion() async {
-    final chapters = _getChapters();
-    final Map<String, bool> status = {};
-    for (var chapter in chapters) {
-      final chapQs = _byChapter(chapter);
-      final done = await isAllQuestionsAttempted(
-        chapQs,
-        widget.batchId,
-        widget.questionType,
-      );
-      status[chapter] = done;
-    }
-    if (mounted) {
-      setState(() => _chapterCompleted = status);
-    }
-  }
-
   List<String> _getChapters() {
     final set = <String>{};
-    for (var q in widget.questions) {
-      print(q);
+    for (var q in widget.chapters) {
       final name = q['chapter_name']?.toString();
       set.add((name == null) ? "Syllabus" : name);
     }
     return set.toList();
   }
 
-  List<dynamic> _byChapter(String chapter) {
-    if (chapter == "Syllabus") {
-      return widget.questions
-          .where(
-            (q) =>
-                q['chapter_name'] == null ||
-                q['chapter_name'].toString().isEmpty,
-          )
-          .toList();
-    }
-    return widget.questions.where((q) => q['chapter_name'] == chapter).toList();
-  }
-
   @override
   Widget build(BuildContext context) {
     final chapters = _getChapters();
     return Scaffold(
-      appBar: AppBar(title: const Text("Select Chapter")),
+      appBar: AppBar(
+        backgroundColor: Colors.blue,
+        title: const Text(
+          "Select Chapter",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: chapters.length,
         itemBuilder: (context, index) {
           final chapter = chapters[index];
-          final chapterQuestions = _byChapter(chapter);
-          final isCompleted = _chapterCompleted[chapter] ?? false;
           return Padding(
             padding: const EdgeInsets.only(bottom: 14),
             child: Material(
-              color: isCompleted ? Colors.green.shade50 : Colors.white,
+              color: Colors.white,
               borderRadius: BorderRadius.circular(16),
               elevation: 2,
               child: InkWell(
@@ -1120,17 +1055,15 @@ class _ChapterListScreenState extends State<ChapterListScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder:
-                          (_) => AttemptPaperScreen(
-                            questions: chapterQuestions,
-                            questionType: widget.questionType,
-                            batchId: widget.batchId,
-                            subjectName: widget.subjectName,
-                            subjectId: widget.subjectId,
-                            chapterId: widget.chapterId,
-                          ),
+                      builder: (_) => AttemptPaperScreen(
+                        questionType: widget.questionType,
+                        batchId: widget.batchId,
+                        subjectName: widget.subjectName,
+                        subjectId: widget.subjectId,
+                        chapterId: widget.chapterId,
+                      ),
                     ),
-                  ).then((_) => _loadChapterCompletion());
+                  );
                 },
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
@@ -1142,61 +1075,33 @@ class _ChapterListScreenState extends State<ChapterListScreen> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color:
-                              isCompleted
-                                  ? Colors.green.withOpacity(0.2)
-                                  : Colors.purple.withOpacity(0.12),
+                          color: Colors.purple.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
-                          isCompleted
-                              ? Icons.check_circle
-                              : Icons.menu_book_rounded,
-                          color: isCompleted ? Colors.green : Colors.purple,
+                          Icons.menu_book_rounded,
+                          color: Colors.purple,
                           size: 24,
                         ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              chapter,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 16.5,
-                                fontWeight: FontWeight.w600,
-                                color:
-                                    isCompleted
-                                        ? Colors.green.shade800
-                                        : Colors.black87,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              "${chapterQuestions.length} Questions",
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.grey.shade700,
-                              ),
-                            ),
-                          ],
+                        child: Text(
+                          chapter,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 16.5,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
                         ),
                       ),
-                      if (isCompleted)
-                        const Icon(
-                          Icons.check_circle,
-                          color: Colors.green,
-                          size: 24,
-                        )
-                      else
-                        const Icon(
-                          Icons.arrow_forward_ios_rounded,
-                          size: 18,
-                          color: Colors.grey,
-                        ),
+                      const Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 18,
+                        color: Colors.grey,
+                      ),
                     ],
                   ),
                 ),
@@ -1209,18 +1114,13 @@ class _ChapterListScreenState extends State<ChapterListScreen> {
   }
 }
 
-/// =================================================
-/// SCREEN 1: SUBJECT LIST
-/// =================================================
 class SubjectListScreen extends StatefulWidget {
-  final List<dynamic> questions;
-  final String batchId;
+  final String courseId;
   final String questionType;
 
   const SubjectListScreen({
     super.key,
-    required this.questions,
-    required this.batchId,
+    required this.courseId,
     required this.questionType,
   });
 
@@ -1229,40 +1129,88 @@ class SubjectListScreen extends StatefulWidget {
 }
 
 class _SubjectListScreenState extends State<SubjectListScreen> {
-  Map<String, bool> _subjectCompleted = {};
+  List<dynamic> subjectsChapters = [];
+
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadSubjectCompletion();
+    fetchApiCourseQuestions();
   }
 
-  Future<void> _loadSubjectCompletion() async {
-    final subs = _getSubjects();
-    final Map<String, bool> status = {};
-    for (var sub in subs) {
-      final subQs = _bySubject(sub);
-      final done = await isAllQuestionsAttempted(
-        subQs,
-        widget.batchId,
-        widget.questionType,
-      );
-      status[sub] = done;
+  Future<void> fetchApiCourseQuestions() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('token');
+
+    try {
+      final response = await http.post(
+        Uri.parse("https://truescoreedu.com/api/get-course-subjects-chapters"),
+        body: {
+          "apiToken": token,
+          "courseId": widget.courseId,
+        },
+      ).timeout(const Duration(seconds: 15));
+
+      if (kDebugMode) {
+        log("fetchApiCourseQuestions STATUS: ${response.statusCode}");
+        log("fetchApiCourseQuestions BODY: ${response.body}");
+      }
+
+      if (response.statusCode != 200) {
+        throw Exception("Server error: ${response.statusCode}");
+      }
+
+      if (response.body.trim().isEmpty) {
+        throw Exception("Empty response");
+      }
+
+      if (response.body.trim().startsWith('<')) {
+        throw Exception("Server returned HTML instead of JSON");
+      }
+
+      final data = jsonDecode(response.body);
+
+      if (data["status"].toString() == "true") {
+        subjectsChapters = data["data"] ?? [];
+      }
+    } on TimeoutException {
+      print('error--Request timed out');
+    } catch (e) {
+      print('error--$e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
-    if (mounted) setState(() => _subjectCompleted = status);
   }
 
   List<String> _getSubjects() {
-    final set = <String>{};
-    for (var q in widget.questions) {
-      final name = q['subject_name']?.toString();
-      if (name != null && name.isNotEmpty) set.add(name);
+    final Set<String> subjects = {};
+
+    for (var q in subjectsChapters) {
+      dynamic value = q['subject_name'];
+      String subject;
+
+      if (value == null) {
+        subject = "Other Subjects";
+      } else {
+        subject = value.toString().trim();
+        if (subject.isEmpty || int.tryParse(subject) != null) {
+          subject = "Other Subjects";
+        }
+      }
+
+      subjects.add(subject);
     }
-    return set.toList();
+
+    return subjects.toList();
   }
 
   List<dynamic> _bySubject(String subject) {
-    return widget.questions.where((q) => q['subject_name'] == subject).toList();
+    return subjectsChapters.where((q) => q['subject_name'] == subject).toList();
   }
 
   @override
@@ -1272,237 +1220,122 @@ class _SubjectListScreenState extends State<SubjectListScreen> {
       backgroundColor: const Color(0xffF5F7FB),
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.blue,
         title: const Text(
           "Select Subject",
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
-        centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.black),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(18),
-        itemCount: subjects.length,
-        itemBuilder: (context, index) {
-          final subject = subjects[index];
-          final subjectQuestions = _bySubject(subject);
-          final isCompleted = _subjectCompleted[subject] ?? false;
-          Map<String, dynamic> subjectId = widget.questions.firstWhere(
-            (element) => element['subject_name'] == subject,
-            orElse: () => null,
-          );
-
-          return InkWell(
-            borderRadius: BorderRadius.circular(18),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder:
-                      (_) => ChapterListScreen(
-                        questions: subjectQuestions,
-                        batchId: widget.batchId,
-                        questionType: widget.questionType,
-                        subjectName: subject,
-                        subjectId: subjectId['subject_id'].toString(),
-                        chapterId: subjectId['chapter_id'].toString(),
-                      ),
-                ),
-              ).then((_) => _loadSubjectCompletion());
-            },
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              height: 86,
-              decoration: BoxDecoration(
-                color: isCompleted ? Colors.green.shade50 : Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                border:
-                    isCompleted
-                        ? Border.all(color: Colors.green, width: 1.8)
-                        : null,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    height: 52,
-                    width: 52,
-                    decoration: BoxDecoration(
-                      color:
-                          isCompleted
-                              ? Colors.green.withOpacity(0.15)
-                              : Colors.blue.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Icon(
-                      isCompleted
-                          ? Icons.check_circle
-                          : Icons.menu_book_rounded,
-                      color: isCompleted ? Colors.green : Colors.blue,
-                      size: 28,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Text(
-                      subject,
-                      style: TextStyle(
-                        fontSize: 17.5,
-                        fontWeight: FontWeight.w600,
-                        color:
-                            isCompleted
-                                ? Colors.green.shade800
-                                : Colors.black87,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isCompleted ? Colors.green : Colors.blue,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      isCompleted ? "Done" : "${subjectQuestions.length}",
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Icon(
-                    isCompleted
-                        ? Icons.check_circle
-                        : Icons.arrow_forward_ios_rounded,
-                    size: 18,
-                    color: isCompleted ? Colors.green : Colors.grey,
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-/// =================================================
-/// SCREEN 0: QUESTION TYPE SELECTION
-/// =================================================
-class QuestionTypeSelectionScreen extends StatelessWidget {
-  final List<dynamic> questions;
-  final String batchId;
-
-  const QuestionTypeSelectionScreen({
-    super.key,
-    required this.questions,
-    required this.batchId,
-  });
-
-  List<dynamic> _filterByType(String type) {
-    return questions.where((q) => q['question_type'] == type).toList();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final mcq = _filterByType("1");
-    final ca = _filterByType("2");
-    final pyq = _filterByType("3");
-    return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _typeCard(context, "MCQ", "1", mcq, Colors.blue),
-            const SizedBox(height: 16),
-            _typeCard(context, "Current Affairs", "2", ca, Colors.orange),
-            const SizedBox(height: 16),
-            _typeCard(context, "PYQ", "3", pyq, Colors.green),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _typeCard(
-    BuildContext context,
-    String title,
-    String questionType,
-    List<dynamic> list,
-    Color color,
-  ) {
-    final bool isEmpty = list.isEmpty;
-    return InkWell(
-      // Disable tap when empty
-      onTap:
-          isEmpty
-              ? null
-              : () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder:
-                        (_) => SubjectListScreen(
-                          questions: list,
-                          batchId: batchId,
-                          questionType: questionType,
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : subjects.isEmpty
+              ? const Center(child: Text("No subjects available"))
+              : ListView.builder(
+                  padding: const EdgeInsets.all(18),
+                  itemCount: subjects.length,
+                  itemBuilder: (context, index) {
+                    final subject = subjects[index];
+                    final subjectQuestions = _bySubject(subject);
+                    final Map<String, dynamic>? subjectMeta =
+                        subjectsChapters.firstWhere(
+                      (element) => element['subject_name'] == subject,
+                      orElse: () => null,
+                    );
+                    return InkWell(
+                      borderRadius: BorderRadius.circular(18),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ChapterListScreen(
+                              chapters:
+                                  subjectQuestions.first['chapters'] ?? [],
+                              batchId: widget.courseId,
+                              questionType: widget.questionType,
+                              subjectName: subject,
+                              subjectId:
+                                  subjectMeta?['subject_id']?.toString() ?? '',
+                              chapterId:
+                                  subjectMeta?['chapter_id']?.toString() ?? '',
+                            ),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        height: 86,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.06),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
-                  ),
-                );
-              },
-      child: Container(
-        height: 100,
-        decoration: BoxDecoration(
-          color:
-              isEmpty ? Colors.grey.withOpacity(0.08) : color.withOpacity(0.12),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isEmpty ? Colors.grey.shade400 : color,
-            width: 1.5,
-          ),
-        ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                "$title (${list.length})",
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: isEmpty ? Colors.grey.shade600 : color,
+                        child: Row(
+                          spacing: 4,
+                          children: [
+                            Container(
+                              height: 52,
+                              width: 52,
+                              decoration: BoxDecoration(
+                                color: Colors.blue.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Icon(
+                                Icons.menu_book_rounded,
+                                color: Colors.blue,
+                                size: 28,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                maxLines: 2,
+                                subject,
+                                style: TextStyle(
+                                  fontSize: 17.5,
+                                  overflow: TextOverflow.ellipsis,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.blue,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                "${List.from(subjectQuestions.first['chapters']).length}",
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              size: 18,
+                              color: Colors.grey,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
-              ),
-              if (isEmpty)
-                const Padding(
-                  padding: EdgeInsets.only(top: 6),
-                  child: Text(
-                    "No questions available",
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

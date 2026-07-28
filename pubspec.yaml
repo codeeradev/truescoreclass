@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.7+8
 
 environment:
-  sdk: ^3.7.0
+  sdk: ">=3.6.0 <4.0.0"
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -41,32 +41,33 @@ dependencies:
   expandable_text: any
   animated_notch_bottom_bar: ^1.0.3
   lucide_icons: ^0.257.0
-  font_awesome_flutter: ^10.8.0
+  font_awesome_flutter:
   intl: ^0.20.2
   file_picker: ^10.1.2
   phonepe_payment_sdk: ^3.0.2
   webview_flutter: ^4.7.0
   webview_flutter_android: ^3.15.0
-  flutter_math_fork: ^0.7.2
+  syncfusion_flutter_pdfviewer: any
+  flutter_math_fork: ^0.7.4
 
   image_picker: ^1.1.2
   share_plus: ^11.0.0
   video_player: ^2.9.5
   youtube_player_flutter: any
   chewie: ^1.11.3
-  syncfusion_flutter_pdfviewer: ^29.1.41
   http: ^1.4.0
   razorpay_flutter: ^1.4.0
   get: ^4.7.2
   shared_preferences: any
-  ionicons: any
+  ionicons_plus: ^0.2.5
   flutter_html: ^3.0.0
   url_launcher: any
-  flutter_screen_recording: ^2.0.25
+  flutter_screen_recording: any
   permission_handler: ^12.0.1
   firebase_messaging: ^16.4.0
   firebase_core: ^4.11.0
-  flutter_local_notifications:
+  flutter_local_notifications: any
+  fluttertoast: ^9.1.0
 
 
 
@@ -155,3 +156,5 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+

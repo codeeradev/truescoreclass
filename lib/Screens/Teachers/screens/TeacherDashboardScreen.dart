@@ -30,29 +30,29 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
   final List<_DashboardItem> items = [
 
     _DashboardItem("Upload Questions",
-        FontAwesomeIcons.listCheck,
+        FontAwesomeIcons.listCheck as IconData,
         Colors.blue),
 
     _DashboardItem(
       "Teacher Questions",
-      FontAwesomeIcons.fileLines,
+      FontAwesomeIcons.fileLines as IconData,
       Colors.orange,
     ),
 
     _DashboardItem(
       "Doubt Class",
-      FontAwesomeIcons.questionCircle,
+      FontAwesomeIcons.questionCircle as IconData,
       Colors.green,
     ),
 
     _DashboardItem(
       "Cleared Doubts",
-      FontAwesomeIcons.questionCircle,
+      FontAwesomeIcons.questionCircle as IconData,
       Colors.pinkAccent,
     ),
 
     _DashboardItem("Post Video",
-        FontAwesomeIcons.video,
+        FontAwesomeIcons.video as IconData,
         Colors.pink),
 
     _DashboardItem("Meetings",
@@ -61,8 +61,8 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
 
     _DashboardItem("Open Meeting", Icons.video_call_rounded, Colors.lightGreenAccent),
 
-    _DashboardItem("Add Notes", FontAwesomeIcons.noteSticky, Colors.brown),
-    _DashboardItem("Profile", FontAwesomeIcons.userLarge, Colors.indigo),
+    _DashboardItem("Add Notes", FontAwesomeIcons.noteSticky as IconData, Colors.brown),
+    _DashboardItem("Profile", FontAwesomeIcons.userLarge as IconData, Colors.indigo),
     _DashboardItem("Logout", Icons.logout, Colors.red),
   ];
 

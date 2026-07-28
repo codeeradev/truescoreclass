@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:online_classes/Screens/Student/otp_page.dart';
 import 'package:online_classes/notification_service.dart';
+import 'package:online_classes/servcies.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
@@ -46,6 +47,7 @@ class _SigninScreenState extends State<SigninScreen>
   @override
   void initState() {
     super.initState();
+    SecureScreen.enable();
     Timer.periodic(const Duration(seconds: 3), (timer) {
       if (_imageController.hasClients) {
         _currentPage = (_currentPage + 1) % _imageUrls.length;
@@ -101,7 +103,6 @@ class _SigninScreenState extends State<SigninScreen>
       final data = jsonDecode(response.body);
       print('data--signin--$data');
       print(response.statusCode);
-
       if (response.statusCode == 200) {
         if (data['status'].toString() == "1"||data['status'].toString()=='true') {
           // if (data['requires_verification'] == true) {
@@ -133,6 +134,8 @@ class _SigninScreenState extends State<SigninScreen>
                     "user_id": data["student_id"]??'',
                     "enrollment_id": data["enrollment_id"]??'',
                     "isPageValue": false,
+                    "contact_no": data['contact_no']??'',
+                    "email": data['email']??'',
                   },
                 ),
               ),
@@ -178,10 +181,8 @@ class _SigninScreenState extends State<SigninScreen>
             // );
           }
         } else {
-          _showError("Check ID-Password");
+          _showError(data['msg']);
         }
-      } else {
-        _showError("Check ID-Password");
       }
     } catch (e) {
       print("error sign in ---$e");
@@ -282,7 +283,7 @@ class _SigninScreenState extends State<SigninScreen>
                       children: [
                         _buildTextField(
                           controller: emailController,
-                          hint: "Username or ID",
+                          hint: "Mobile or Email or ID",
                           icon: Icons.alternate_email_rounded,
                         ),
                         // const SizedBox(height: 16),

@@ -1,7 +1,10 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:online_classes/Screens/Student/Bottombar.dart';
 import 'package:online_classes/Screens/Student/percentage.dart';
 import 'package:online_classes/Screens/Student/videos.dart';
 import 'package:online_classes/Screens/Student/webview.dart';
@@ -17,13 +20,12 @@ import 'getnotes.dart';
 import 'newques.dart'; // Your YouTube player (VideoPlayerScreen)
 
 class CourseDetailScreen2 extends StatefulWidget {
-
   final Map<String, dynamic> courseData;
+
   const CourseDetailScreen2({super.key, required this.courseData});
 
   @override
   State<CourseDetailScreen2> createState() => _CourseDetailScreen2State();
-
 }
 
 class _CourseDetailScreen2State extends State<CourseDetailScreen2>
@@ -35,23 +37,17 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
   bool enableLogs = true;
 
   String appSchema = "test";
-  String orderid='';
-  String tokenid='';
-
-
-
+  String orderid = '';
+  String tokenid = '';
 
   late Map<String, dynamic> payload = {
-    "orderId":orderid.toString(),
-    "merchantId":"MERCHNATID",
-    "token":tokenid.toString(),
-    "paymentMode":{"type":"PAY_PAGE"}
+    "orderId": orderid.toString(),
+    "merchantId": "MERCHNATID",
+    "token": tokenid.toString(),
+    "paymentMode": {"type": "PAY_PAGE"}
   };
 
-
   late final String request = jsonEncode(payload);
-
-
 
   Future<Map<String, dynamic>> getPhonePeAccessToken({
     required String clientId,
@@ -89,9 +85,6 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
     }
   }
 
-
-
-
   createPhonePeOrder({
     required String authToken,
     required String merchantOrderId,
@@ -122,9 +115,7 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
         "udf14": "additional-information-14",
         "udf15": "additional-information-15",
       },
-      "paymentFlow": {
-        "type": "PG_CHECKOUT"
-      }
+      "paymentFlow": {"type": "PG_CHECKOUT"}
     };
 
     final response = await http.post(
@@ -135,18 +126,14 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
       },
       body: jsonEncode(body),
     );
-    print(response.body);
-
-
     if (response.statusCode == 200 || response.statusCode == 201) {
-      final data= jsonDecode(response.body);
+      final data = jsonDecode(response.body);
       setState(() {
-        orderid=data["orderId"];
-        tokenid=data["token"];
+        orderid = data["orderId"];
+        tokenid = data["token"];
       });
       print(orderid);
       startTransaction();
-
     } else {
       throw Exception(
         "PhonePe order failed (${response.statusCode}): ${response.body}",
@@ -154,62 +141,52 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
     }
   }
 
-
-
-
-  void initSdk(){
-
-    PhonePePaymentSdk.init(environment, merchantId, flowId,
-        enableLogs).then((isInitialized)=> {
-      print("initialized : $isInitialized")
-    }).catchError((onError){
+  void initSdk() {
+    PhonePePaymentSdk.init(environment, merchantId, flowId, enableLogs)
+        .then((isInitialized) => {print("initialized : $isInitialized")})
+        .catchError((onError) {
       print("onError : $onError");
       return <dynamic>{};
-
     });
-
-
   }
 
-  void startTransaction(){
-
-    PhonePePaymentSdk.startTransaction(request, appSchema)
-        .then((response) {
-      if(response != null){
+  void startTransaction() {
+    PhonePePaymentSdk.startTransaction(request, appSchema).then((response) {
+      if (response != null) {
         String status = response['status'].toString();
         String error = response['error'].toString();
-        if(status == 'SUCCESS'){
+        if (status == 'SUCCESS') {
           print("success");
-
-        }else{
+        } else {
           print("failed");
-
         }
-
-
-      }else{
+      } else {
         print("Flow incomplete");
       }
     });
-
-
-
   }
-
 
   bool isLoading = true;
   bool isPurchased = false;
+  bool isTrialOver = false;
+  bool isTrial = false;
+  String trialDays = '';
+  String isTrialAvailable = '0';
   Map<String, dynamic>? apiCourseData;
 
   List<dynamic> videoLectures = [];
   List<dynamic> allQuestions = [];
 
   Widget testoraBannerCard() {
-
-    return InkWell(onTap: (){
-      Navigator.push(context, MaterialPageRoute(builder: (context)=>Videos(id: widget.courseData["id"].toString(),)));
-    },
-
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => Videos(
+                      id: widget.courseData["id"].toString(),
+                    )));
+      },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
         padding: const EdgeInsets.all(18),
@@ -231,8 +208,7 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
             ),
           ],
         ),
-        child:
-        Stack(
+        child: Stack(
           children: [
             /// 🔵 Decorative circles
             Positioned(
@@ -279,7 +255,6 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
                           color: Colors.white,
                         ),
                       ),
-
                     ],
                   ),
                 ),
@@ -309,8 +284,6 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
     );
   }
 
-
-
   // For questions tabs
   late TabController _tabController;
   List<String> availableTabs = [];
@@ -321,25 +294,29 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
     "PYQ": [],
   };
 
-  double prices=0;
+  double prices = 0;
   String Id = '';
   late Razorpay _razorpay;
+  final couponController = TextEditingController();
+
+  bool couponApplied = false;
+
+  double originalAmount = 0;
+  String? couponId;
+  double discountPercent = 0;
+  double discountAmount = 0;
+  double finalAmount = 0;
 
   @override
   void initState() {
     super.initState();
-    print(widget.courseData);
     SecureScreen.enable();
-
-
-
-
     _razorpay = Razorpay();
     _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
     _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
     _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
-    checkPurchaseStatus();
     fetchNotes();
+    checkPurchaseStatus();
   }
 
   Future<void> checkPurchaseStatus() async {
@@ -347,7 +324,7 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
     final token = preferences.getString('token');
     final String courseId = widget.courseData["id"]?.toString() ?? "";
     print(token);
-    print(courseId);
+    print('courseId----$courseId');
 
     try {
       final response = await http.post(
@@ -357,13 +334,19 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
           "courseId": courseId,
         },
       );
-
+      if (response.body.trim().isEmpty) {
+        throw Exception("Empty response");
+      }
       final data = jsonDecode(response.body);
-      print("Purchase check API response: $data");
-
-      if (data["status"] == "true" && data["data"]["isPurchased"] == true) {
+      log("--statusCode-${response.statusCode}---Purchase check API response: $data");
+      if (data["status"].toString() == "true") {
         setState(() {
-          isPurchased = true;
+          isPurchased = data["data"]["isPurchased"];
+          isTrialOver = data["data"]["isTrialOver"];
+          isTrial = data["data"]["isTrial"];
+          trialDays = data["data"]['course']["trial_days"].toString();
+          isTrialAvailable =
+              data["data"]['course']["is_trial_available"].toString();
           apiCourseData = data["data"]["course"];
           videoLectures = data["data"]["videoLectures"] ?? [];
           allQuestions = data["data"]["questions"] ?? [];
@@ -400,109 +383,229 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
             return order.indexOf(a).compareTo(order.indexOf(b));
           });
 
-          _tabController = TabController(length: availableTabs.length, vsync: this);
+          _tabController =
+              TabController(length: availableTabs.length, vsync: this);
           isLoading = false;
         });
       } else {
         setState(() {
-          isPurchased = false;
           isLoading = false;
         });
       }
     } catch (e) {
       print("Error checking purchase: $e");
       setState(() {
-        isPurchased = false;
         isLoading = false;
       });
+    }
+  }
+
+  bool isLoadingCoupon = false;
+
+  Future applyCouponApi() async {
+    SharedPreferences preferences = await SharedPreferences.getInstance();
+    final token = preferences.getString('token');
+    final String courseId = widget.courseData["id"]?.toString() ?? "";
+    setState(() {
+      isLoadingCoupon = true;
+    });
+    try {
+      final response = await http.post(
+        Uri.parse("https://truescoreedu.com/api/apply-coupon"),
+        body: {
+          "apiToken": token.toString(),
+          "batch_id": courseId,
+          "coupon_code": couponController.text.trim(),
+        },
+      );
+      log("applyCoupon-statusCode--${response.statusCode}");
+      log("applyCouponAp-body--${response.body}");
+      if (response.body.trim().isEmpty) {
+        throw Exception("Empty response");
+      }
+
+      final data = jsonDecode(response.body);
+
+      if (data["status"].toString() == "1" ||
+          data["status"].toString() == "true") {
+        final result = data["data"];
+        Fluttertoast.showToast(
+            msg: data["msg"],
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.TOP,
+            textColor: Colors.green);
+        return result;
+      } else {
+        Fluttertoast.showToast(
+            msg: data["msg"],
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.TOP,
+            textColor: Colors.red);
+        return null;
+      }
+    } catch (e) {
+      debugPrint(e.toString());
+      return null;
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoadingCoupon = false;
+        });
+      }
     }
   }
 
   @override
   void dispose() {
     SecureScreen.disable();
-
     if (availableTabs.isNotEmpty) _tabController.dispose();
     _razorpay.clear();
     super.dispose();
   }
 
-  String orderids='';
-  String mecrhant='';
+  String orderids = '';
+  String mecrhant = '';
 
-  Future<void> addPhonePay(BuildContext context, String batchId) async {
+  Future<void> addPhonePay(
+      {required BuildContext context,
+      required String batchId,
+      required bool isTrial}) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
     print(token);
     print(batchId);
+    try {
+      final response = await http.post(
+        Uri.parse("https://truescoreedu.com/api/payment/initiate"),
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: {
+          "apiToken": token.toString(),
+          "batch_id": batchId.toString(),
+          "purchase_type": isTrial ? '1' : '2',
+          if (couponId != null) "coupon_id": couponId.toString(),
+        },
+      );
+      dynamic data;
 
-    final response = await http.post(
-      Uri.parse("https://truescoreedu.com/api/payment/initiate"),
-      headers: {
-        "Accept": "application/json",
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: {
-        "apiToken": token.toString(),
-        "batch_id": batchId.toString(),
-      },
-    );
+      String body = response.body.trim();
 
-    final data = jsonDecode(response.body);
-    print(data);
-
-    if (response.statusCode == 200 && data['status'] == 1) {
-      if(data['message'].toString()=="Free course payment recorded successfully."){
-        checkPurchaseStatus();
-
-      }else{
-        print('ok');
-        final redirectUrl = data['data']['redirect_url'];
-        final transactionId = data['data']['transaction_id'];
-        final orderId = data['data']['order_id'];
-        final type = data['data']['gateway'];
-        final key = data['data']['key'];
-        final amt = data['data']['amount'];
-        setState(() {
-          orderids=orderId.toString();
-          mecrhant=transactionId.toString();
-        });
-
-        double d = double.parse(amt);
-        startPayment(d,orderId.toString(),key.toString());
-
-
-
-        print(transactionId);
-        print(orderId);
-
+      // Handle invalid response containing multiple JSON objects
+      if (body.contains("}{")) {
+        final firstPart = body.substring(0, body.indexOf("}{") + 1);
+        data = jsonDecode(firstPart);
+      } else {
+        data = jsonDecode(body);
       }
+      print('addPhonePay---$data');
+      print('statusCode---${response.statusCode}');
 
+      if (response.statusCode == 200 && data['status'] == 1) {
+        if (!isTrial) {
+          final redirectUrl = data['data']['redirect_url'];
+          final transactionId = data['data']['transaction_id'];
+          final orderId = data['data']['order_id'];
+          final type = data['data']['gateway'];
+          final key = data['data']['key'];
+          final amt = data['data']['amount'];
+          setState(() {
+            orderids = orderId.toString();
+            mecrhant = transactionId.toString();
+          });
 
-      // Navigator.push(
-      //   context,
-      //   MaterialPageRoute(
-      //     builder: (_) => PhonePeWebViewScreen(
-      //       redirectUrl: redirectUrl,
-      //       transactionId: transactionId,
-      //       orderId: orderId,
-      //       apiToken: token!,
-      //       gateway: type.toString(),
-      //     ),
-      //   ),
-      // ).then((s){
-      //   checkPurchaseStatus();
-      //
-      //
-      // });
+          double d = double.parse(amt.toString());
+          startPayment(d, orderId.toString(), key.toString());
+
+          // Navigator.push(
+          //   context,
+          //   MaterialPageRoute(
+          //     builder: (_) => PhonePeWebViewScreen(
+          //       redirectUrl: redirectUrl,
+          //       transactionId: transactionId,
+          //       orderId: orderId,
+          //       apiToken: token!,
+          //       gateway: type.toString(),
+          //     ),
+          //   ),
+          // ).then((s){
+          //   checkPurchaseStatus();
+          //
+          //
+          // });
+        } else {
+          if (data['trial_assingd'] == false) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                  content: Text(data['message']), backgroundColor: Colors.red),
+            );
+          } else {
+            checkPurchaseStatus();
+
+            showDialog(
+              context: context,
+              barrierDismissible: false, // Prevent closing by tapping outside
+              builder: (context) => AlertDialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                title: const Row(
+                  children: [
+                    Icon(
+                      Icons.check_circle,
+                      color: Colors.green,
+                      size: 30,
+                    ),
+                    SizedBox(width: 8),
+                    Text("Success"),
+                  ],
+                ),
+                content: Text(
+                  data['message'] ??
+                      'Free course payment recorded successfully.',
+                  style: const TextStyle(fontSize: 16),
+                ),
+                actions: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      child: const Text(
+                        "OK",
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(data['message'] ?? 'Something went wrong'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      print('error---$e');
     }
   }
-
 
   Widget htmlTextViewer(String htmlData) {
     return Html(
       data: htmlData.isEmpty ? "<p>No content</p>" : htmlData,
-
       style: {
         "body": Style(
           margin: Margins.zero,
@@ -511,21 +614,16 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
           color: Colors.black87,
           lineHeight: LineHeight.number(1.5),
         ),
-
         "p": Style(
-          margin:  Margins.only(bottom: 8),
+          margin: Margins.only(bottom: 8),
         ),
-
         "b": Style(fontWeight: FontWeight.bold),
         "strong": Style(fontWeight: FontWeight.bold),
-
         "h1": Style(fontSize: FontSize(22)),
         "h2": Style(fontSize: FontSize(20)),
         "h3": Style(fontSize: FontSize(18)),
-
         "ul": Style(margin: Margins.only(left: 16)),
         "ol": Style(margin: Margins.only(left: 16)),
-
         "a": Style(
           color: Colors.blue,
           textDecoration: TextDecoration.underline,
@@ -534,10 +632,8 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
     );
   }
 
-
-
-
-  Future Assignbatch(String mode, String batchid, String price, String trans) async {
+  Future Assignbatch(
+      String mode, String batchid, String price, String trans) async {
     print('s');
 
     SharedPreferences preferences = await SharedPreferences.getInstance();
@@ -553,7 +649,7 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
       },
     );
 
-    if(response.statusCode==200){
+    if (response.statusCode == 200) {
       print('yes');
       final data = jsonDecode(response.body);
       print(data);
@@ -564,14 +660,13 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
       );
 
       checkPurchaseStatus();
-
-
     }
-
   }
+
   bool isLoading2 = true;
   List<dynamic> notes = [];
   String? errorMessage;
+
   Future<void> fetchNotes() async {
     setState(() {
       isLoading2 = true;
@@ -594,7 +689,7 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
         Uri.parse("https://truescoreedu.com/api/get-notes"),
         body: {
           "apiToken": token,
-          "course_id":widget.courseData["id"].toString()
+          "course_id": widget.courseData["id"].toString()
         },
       );
       print(response.body);
@@ -612,9 +707,7 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
             errorMessage = json['message'] ?? "No notes found";
             isLoading2 = false;
           });
-
         }
-
       } else {
         throw Exception("Server error");
       }
@@ -626,9 +719,7 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
     }
   }
 
-
-
-  void startPayment(double total,String orderid,String Key) {
+  void startPayment(double total, String orderid, String Key) {
     var options = {
       'key': Key,
       'amount': total * 100,
@@ -644,12 +735,65 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
     }
   }
 
-  Future<void> _verifyPayment(
-      String
-      signature
-      ) async {
+  // Future<void> _verifyPayment(
+  //     String
+  //     signature
+  //     )
+  // async {
+  //   SharedPreferences prefs = await SharedPreferences.getInstance();
+  //   final token = prefs.getString('token');
+  //   final response = await http.post(
+  //     Uri.parse("https://truescoreedu.com/api/payment/verify"),
+  //     headers: {
+  //       "Accept": "application/json",
+  //       "Content-Type": "application/x-www-form-urlencoded",
+  //     },
+  //     body: {
+  //       "merchantOrderId": mecrhant,
+  //       "orderid": orderids,
+  //       "apiToken": token.toString(),
+  //       "gateway":"RAZORPAY",
+  //       "signature":signature.toString(),
+  //       "paymentStatus":"paid",
+  //
+  //
+  //     },
+  //   );
+  //   print('datais${response.body}');
+  //   checkPurchaseStatus();
+  //
+  //  // Navigator.pop(context);
+  //   // close loader
+  //
+  //
+  //   final data = jsonDecode(response.body);
+  //   print("_verifyPayment--$data");
+  //   //showPaymentResultPopup(context, data);
+  //
+  //   // showDialog(
+  //   //   context: context,
+  //   //   builder: (_) => AlertDialog(
+  //   //     title: Text(data['status'] == 1
+  //   //         ? "Payment Successful"
+  //   //         : "Payment Failed"),
+  //   //     content: Text(data['message'] ?? ""),
+  //   //     actions: [
+  //   //       TextButton(
+  //   //         onPressed: () {
+  //   //           Navigator.pop(context);
+  //   //           Navigator.pop(context); // back to previous screen
+  //   //         },
+  //   //         child: const Text("OK"),
+  //   //       ),
+  //   //     ],
+  //   //   ),
+  //   // );
+  // }
+
+  Future<void> _verifyPayment(String signature) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
+
     final response = await http.post(
       Uri.parse("https://truescoreedu.com/api/payment/verify"),
       headers: {
@@ -660,55 +804,83 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
         "merchantOrderId": mecrhant,
         "orderid": orderids,
         "apiToken": token.toString(),
-        "gateway":"RAZORPAY",
-        "signature":signature.toString(),
-        "paymentStatus":"paid",
-
-
+        "gateway": "RAZORPAY",
+        "signature": signature,
+        "paymentStatus": "paid",
       },
     );
-    print('datais${response.body}');
-    checkPurchaseStatus();
-
-   // Navigator.pop(context);
-    // close loader
-
 
     final data = jsonDecode(response.body);
-    print(data);
-    //showPaymentResultPopup(context, data);
 
-    // showDialog(
-    //   context: context,
-    //   builder: (_) => AlertDialog(
-    //     title: Text(data['status'] == 1
-    //         ? "Payment Successful"
-    //         : "Payment Failed"),
-    //     content: Text(data['message'] ?? ""),
-    //     actions: [
-    //       TextButton(
-    //         onPressed: () {
-    //           Navigator.pop(context);
-    //           Navigator.pop(context); // back to previous screen
-    //         },
-    //         child: const Text("OK"),
-    //       ),
-    //     ],
-    //   ),
-    // );
+    print("_verifyPayment---$data");
+
+    if (!mounted) return;
+
+    if (response.statusCode == 200 &&
+        (data["status"] == 1 ||
+            data["status"] == true ||
+            data["status"] == "success")) {
+      checkPurchaseStatus();
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.check_circle, color: Colors.green, size: 70),
+              SizedBox(height: 15),
+              Text(
+                "Payment Successful",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                "Thank you! Your payment has been verified.",
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      await Future.delayed(const Duration(seconds: 4));
+
+      if (!mounted) return;
+
+      Navigator.pop(context);
+
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const ModernBottomNav()),
+        (route) => false,
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(data["message"] ?? "Payment verification failed"),
+        ),
+      );
+    }
   }
-
 
   Future<void> _handlePaymentSuccess(PaymentSuccessResponse response) async {
     print("Payment success: ${response.paymentId}");
     print("Order ID: ${response.orderId}");
     print("Signature: ${response.signature}");
     _verifyPayment(response.signature.toString());
-   // await Assignbatch('offline', Id, prices.toString(), response.paymentId.toString());
+    // await Assignbatch('offline', Id, prices.toString(), response.paymentId.toString());
     //Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Videos()));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Payment Successful: ${response.paymentId}")),
-    );
+    // ScaffoldMessenger.of(context).showSnackBar(
+    //   SnackBar(content: Text("Payment Successful: ${response.paymentId}")),
+    // );
   }
 
   Future<void> _handlePaymentError(PaymentFailureResponse response) async {
@@ -738,7 +910,9 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(ques, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            Text(ques,
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             const SizedBox(height: 16),
             ...List.generate(options.length, (index) {
               final String optionLetter = String.fromCharCode(65 + index);
@@ -773,11 +947,13 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
                         style: TextStyle(
                           fontSize: 15,
                           color: isCorrect ? Colors.green[800] : Colors.black87,
-                          fontWeight: isCorrect ? FontWeight.bold : FontWeight.normal,
+                          fontWeight:
+                              isCorrect ? FontWeight.bold : FontWeight.normal,
                         ),
                       ),
                     ),
-                    if (isCorrect) const Icon(Icons.check, color: Colors.green, size: 22),
+                    if (isCorrect)
+                      const Icon(Icons.check, color: Colors.green, size: 22),
                   ],
                 ),
               );
@@ -787,7 +963,10 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
               alignment: Alignment.centerRight,
               child: Text(
                 "Correct Answer: $rightAnswer",
-                style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 15),
+                style: const TextStyle(
+                    color: Colors.green,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15),
               ),
             ),
           ],
@@ -795,14 +974,14 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
       ),
     );
   }
+
   Widget _optionCard({
     required String title,
     required IconData icon,
     required Color color,
     required VoidCallback onTap,
   }) {
-    return
-      Expanded(
+    return Expanded(
       child: GestureDetector(
         onTap: onTap,
         child: Container(
@@ -872,8 +1051,7 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
   }
 
   Widget courseDescription(String description) {
-    String formattedDescription =
-    description.replaceAll("\n", "<br>");
+    String formattedDescription = description.replaceAll("\n", "<br>");
 
     return Html(
       data: formattedDescription.isEmpty
@@ -901,302 +1079,72 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
     );
   }
 
-
-
-
   @override
   Widget build(BuildContext context) {
-   // print(apiCourseData!["course_benifits"]);
     if (isLoading) {
       return Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
+          iconTheme: IconThemeData(color: Colors.white),
           backgroundColor: Colors.blue,
-          title: const Text("Course Details", style: TextStyle(color: Colors.white)),
+          title: const Text("Course Details",
+              style: TextStyle(color: Colors.white)),
         ),
-        body: const Center(child: CircularProgressIndicator(color: Colors.blue)),
+        body:
+            const Center(child: CircularProgressIndicator(color: Colors.blue)),
       );
     }
 
-    // ==================== PURCHASED UI WITH VIDEOS + QUESTIONS ====================
-    if (isPurchased && apiCourseData != null) {
-      final String batchName = apiCourseData!["batch_name"] ?? "Untitled Course";
-      final String category = apiCourseData!["cat_name"] ?? "";
-      final String subCategory = apiCourseData!["sub_cat_name"] ?? "";
-      final String description = (apiCourseData!["description"] ?? "").toString().replaceAll("null", "").trim();
-      final String imageUrl = apiCourseData!["batch_image"] ?? "";
-      List<dynamic> benefits=apiCourseData!["course_benifits"] ?? "";
-      print("benefits$benefits");
+    final bool canClaimTrial =
+        !isTrialOver && !isPurchased && isTrialAvailable == '1' && !isTrial;
 
-      return
-        Scaffold(
-        backgroundColor: Colors.grey[50],
-        appBar: AppBar(
-          elevation: 0,
-          backgroundColor: Colors.blue,
-          title: const Text("Course Details", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () =>
-                Navigator.pop(context),
-          ),
-          // actions: [
-          //   InkWell(onTap: ()async{
-          //   final tokenResponse = await getPhonePeAccessToken(
-          //     clientId: "M23QCU3N54CJF_2511281615",
-          //     clientSecret: "YjQ0YjkwOWEtNDllOC00Zjg5LWIyYjctMDMxYjliODk2ODk4",
-          //   );
-          //
-          //   print(tokenResponse);
-          //
-          // },child: Icon(Icons.eighteen_mp))],
-        ),
-        body: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(color: Colors.blue,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.check_circle, size: 30, color: Colors.white),
-                    const SizedBox(width: 12),
-                    const Text("Congrats for this course!",
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
-
-                  ],
-                ),
-              ),
-
-              // Course Image
-              // Container(
-              //   width: double.infinity,
-              //   height: 220,
-              //   decoration: BoxDecoration(
-              //     color: Colors.blue.shade50,
-              //     image: imageUrl.isNotEmpty
-              //         ? DecorationImage(
-              //       image: NetworkImage("https://truescoreedu.com/uploads/batch_image/$imageUrl"),
-              //       fit: BoxFit.cover,
-              //     )
-              //         : null,
-              //   ),
-              //   child: imageUrl.isEmpty ? const Icon(Icons.menu_book_rounded, size: 80, color: Colors.blue) : null,
-              // ),
-
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(batchName, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    Text("$category ${subCategory.isNotEmpty ? '• $subCategory' : ''}",
-                        style: const TextStyle(fontSize: 16, color: Colors.black54)),
-                    const SizedBox(height: 20),
-
-                    // Purchased Success
-
-                    const SizedBox(height: 30),
-                    InkWell(
-                      onTap: (){
-                        final mcqQuestions = allQuestions.where((q) => q['question_type'] == "1").toList();
-                        final caQuestions = allQuestions.where((q) => q['question_type'] == "2").toList();
-                        final pyqQuestions = allQuestions.where((q) => q['question_type'] == "3").toList();
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => CourseProgressScreen(
-                              batchId: widget.courseData["id"].toString(),
-                              mcqQuestions: mcqQuestions,
-                              caQuestions: caQuestions,
-                              pyqQuestions: pyqQuestions,
-                            ),
-                          ),
-                        );                        },
-                      child: Container(decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),color: Colors.blueAccent
-                      ),height: 50,child: Center(child: Text("Progress",style: TextStyle(color: Colors.white),))
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-
-                    Row(
-                    children: [
-                      // _optionCard(
-                      //   title: "MCQ",
-                      //   icon: Icons.quiz_rounded,
-                      //   color: const Color(0xFF4F46E5),
-                      //   onTap: () {
-                      //     Navigator.push(
-                      //       context,
-                      //       MaterialPageRoute(
-                      //         builder: (_) => QuestionTypeSelectionScreen(
-                      //           questions: allQuestions,
-                      //         ),
-                      //       ),
-                      //     );
-                      //   },
-                      // ),
-
-                      videoLectures.length==0?SizedBox(): _optionCard(
-                        title: "Videos",
-                        icon: Icons.play_circle_fill_rounded,
-                        color: const Color(0xFF16A34A),
-                        onTap: () {
-                          Navigator.push(context, MaterialPageRoute(builder: (context)=>VideoListScreenfull(videoLectures: videoLectures,)));
-
-
-                        },
-                      ),
-                     notes.isEmpty?SizedBox(): _optionCard(
-                        title: "Notes",
-                        icon: Icons.menu_book_rounded,
-                        color: const Color(0xFFF97316),
-                        onTap: () {
-                          Navigator.push(context, MaterialPageRoute(builder: (context)=>GetNotesScreen(batchid: widget.courseData["id"].toString(),)));
-
-                        },
-                      ),
-
-                    ],
-                  ),
-                    const SizedBox(height: 30),
-                    Container(
-                      height: 400,
-                      child:  QuestionTypeSelectionScreen(
-                        questions: allQuestions, batchId: widget.courseData["id"].toString(),
-                      ),
-                    ),
-
-                    testoraBannerCard(),
-                    SizedBox(height: 20,),
-
-
-                    // Description
-                    // if (description.isNotEmpty) ...[
-                    //  // const Text("About this Course", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    //   const SizedBox(height: 10),
-                    //   Text(description, style: const TextStyle(fontSize: 15, height: 1.6)),
-                    //   const SizedBox(height: 30),
-                    // ],
-
-                    // Video Lectures
-                    // if (videoLectures.isNotEmpty) ...[
-                    //   const Text("Video Lectures", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                    //   const SizedBox(height: 12),
-                    //   ListView.builder(
-                    //     shrinkWrap: true,
-                    //     physics: const NeverScrollableScrollPhysics(),
-                    //     itemCount: videoLectures.length,
-                    //     itemBuilder: (context, index) {
-                    //       final video = videoLectures[index];
-                    //       final String title = video["title"] ?? "Untitled";
-                    //       final String url = video["url"] ?? "";
-                    //
-                    //       return Card(
-                    //         margin: const EdgeInsets.symmetric(vertical: 8),
-                    //         child: ListTile(
-                    //           leading: Container(
-                    //             width: 50,
-                    //             height: 50,
-                    //             decoration: BoxDecoration(color: Colors.red.shade100, borderRadius: BorderRadius.circular(8)),
-                    //             child: const Icon(Icons.play_circle_fill, color: Colors.red, size: 34),
-                    //           ),
-                    //           title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-                    //           subtitle: Text(video["subject"] ?? "", style: TextStyle(color: Colors.grey[600])),
-                    //           trailing: const Icon(Icons.arrow_forward_ios),
-                    //           onTap: url.isNotEmpty
-                    //               ? () => Navigator.push(
-                    //             context,
-                    //             MaterialPageRoute(
-                    //               builder: (_) => VideoPlayerScreen(videoTitle: title, youtubeUrl: url),
-                    //             ),
-                    //           )
-                    //               : null,
-                    //         ),
-                    //       );
-                    //     },
-                    //   ),
-                    //   const SizedBox(height: 30),
-                    // ],
-                    //
-                    // // Practice Questions (at bottom)
-                    // if (availableTabs.isNotEmpty) ...[
-                    //   const Text("Practice Questions", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                    //   const SizedBox(height: 16),
-                    //   TabBar(
-                    //     controller: _tabController,
-                    //     isScrollable: availableTabs.length > 2,
-                    //     labelColor: Colors.blue,
-                    //     unselectedLabelColor: Colors.grey,
-                    //     indicatorColor: Colors.blue,
-                    //     tabs: availableTabs.map((tab) => Tab(text: tab)).toList(),
-                    //   ),
-                    //   SizedBox(
-                    //     height: 600,
-                    //     child: TabBarView(
-                    //       controller: _tabController,
-                    //       children: availableTabs.map((tabName) {
-                    //         final questions = questionsByType[tabName] ?? [];
-                    //         return ListView.builder(
-                    //           padding: const EdgeInsets.only(top: 16),
-                    //           itemCount: questions.length,
-                    //           itemBuilder: (context, index) => buildQuestionCard(questions[index]),
-                    //         );
-                    //       }).toList(),
-                    //     ),
-                    //   ),
-                    // ] else ...[
-                    //   const Center(
-                    //     child: Text("No practice questions available yet.", style: TextStyle(color: Colors.grey)),
-                    //   ),
-                    // ],
-
-                    const SizedBox(height: 40),
-
-                  ],
-
-                ),
-
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    // ==================== NOT PURCHASED - ORIGINAL BUY UI ====================
+    final bool trialClaimed = isTrial;
     final String id = widget.courseData["id"] ?? "";
-    final String batchName = widget.courseData["batch_name"] ?? "Untitled Course";
+    final String batchName =
+        widget.courseData["batch_name"] ?? "Untitled Course";
     final String category = widget.courseData["cat_name"] ?? "";
     final String subCategory = widget.courseData["sub_cat_name"] ?? "";
-    final String description = (widget.courseData["description"] ?? "").toString().trim().replaceAll("null", "");
-    final String imageUrl = (widget.courseData["batch_image"] ?? "").toString().trim();
-    final String rawPrice = (widget.courseData["batch_price"] ?? "").toString().trim();
-    final String rawOfferPrice = (widget.courseData["batch_offer_price"] ?? "").toString().trim();
+    final String description = (widget.courseData["description"] ?? "")
+        .toString()
+        .trim()
+        .replaceAll("null", "");
+    final String imageUrl =
+        (widget.courseData["batch_image"] ?? "").toString().trim();
+    final String rawPrice =
+        (widget.courseData["batch_price"] ?? "").toString().trim();
+    final String rawOfferPrice =
+        (widget.courseData["batch_offer_price"] ?? "").toString().trim();
     final String offerPrice = rawOfferPrice.isEmpty ? rawPrice : rawOfferPrice;
-    final double parsedOfferPrice = double.tryParse(rawOfferPrice.isEmpty ? rawPrice : rawOfferPrice) ?? 0.0;
-    final bool hasOffer = rawOfferPrice.isNotEmpty && parsedOfferPrice < (double.tryParse(rawPrice) ?? 0);
+    final double parsedOfferPrice =
+        double.tryParse(rawOfferPrice.isEmpty ? rawPrice : rawOfferPrice) ??
+            0.0;
+    final bool hasOffer = rawOfferPrice.isNotEmpty &&
+        parsedOfferPrice < (double.tryParse(rawPrice) ?? 0);
     final String startDate = widget.courseData["start_date"] ?? "Not specified";
     final String endDate = widget.courseData["end_date"] ?? "Not specified";
-    final String rawStartTime = (widget.courseData["start_time"] ?? "").toString();
+    final String rawStartTime =
+        (widget.courseData["start_time"] ?? "").toString();
     final String rawEndTime = (widget.courseData["end_time"] ?? "").toString();
-    final String startTime = rawStartTime.length >= 8 ? rawStartTime.substring(0, 5) : "";
-    final String endTime = rawEndTime.length >= 8 ? rawEndTime.substring(0, 5) : "";
+    final String startTime =
+        rawStartTime.length >= 8 ? rawStartTime.substring(0, 5) : "";
+    final String endTime =
+        rawEndTime.length >= 8 ? rawEndTime.substring(0, 5) : "";
     final String payMode = widget.courseData["pay_mode"] ?? "Online";
-    List<dynamic> benefits=widget.courseData["course_benifits"] ?? [];
-   print("benefits$benefits");
-   print("des$description");
+    List<dynamic> benefits = widget.courseData["course_benifits"] ?? [];
+    print("isPurchased----$isTrialOver $isPurchased $isTrialAvailable}");
+    print("courseData----${widget.courseData}");
+    print("courseData----${apiCourseData}");
 
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.blue,
-        title: const Text("Course Details", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.pop(context)),
+        title: const Text("Course Details",
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.pop(context)),
         // actions: [InkWell(onTap: (){
         //   initSdk();
         //   createPhonePeOrder(authToken: 'O-Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHBpcmVzT24iOjE3NzAxMTMzOTUzNTksIm1lcmNoYW50SWQiOiJNMjNRQ1UzTjU0Q0pGIn0.Rp7_fFbvQ3lpd0ES4RgGfd58wtkT2BHC7vlcDR55v-I', merchantOrderId: 'TEST123', amount: 100);
@@ -1223,39 +1171,68 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
                 color: Colors.blue.shade50,
                 image: imageUrl.isNotEmpty
                     ? DecorationImage(
-                  image: NetworkImage("https://truescoreedu.com/uploads/batch_image/$imageUrl"),
-                  fit: BoxFit.cover,
-                )
+                        image: NetworkImage(
+                            "https://truescoreedu.com/uploads/batch_image/$imageUrl"),
+                        fit: BoxFit.cover,
+                      )
                     : null,
               ),
-              child: imageUrl.isEmpty ? const Icon(Icons.menu_book_rounded, size: 80, color: Colors.blue) : null,
+              child: imageUrl.isEmpty
+                  ? const Icon(Icons.menu_book_rounded,
+                      size: 80, color: Colors.blue)
+                  : null,
             ),
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(batchName, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                  Text(batchName,
+                      style: const TextStyle(
+                          fontSize: 24, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
-                  Text("$category ${subCategory.isNotEmpty ? '• $subCategory' : ''}",
-                      style: const TextStyle(fontSize: 16, color: Colors.black54)),
+                  Text(
+                      "$category ${subCategory.isNotEmpty ? '• $subCategory' : ''}",
+                      style:
+                          const TextStyle(fontSize: 16, color: Colors.black54)),
                   const SizedBox(height: 20),
                   Row(
                     children: [
                       if (rawPrice.isEmpty)
-                        const Text("Free Course", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.green))
+                        const Text("Free Course",
+                            style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green))
                       else if (hasOffer) ...[
-                        Text("₹$rawPrice", style: const TextStyle(fontSize: 20, color: Colors.grey, decoration: TextDecoration.lineThrough)),
+                        Text("₹$rawPrice",
+                            style: const TextStyle(
+                                fontSize: 20,
+                                color: Colors.grey,
+                                decoration: TextDecoration.lineThrough)),
                         const SizedBox(width: 12),
-                        Text("₹$offerPrice", style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.green)),
+                        Text("₹$offerPrice",
+                            style: const TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green)),
                       ] else
-                        Text("₹$rawPrice", style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.blue)),
+                        Text("₹$rawPrice",
+                            style: const TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue)),
                       const Spacer(),
-                      Chip(backgroundColor: Colors.blue.shade50, label: Text(payMode, style: const TextStyle(color: Colors.blue))),
+                      Chip(
+                          backgroundColor: Colors.blue.shade50,
+                          label: Text(payMode,
+                              style: const TextStyle(color: Colors.blue))),
                     ],
                   ),
                   const SizedBox(height: 20),
-                  const Text("Description", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text("Description",
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   //htmlTextViewer(description),
                   courseDescription(description),
@@ -1279,221 +1256,411 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
                   //   },
                   // ),
                   const SizedBox(height: 20),
-                  const Text("BENEFITS", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                 benefits.isEmpty?SizedBox(): ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: benefits.length,
-                    itemBuilder: (context, i) {
-                      final spec = benefits[i];
+                  const Text("BENEFITS",
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  benefits.isEmpty
+                      ? SizedBox()
+                      : ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: benefits.length,
+                          itemBuilder: (context, i) {
+                            final spec = benefits[i];
 
-                      // ── safe features getter ──
-                      final features = () {
-                        final val = spec['batch_fecherd'];
-                        if (val is List) return val.cast<dynamic>();
-                        if (val is String) {
-                          try {
-                            final decoded = json.decode(val);
-                            if (decoded is List) return decoded.cast<dynamic>();
-                          } catch (_) {}
-                        }
-                        return <dynamic>[];
-                      }();
+                            // ── safe features getter ──
+                            final features = () {
+                              final val = spec['batch_fecherd'];
+                              if (val is List) return val.cast<dynamic>();
+                              if (val is String) {
+                                try {
+                                  final decoded = json.decode(val);
+                                  if (decoded is List)
+                                    return decoded.cast<dynamic>();
+                                } catch (_) {}
+                              }
+                              return <dynamic>[];
+                            }();
 
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              spec['batch_specification_heading']?.toString() ?? '',
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            ...features.asMap().entries.map((e) =>
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 12, bottom: 6),
-                                  child: Row(
-                                    children: [
-                                      Text(
-                                        "${e.key + 1}.",
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w500,
-                                          color: Colors.blueGrey,
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 12, horizontal: 16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    spec['batch_specification_heading']
+                                            ?.toString() ??
+                                        '',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  ...features.asMap().entries.map(
+                                        (e) => Padding(
+                                          padding: const EdgeInsets.only(
+                                              left: 12, bottom: 6),
+                                          child: Row(
+                                            children: [
+                                              Text(
+                                                "${e.key + 1}.",
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.w500,
+                                                  color: Colors.blueGrey,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                  child:
+                                                      Text(e.value.toString())),
+                                            ],
+                                          ),
                                         ),
                                       ),
-                                      const SizedBox(width: 8),
-                                      Expanded(child: Text(e.value.toString())),
-                                    ],
-                                  ),
-                                ),
-                            ),
-                          ],
+                                ],
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
-                  // Column(
-                  //   crossAxisAlignment: CrossAxisAlignment.start,
-                  //   children: [
-                  //     for (var item in benefits) ...[
-                  //       /// Heading
-                  //       Text(
-                  //         item['batch_specification_heading']?.toString() ?? '',
-                  //         style: const TextStyle(
-                  //           fontSize: 16,
-                  //           fontWeight: FontWeight.w600,
-                  //         ),
-                  //       ),
-                  //
-                  //       const SizedBox(height: 4),
-                  //
-                  //
-                  //       /// Features
-                  //       ListView.builder(
-                  //         shrinkWrap: true,
-                  //         physics: const NeverScrollableScrollPhysics(),
-                  //         itemCount: benefits.length,
-                  //         itemBuilder: (context, i) {
-                  //           final spec = benefits[i];
-                  //
-                  //           // ── safe features getter ──
-                  //           final features = () {
-                  //             final val = spec['batch_fecherd'];
-                  //             if (val is List) return val.cast<dynamic>();
-                  //             if (val is String) {
-                  //               try {
-                  //                 final decoded = json.decode(val);
-                  //                 if (decoded is List) return decoded.cast<dynamic>();
-                  //               } catch (_) {}
-                  //             }
-                  //             return <dynamic>[];
-                  //           }();
-                  //
-                  //           return Padding(
-                  //             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                  //             child: Column(
-                  //               crossAxisAlignment: CrossAxisAlignment.start,
-                  //               children: [
-                  //                 Text(
-                  //                   spec['batch_specification_heading']?.toString() ?? '',
-                  //                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  //                     fontWeight: FontWeight.w600,
-                  //                   ),
-                  //                 ),
-                  //                 const SizedBox(height: 8),
-                  //                 ...features.asMap().entries.map((e) =>
-                  //                     Padding(
-                  //                       padding: const EdgeInsets.only(left: 12, bottom: 6),
-                  //                       child: Row(
-                  //                         children: [
-                  //                           Text(
-                  //                             "${e.key + 1}.",
-                  //                             style: const TextStyle(
-                  //                               fontWeight: FontWeight.w500,
-                  //                               color: Colors.blueGrey,
-                  //                             ),
-                  //                           ),
-                  //                           const SizedBox(width: 8),
-                  //                           Expanded(child: Text(e.value.toString())),
-                  //                         ],
-                  //                       ),
-                  //                     ),
-                  //                 ),
-                  //               ],
-                  //             ),
-                  //           );
-                  //         },
-                  //       ),
-                  //
-                  //
-                  //
-                  //
-                  //
-                  //       const SizedBox(height: 16),
-                  //     ]
-                  //   ],
-                  // ),
 
-                  // Container(height: 200,
-                  //   child: SimpleTextList(list: benefits)
-                  //
-                  // ),
-
-                  _buildDetailRow(Icons.calendar_today, "Start Date", startDate),
+                  _buildDetailRow(
+                      Icons.calendar_today, "Start Date", startDate),
                   _buildDetailRow(Icons.calendar_month, "End Date", endDate),
                   // if (startTime.isNotEmpty && endTime.isNotEmpty)
                   //   _buildDetailRow(Icons.access_time, "Time", "$startTime - $endTime"),
-                 // _buildDetailRow(Icons.groups, "Enrolled Students", "10000+ students"),
+                  // _buildDetailRow(Icons.groups, "Enrolled Students", "10000+ students"),
                   const SizedBox(height: 40),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 55,
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        // double d = parsedOfferPrice;
-                        //   setState(() {
-                        //     prices = d;
-                        //     Id = id.toString();
-                        //   });
-
-                       if (rawPrice.isEmpty) {
-                         addPhonePay(context,id);
-
-                         // await Assignbatch('online', id, "00", "");
-                          // Navigator.pushReplacement(
-                          //   context,
-                          //   MaterialPageRoute(builder: (_) => Videos(id: widget.courseData["id"].toString(),)),
-                          // );
-
-                        }else if(rawPrice.isNotEmpty){
-                          double d = parsedOfferPrice;
-                          setState(() {
-                            prices = d;
-                            Id = id.toString();
-                          });
-                          final int amount = (parsedOfferPrice * 100).toInt();
-
-                          if (d <= 0) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("Invalid payment amount")),
-                            );
-                            return;
-                          }
-                          print("pp$d");
-                          addPhonePay(context,id);
-                          // showDialog(
-                          //   context: context,
-                          //   barrierDismissible: false,
-                          //   builder: (_) => const TestingPaymentDialog(),
-                          // );
-
-
-                          //startPayment(d);
-                          // initSdk();
-                          // createPhonePeOrder(authToken: 'O-Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHBpcmVzT24iOjE3NzAxMTMzOTUzNTksIm1lcmNoYW50SWQiOiJNMjNRQ1UzTjU0Q0pGIn0.Rp7_fFbvQ3lpd0ES4RgGfd58wtkT2BHC7vlcDR55v-I', merchantOrderId: 'TEST123', amount: amount);
-                          // await Assignbatch('online', id, d.toString(), "dkdsk");
-
-
-
-                       } else {
-                          print('nooo');
-
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        elevation: 4,
-                      ),
-                      child: Text(
-                        rawPrice.isEmpty ? "Join Free" : "Buy Now",
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                  if (canClaimTrial || trialClaimed) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      height: 55,
+                      child: ElevatedButton(
+                        onPressed: canClaimTrial
+                            ? () async {
+                                addPhonePay(
+                                  context: context,
+                                  batchId: id,
+                                  isTrial: true,
+                                );
+                              }
+                            : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              trialClaimed ? Colors.grey : Colors.blue.shade600,
+                          disabledBackgroundColor: Colors.grey,
+                          elevation: 6,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              trialClaimed
+                                  ? Icons.check_circle
+                                  : Icons.workspace_premium_rounded,
+                              color: Colors.white,
+                              size: 26,
+                            ),
+                            const SizedBox(width: 12),
+                            Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  trialClaimed
+                                      ? "Trial Already Claimed"
+                                      : "Start Free Trial",
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                Text(
+                                  trialClaimed
+                                      ? "You have already claimed your trial."
+                                      : "$trialDays Days Access",
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.white.withOpacity(0.9),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 20),
+                  ],
+
+                  if (!isPurchased)
+                    SizedBox(
+                      width: double.infinity,
+                      height: 55,
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          couponApplied = false;
+                          couponId = null;
+                          couponController.clear();
+                          discountPercent = 0;
+                          discountAmount = 0;
+                          finalAmount = 0;
+                          isLoadingCoupon = false;
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (context) {
+                              return StatefulBuilder(
+                                builder: (context, setState) {
+                                  return Container(
+                                    padding: EdgeInsets.only(
+                                      left: 20,
+                                      right: 20,
+                                      top: 20,
+                                      bottom: MediaQuery.of(context)
+                                              .viewInsets
+                                              .bottom +
+                                          20,
+                                    ),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.vertical(
+                                        top: Radius.circular(25),
+                                      ),
+                                    ),
+                                    child: SingleChildScrollView(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          /// Drag Handle
+                                          Container(
+                                            width: 50,
+                                            height: 5,
+                                            decoration: BoxDecoration(
+                                              color: Colors.grey.shade400,
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            ),
+                                          ),
+
+                                          const SizedBox(height: 20),
+
+                                          ListTile(
+                                            contentPadding: EdgeInsets.zero,
+                                            leading: const CircleAvatar(
+                                              backgroundColor: Colors.blue,
+                                              child: Icon(Icons.school,
+                                                  color: Colors.white),
+                                            ),
+                                            title: Text(
+                                              batchName,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 18,
+                                              ),
+                                            ),
+                                          ),
+
+                                          _buildDetailRow(Icons.calendar_today,
+                                              "Start Date", startDate),
+                                          _buildDetailRow(Icons.calendar_month,
+                                              "End Date", endDate),
+
+                                          const SizedBox(height: 15),
+
+                                          TextField(
+                                            controller: couponController,
+                                            enabled: !couponApplied,
+                                            decoration: InputDecoration(
+                                              hintText: "Enter Coupon Code",
+                                              prefixIcon:
+                                                  const Icon(Icons.discount),
+                                              border: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                            ),
+                                          ),
+
+                                          const SizedBox(height: 12),
+
+                                          SizedBox(
+                                            width: double.infinity,
+                                            child: ElevatedButton(
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: couponApplied
+                                                    ? Colors.red
+                                                    : Colors.green,
+                                              ),
+                                              onPressed: () async {
+                                                if (couponApplied) {
+                                                  setState(() {
+                                                    couponApplied = false;
+                                                    couponId = null;
+                                                    couponController.clear();
+                                                    discountPercent = 0;
+                                                    discountAmount = 0;
+                                                    finalAmount = 0;
+                                                    isLoadingCoupon = false;
+                                                  });
+                                                  return;
+                                                }
+
+                                                if (couponController.text
+                                                    .trim()
+                                                    .isEmpty) {
+                                                  Fluttertoast.showToast(
+                                                    msg: "Enter coupon code",
+                                                    toastLength:
+                                                        Toast.LENGTH_SHORT,
+                                                    gravity: ToastGravity.TOP,
+                                                  );
+
+                                                  return;
+                                                }
+
+                                                final value =
+                                                    await applyCouponApi();
+
+                                                if (value != null) {
+                                                  setState(() {
+                                                    couponApplied = true;
+                                                    couponId =
+                                                        value["coupon_id"]
+                                                            .toString();
+                                                    originalAmount = double.parse(
+                                                        value["original_amount"]
+                                                            .toString());
+                                                    discountPercent =
+                                                        double.parse(value[
+                                                                "discount_percent"]
+                                                            .toString());
+                                                    discountAmount = double.parse(
+                                                        value["discount_amount"]
+                                                            .toString());
+                                                    finalAmount = double.parse(
+                                                        value["final_amount"]
+                                                            .toString());
+                                                  });
+                                                }
+                                              },
+                                              child: isLoadingCoupon
+                                                  ? Center(
+                                                      child: Padding(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              8.0),
+                                                      child:
+                                                          CircularProgressIndicator(),
+                                                    ))
+                                                  : Text(
+                                                      couponApplied
+                                                          ? "Remove Coupon"
+                                                          : "Apply Coupon",
+                                                      style: const TextStyle(
+                                                          color: Colors.white),
+                                                    ),
+                                            ),
+                                          ),
+
+                                          const SizedBox(height: 15),
+
+                                          Card(
+                                            elevation: 2,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: Padding(
+                                              padding: const EdgeInsets.all(15),
+                                              child: Column(
+                                                children: [
+                                                  _priceRow(
+                                                    "Amount",
+                                                    "₹$offerPrice",
+                                                  ),
+                                                  const SizedBox(height: 10),
+                                                  _priceRow(
+                                                    "Discount",
+                                                    "- ₹${discountAmount.toStringAsFixed(0)}",
+                                                    color: Colors.green,
+                                                  ),
+                                                  const Divider(),
+                                                  _priceRow(
+                                                    "Payable Amount",
+                                                    "₹${finalAmount == 0 ? offerPrice : finalAmount}",
+                                                    isBold: true,
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+
+                                          const SizedBox(height: 20),
+
+                                          SizedBox(
+                                            width: double.infinity,
+                                            height: 52,
+                                            child: ElevatedButton.icon(
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.blue,
+                                              ),
+                                              onPressed: () {
+                                                Navigator.pop(context);
+
+                                                addPhonePay(
+                                                  context: context,
+                                                  batchId: id,
+                                                  isTrial: false,
+                                                );
+                                              },
+                                              icon: const Icon(
+                                                Icons.shopping_cart,
+                                                color: Colors.white,
+                                              ),
+                                              label: Text(
+                                                "Buy Now • ₹${finalAmount == 0 ? offerPrice : finalAmount}",
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 17,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16)),
+                          elevation: 4,
+                        ),
+                        child: Text(
+                          "Buy Now",
+                          style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white),
+                        ),
+                      ),
+                    ),
                   const SizedBox(height: 20),
                 ],
               ),
@@ -1504,6 +1671,33 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
     );
   }
 
+  Widget _priceRow(
+    String title,
+    String value, {
+    Color color = Colors.black,
+    bool isBold = false,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            color: color,
+            fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
+            fontSize: isBold ? 17 : 15,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildDetailRow(IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1511,7 +1705,9 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
         children: [
           Icon(icon, size: 20, color: Colors.blue),
           const SizedBox(width: 12),
-          Text("$label:", style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+          Text("$label:",
+              style:
+                  const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
           const SizedBox(width: 8),
           Expanded(child: Text(value, style: const TextStyle(fontSize: 15))),
         ],
@@ -1519,8 +1715,6 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
     );
   }
 }
-
-
 
 class CoursePurchasedDialog extends StatelessWidget {
   const CoursePurchasedDialog({super.key});
@@ -1631,9 +1825,6 @@ class CoursePurchasedDialog extends StatelessWidget {
   }
 }
 
-
-
-
 class TestingPaymentDialog extends StatefulWidget {
   const TestingPaymentDialog({super.key});
 
@@ -1642,7 +1833,6 @@ class TestingPaymentDialog extends StatefulWidget {
 }
 
 class _TestingPaymentDialogState extends State<TestingPaymentDialog> {
-
   @override
   void initState() {
     super.initState();
@@ -1673,8 +1863,7 @@ class _TestingPaymentDialogState extends State<TestingPaymentDialog> {
             ),
           ],
         ),
-        child:
-        Column(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             // ✅ SUCCESS ICON
@@ -1725,17 +1914,18 @@ class _TestingPaymentDialogState extends State<TestingPaymentDialog> {
             // ⏳ LOADING DOT
             const CircularProgressIndicator(strokeWidth: 2),
             const SizedBox(height: 12),
-            ElevatedButton(onPressed: (){
-              Navigator.pop(context);
-            }, child: Text("Done"))
-
-
+            ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: Text("Done"))
           ],
         ),
       ),
     );
   }
 }
+
 class SimpleTextList extends StatelessWidget {
   final List<dynamic> list;
 
@@ -1753,7 +1943,7 @@ class SimpleTextList extends StatelessWidget {
             item['batch_specification_heading']?.toString() ?? "";
 
         final List features =
-        item['batch_fecherd'] is List ? item['batch_fecherd'] : [];
+            item['batch_fecherd'] is List ? item['batch_fecherd'] : [];
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1775,10 +1965,10 @@ class SimpleTextList extends StatelessWidget {
               children: features
                   .map<Widget>(
                     (f) => Text(
-                  "- ${f.toString()}",
-                  style: const TextStyle(fontSize: 14),
-                ),
-              )
+                      "- ${f.toString()}",
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                  )
                   .toList(),
             ),
 
@@ -1789,4 +1979,3 @@ class SimpleTextList extends StatelessWidget {
     );
   }
 }
-

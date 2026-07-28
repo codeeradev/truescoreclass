@@ -111,10 +111,7 @@ class _GetNotesScreenState extends State<GetNotesScreen> {
           "My Notes",
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
-        backgroundColor: Colors.blue.shade700,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
+        backgroundColor: Colors.blue,
       ),
       body: Container(
         decoration: BoxDecoration(

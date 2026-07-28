@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:online_classes/Screens/Student/Bottombar.dart';
 import 'package:online_classes/Screens/Student/CardSave.dart';
+import 'package:online_classes/servcies.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -26,6 +27,7 @@ class _OtpStudentPageState extends State<OtpStudentPage> {
   @override
   void initState() {
     super.initState();
+    SecureScreen.enable();
     startTimer();
   }
 
@@ -93,6 +95,23 @@ class _OtpStudentPageState extends State<OtpStudentPage> {
     );
   }
 
+  String maskMobile(String mobile) {
+    if (mobile.length < 10) return mobile;
+    return "${mobile.substring(0, 2)}******${mobile.substring(mobile.length - 2)}";
+  }
+
+  String maskEmail(String email) {
+    if (!email.contains('@')) return email;
+
+    final parts = email.split('@');
+    final name = parts[0];
+    final domain = parts[1];
+
+    if (name.length <= 2) return "***@$domain";
+
+    return "${name.substring(0, 2)}*****@${domain}";
+  }
+
   @override
   Widget build(BuildContext context) {
     final args =
@@ -102,6 +121,8 @@ class _OtpStudentPageState extends State<OtpStudentPage> {
     final String userId = args["user_id"]?.toString() ?? '';
     final String userType = args["user_type"]?.toString() ?? '';
     final String enrollmentId = args["enrollment_id"]?.toString() ?? '';
+    final String mobile = args["contact_no"]?.toString() ?? '';
+    final String email = args["email"]?.toString() ?? '';
     final bool isPageValue = args["isPageValue"] ?? true;
     return Scaffold(
       backgroundColor: const Color(0xffF5F7FB),
@@ -149,19 +170,23 @@ class _OtpStudentPageState extends State<OtpStudentPage> {
                           const SizedBox(height: 30),
                           Lottie.asset('assets/images/otp.json', height: 140),
                           const SizedBox(height: 15),
-                          const Text(
-                            "Verify Your Account",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
+                          Flexible(
+                            child: const Text(
+                              "Verify Your Account",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 8),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 30),
                             child: Text(
-                              "Enter the 6-digit OTP sent to your WhatsApp and Email.",
+                              "Enter the 6-digit OTP sent to "
+                              "WhatsApp (${maskMobile(mobile)}) "
+                              "and Email (${maskEmail(email)}).",
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: Colors.white.withOpacity(.9),
@@ -361,11 +386,14 @@ class _OtpStudentPageState extends State<OtpStudentPage> {
       print("urlApi---$urlApi");
       print("body---${isOtpType ? body : bodyLoginOtp}");
       print("statusCode---${response.statusCode}");
+      print('verifyOtp--${response.body}');
+
       if (!mounted) return;
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        print('verifyOtp--${response.body}');
-        if (data["status"] == 1 && isOtpType) {
+        if ((data["status"].toString() == '1' ||
+                data['status'].toString() == 'true') &&
+            isOtpType) {
           _showSnackBar(data["msg"], isError: false);
           showDialog(
             context: context,
@@ -374,16 +402,22 @@ class _OtpStudentPageState extends State<OtpStudentPage> {
               backgroundColor: Colors.transparent,
               insetPadding: const EdgeInsets.all(16),
               child: RegistrationSuccessCard(
-                message: data['msg'], // ✅ FIXED KEY
+                message: data['msg'],
                 enrollmentId: data['credentials']['enrollment_id'].toString(),
                 // password: data['credentials']['password'].toString(),
               ),
             ),
           );
-        } else if (!isOtpType && data['status'].toString() == 'true') {
+        } else if (!isOtpType &&
+            (data["status"].toString() == '1' ||
+                data['status'].toString() == 'true')) {
           await preferences.setString(
-            "studentData",
+            "studentEnrollmentId",
             data['studentData']['enrollmentId'],
+          );
+          await preferences.setString(
+            "studentId",
+            data['studentData']['studentId'],
           );
           await preferences.setString(
             "token",
@@ -405,6 +439,49 @@ class _OtpStudentPageState extends State<OtpStudentPage> {
           await preferences.setString(
             "studentph",
             data['studentData']['mobile'].toString(),
+          );
+          await preferences.setString(
+              'studentAlternateNo', data['alternate_number']?.toString() ?? '');
+
+          await preferences.setString('studentfather',
+              data['studentData']['father_name']?.toString() ?? '');
+          await preferences.setString(
+              'studentgender', data['studentData']['gender']?.toString() ?? '');
+          await preferences.setString(
+            'studentdob',
+            data['studentData']['dob']?.toString() ?? '',
+          );
+          final addressString =
+              data['studentData']['address']?.toString() ?? '';
+
+          final address =
+              addressString.isEmpty ? <String>[] : addressString.split(',');
+
+          await preferences.setString(
+            'studenthouse',
+            address.isNotEmpty ? address[0].trim() : '',
+          );
+
+          await preferences.setString(
+            'studentstreet',
+            address.length > 1 ? address[1].trim() : '',
+          );
+
+          await preferences.setString(
+            'studentpin',
+            address.length > 2 ? address[2].trim() : '',
+          );
+          await preferences.setString(
+            'studentstateid',
+            data['studentData']['state_id']?.toString() ?? '',
+          );
+          await preferences.setString(
+            'studentdistrictid',
+            data['studentData']['district_id']?.toString() ?? '',
+          );
+          await preferences.setString(
+            'studentcityid',
+            data['studentData']['city_id']?.toString() ?? '',
           );
 
           Navigator.pushReplacement(
@@ -448,10 +525,9 @@ class _OtpStudentPageState extends State<OtpStudentPage> {
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: {
           "user_id": userId,
-          "otp_login": isOtpType?'false': 'true',
+          "otp_login": isOtpType ? 'false' : 'true',
           "user_type": 'student',
-          if(!isOtpType)
-            "username": enrollmentId
+          if (!isOtpType) "username": enrollmentId
         },
       );
       if (!mounted) return;

@@ -395,6 +395,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
+  final TextEditingController alternateNoController = TextEditingController();
   final TextEditingController fatherCtr = TextEditingController();
   final TextEditingController houseCtr = TextEditingController();
   final TextEditingController streetCtr = TextEditingController();
@@ -420,7 +421,6 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
   void initState() {
     super.initState();
     SecureScreen.enable();
-    _loadUserData();
     fetchStates();
   }
 
@@ -451,13 +451,14 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
       streetCtr.text = prefs.getString('studentstreet') ?? '';
       pinCtr.text = prefs.getString('studentpin') ?? '';
       image = prefs.getString('studentimage') ?? '';
-      selectedGender = prefs.getString('studentgender');
+      selectedGender = prefs.getString('studentgender') ?? '';
       selectedDob = (dobString != null && dobString.isNotEmpty)
           ? DateTime.tryParse(dobString)
           : null;
-      _savedStateName = prefs.getString('studentstate');
-      _savedDistrictName = prefs.getString('studentdistrict');
-      _savedCityName = prefs.getString('studentcity');
+      _savedStateName = prefs.getString('studentstateid');
+      _savedDistrictName = prefs.getString('studentdistrictid');
+      _savedCityName = prefs.getString('studentcityid');
+      alternateNoController.text = prefs.getString('studentAlternateNo') ?? '';
     });
   }
 
@@ -466,41 +467,70 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
   String? _savedCityName;
 
   Future<void> fetchStates() async {
+    if (!mounted) return;
     setState(() => isLoadingStates = true);
+    await _loadUserData();
     try {
       final response = await http.get(
         Uri.parse('https://truescoreedu.com/api/geo-full'),
       );
+
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);
         final List<dynamic> stateList = jsonResponse['states'] ?? [];
+
         setState(() {
           states = stateList;
-          isLoadingStates = false;
           if (_savedStateName != null) {
             selectedState = states.firstWhere(
-              (s) => s['name'] == _savedStateName,
-              orElse: () => null,
+              (s) => s['id'].toString() == _savedStateName.toString(),
+              orElse: () => states.isNotEmpty ? states.first : null,
             );
-            if (selectedState != null) {
-              districts = selectedState['districts'] ?? [];
-              if (_savedDistrictName != null) {
-                selectedDistrict = districts.firstWhere(
-                  (d) => d['name'] == _savedDistrictName,
-                  orElse: () => null,
-                );
-                if (selectedDistrict != null) {
-                  cities = selectedDistrict['cities'] ?? [];
-                  if (_savedCityName != null) {
-                    selectedCity = cities.firstWhere(
-                      (c) => c['name'] == _savedCityName,
-                      orElse: () => null,
-                    );
-                  }
+          } else {
+            selectedState = states.isNotEmpty ? states.first : null;
+          }
+
+          districts = selectedState?['districts'] ?? [];
+
+          if (_savedDistrictName != null) {
+            selectedDistrict = districts.firstWhere(
+              (d) => d['id'].toString() == _savedDistrictName.toString(),
+              orElse: () => districts.isNotEmpty ? districts.first : null,
+            );
+          } else {
+            selectedDistrict = districts.isNotEmpty ? districts.first : null;
+          }
+
+          cities = selectedDistrict?['cities'] ?? [];
+
+          if (_savedCityName != null) {
+            for (final state in states) {
+              final stateDistricts = state['districts'] ?? [];
+
+              for (final district in stateDistricts) {
+                final districtCities = district['cities'] ?? [];
+
+                final city =
+                    districtCities.cast<Map<String, dynamic>?>().firstWhere(
+                          (c) =>
+                              c?['id'].toString() == _savedCityName.toString(),
+                          orElse: () => null,
+                        );
+
+                if (city != null) {
+                  selectedState = state;
+                  selectedDistrict = district;
+                  selectedCity = city;
+
+                  districts = stateDistricts;
+                  cities = districtCities;
+                  break;
                 }
               }
             }
           }
+
+          isLoadingStates = false;
         });
       } else {
         setState(() => isLoadingStates = false);
@@ -584,6 +614,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
         'email': emailController.text.trim(),
         'contact': phoneController.text.trim(),
         'father_name': fatherCtr.text.trim(),
+        'alternate_number': alternateNoController.text.trim(),
         'gender': selectedGender ?? '',
         'dob': selectedDob != null
             ? DateFormat('yyyy-MM-dd').format(selectedDob!)
@@ -591,10 +622,10 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
         'house_no': houseCtr.text.trim(),
         'street': streetCtr.text.trim(),
         'pincode': pinCtr.text.trim(),
-        'state': selectedState != null ? selectedState['name'].toString() : '',
+        'state': selectedState != null ? selectedState['id'].toString() : '',
         'district':
-            selectedDistrict != null ? selectedDistrict['name'].toString() : '',
-        'city': selectedCity != null ? selectedCity['name'].toString() : '',
+            selectedDistrict != null ? selectedDistrict['id'].toString() : '',
+        'city': selectedCity != null ? selectedCity['id'].toString() : '',
       });
 
       if (profileImage != null) {
@@ -607,32 +638,54 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
       final responseBody = await response.stream.bytesToString();
       final jsonResp = jsonDecode(responseBody);
       final data = jsonResp['data'];
-log('data---$data');
       if (response.statusCode == 200 && jsonResp['status'] == 1) {
-        await prefs.setString('studentname', data['name']?.toString() ?? '');
-        await prefs.setString('studentmail', data['email']?.toString() ?? '');
+        await prefs.setString(
+            'studentname', data['name']?.toString() ?? nameController.text);
+        await prefs.setString(
+            'studentmail', data['email']?.toString() ?? emailController.text);
+        await prefs.setString('studentAlternateNo',
+            data['alternate_number']?.toString() ?? alternateNoController.text);
         await prefs.setString(
             'studentph', data['contact_no']?.toString() ?? '');
-        await prefs.setString('studentfather', fatherCtr.text.trim());
-        await prefs.setString('studentgender', selectedGender ?? '');
+        await prefs.setString(
+            'studentfather', data['father_name']?.toString() ?? fatherCtr.text);
+        await prefs.setString(
+            'studentgender', data['gender']?.toString() ?? '');
         await prefs.setString(
           'studentdob',
-          selectedDob != null ? selectedDob!.toIso8601String() : '',
+          data['dob']?.toString() ?? '',
         );
-        await prefs.setString('studenthouse', houseCtr.text.trim());
-        await prefs.setString('studentstreet', streetCtr.text.trim());
-        await prefs.setString('studentpin', pinCtr.text.trim());
+
+        final addressString = data['address']?.toString() ?? '';
+
+        final address =
+            addressString.isEmpty ? <String>[] : addressString.split(',');
+
         await prefs.setString(
-          'studentstate',
-          selectedState != null ? selectedState['name'].toString() : '',
+          'studenthouse',
+          address.isNotEmpty ? address[0].trim() : '',
+        );
+
+        await prefs.setString(
+          'studentstreet',
+          address.length > 1 ? address[1].trim() : '',
+        );
+
+        await prefs.setString(
+          'studentpin',
+          address.length > 2 ? address[2].trim() : '',
         );
         await prefs.setString(
-          'studentdistrict',
-          selectedDistrict != null ? selectedDistrict['name'].toString() : '',
+          'studentstateid',
+          data['state_id']?.toString() ?? '',
         );
         await prefs.setString(
-          'studentcity',
-          selectedCity != null ? selectedCity['name'].toString() : '',
+          'studentdistrictid',
+          data['district_id']?.toString() ?? '',
+        );
+        await prefs.setString(
+          'studentcityid',
+          data['city_id']?.toString() ?? '',
         );
 
         if (profileImage != null) {
@@ -641,7 +694,11 @@ log('data---$data');
         }
 
         _showSnackBar(jsonResp['msg'] ?? 'Profile updated successfully!');
-        if (mounted) Navigator.pop(context, true);
+        Future.delayed(const Duration(seconds: 1), () {
+          if (mounted) {
+            Navigator.pop(context, true);
+          }
+        });
       } else {
         _showSnackBar(jsonResp['msg'] ?? 'Failed to update profile',
             isError: true);
@@ -656,243 +713,253 @@ log('data---$data');
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7FF),
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        title: const Text(
-          "Update Profile",
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.black),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              GestureDetector(
-                onTap: _pickImage,
-                child: Stack(
-                  alignment: Alignment.bottomRight,
-                  children: [
-                    CircleAvatar(
-                      radius: 60,
-                      backgroundColor: Colors.grey.shade200,
-                      backgroundImage: profileImage != null
-                          ? FileImage(profileImage!) as ImageProvider
-                          : (image.isNotEmpty
-                              ? NetworkImage(
-                                  "https://truescoreedu.com/uploads/students/$image")
-                              : null),
-                      child: (profileImage == null && image.isEmpty)
-                          ? const Icon(Icons.person_rounded,
-                              size: 60, color: Colors.grey)
-                          : null,
-                    ),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: Colors.blue,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.camera_alt,
-                          size: 20, color: Colors.white),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                "Tap to change photo",
-                style:
-                    TextStyle(color: Colors.blue, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 20),
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "Edit your personal details",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-              ),
-              const SizedBox(height: 20),
-              _inputField(
-                controller: nameController,
-                label: "Full Name",
-                icon: Icons.person_outline_rounded,
-                keyboardType: TextInputType.name,
-                validator: (v) => (v == null || v.trim().isEmpty)
-                    ? "Please enter your name"
-                    : null,
-              ),
-              _inputField(
-                controller: phoneController,
-                label: "Mobile Number",
-                icon: Icons.phone_outlined,
-                keyboardType: TextInputType.phone,
-                maxLength: 10,
-                validator: (v) => (v == null || v.length != 10)
-                    ? "Enter a valid 10-digit mobile number"
-                    : null,
-              ),
-              _inputField(
-                controller: emailController,
-                label: "Email Address",
-                icon: Icons.email_outlined,
-                keyboardType: TextInputType.emailAddress,
-                validator: (v) => (v == null ||
-                        !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                            .hasMatch(v))
-                    ? "Enter a valid email"
-                    : null,
-              ),
-              _inputField(
-                controller: fatherCtr,
-                label: "Father/Husband Name",
-                icon: Icons.family_restroom,
-                keyboardType: TextInputType.name,
-                validator: (v) => (v == null || v.trim().isEmpty)
-                    ? "Please enter father/husband name"
-                    : null,
-              ),
-              _buildDropdown<String>(
-                value: selectedGender,
-                items: const ["Male", "Female"],
-                itemBuilder: (g) => g,
-                label: "Gender",
-                onChanged: (val) => setState(() => selectedGender = val),
-              ),
-              const SizedBox(height: 18),
-              InkWell(
-                onTap: () => _selectDate(context),
-                child: InputDecorator(
-                  decoration: InputDecoration(
-                    labelText: "Date of Birth",
-                    labelStyle: const TextStyle(color: Colors.blue),
-                    prefixIcon:
-                        const Icon(Icons.calendar_today, color: Colors.blue),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(18),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                  child: Text(
-                    selectedDob == null
-                        ? "Select DOB"
-                        : DateFormat('dd-MM-yyyy').format(selectedDob!),
-                    style: TextStyle(
-                      color:
-                          selectedDob == null ? Colors.black38 : Colors.black87,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
-              _inputField(
-                controller: houseCtr,
-                label: "House No.",
-                icon: Icons.home_outlined,
-                validator: (v) => (v == null || v.trim().isEmpty)
-                    ? "Please enter house no."
-                    : null,
-              ),
-              _inputField(
-                controller: streetCtr,
-                label: "Street / Village / City",
-                icon: Icons.location_on_outlined,
-                validator: (v) => (v == null || v.trim().isEmpty)
-                    ? "Please enter street/village"
-                    : null,
-              ),
-              _inputField(
-                controller: pinCtr,
-                label: "Pin Code",
-                icon: Icons.pin_outlined,
-                keyboardType: TextInputType.number,
-                maxLength: 6,
-                validator: (v) => (v == null || v.length != 6)
-                    ? "Enter a valid 6-digit pin code"
-                    : null,
-              ),
-              isLoadingStates
-                  ? const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8),
-                      child: LinearProgressIndicator(
-                          backgroundColor: Colors.white24),
-                    )
-                  : _buildDropdown(
-                      value: selectedState,
-                      items: states,
-                      itemBuilder: (s) => s['name'].toString(),
-                      label: "Select State",
-                      onChanged: (state) => setState(() {
-                        selectedState = state;
-                        selectedDistrict = null;
-                        selectedCity = null;
-                        districts = state['districts'] ?? [];
-                        cities = [];
-                      }),
-                    ),
-              const SizedBox(height: 18),
-              _buildDropdown(
-                value: selectedDistrict,
-                items: districts,
-                itemBuilder: (d) => d['name'].toString(),
-                label: "Select District",
-                onChanged: districts.isEmpty
-                    ? null
-                    : (district) => setState(() {
-                          selectedDistrict = district;
-                          selectedCity = null;
-                          cities = district['cities'] ?? [];
-                        }),
-              ),
-              const SizedBox(height: 18),
-              _buildDropdown(
-                value: selectedCity,
-                items: cities,
-                itemBuilder: (c) => c['name'].toString(),
-                label: "Select City / Tehsil",
-                onChanged: cities.isEmpty
-                    ? null
-                    : (city) => setState(() => selectedCity = city),
-              ),
-              const SizedBox(height: 30),
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: isLoading ? null : _saveProfile,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 6,
-                  ),
-                  child: isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text(
-                          "Save Changes",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                ),
-              ),
-              const SizedBox(height: 20),
-            ],
+        backgroundColor: const Color(0xFFF4F7FF),
+        appBar: AppBar(
+          elevation: 0,
+          backgroundColor: Colors.white,
+          title: const Text(
+            "Update Profile",
+            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
           ),
+          centerTitle: true,
+          iconTheme: const IconThemeData(color: Colors.black),
         ),
-      ),
-    );
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                GestureDetector(
+                  onTap: _pickImage,
+                  child: Stack(
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      CircleAvatar(
+                        radius: 60,
+                        backgroundColor: Colors.grey.shade200,
+                        backgroundImage: profileImage != null
+                            ? FileImage(profileImage!) as ImageProvider
+                            : (image.isNotEmpty
+                                ? NetworkImage(
+                                    "https://truescoreedu.com/uploads/students/$image")
+                                : null),
+                        child: (profileImage == null && image.isEmpty)
+                            ? const Icon(Icons.person_rounded,
+                                size: 60, color: Colors.grey)
+                            : null,
+                      ),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(
+                          color: Colors.blue,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.camera_alt,
+                            size: 20, color: Colors.white),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  "Tap to change photo",
+                  style: TextStyle(
+                      color: Colors.blue, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 20),
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    "Edit your personal details",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                _inputField(
+                  controller: nameController,
+                  label: "Full Name",
+                  icon: Icons.person_outline_rounded,
+                  keyboardType: TextInputType.name,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? "Please enter your name"
+                      : null,
+                ),
+                _inputField(
+                  enabled: false,
+                  controller: phoneController,
+                  label: "Mobile Number",
+                  icon: Icons.phone_outlined,
+                  keyboardType: TextInputType.phone,
+                  maxLength: 10,
+                  validator: (v) => (v == null || v.length != 10)
+                      ? "Enter a valid 10-digit mobile number"
+                      : null,
+                ),
+                _inputField(
+                  enabled: false,
+                  controller: emailController,
+                  label: "Email Address",
+                  icon: Icons.email_outlined,
+                  keyboardType: TextInputType.emailAddress,
+                  validator: (v) => (v == null ||
+                          !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                              .hasMatch(v))
+                      ? "Enter a valid email"
+                      : null,
+                ),
+                _inputField(
+                  controller: alternateNoController,
+                  label: "Alternate Mobile Number",
+                  icon: Icons.phone_outlined,
+                  keyboardType: TextInputType.phone,
+                ),
+                _inputField(
+                  controller: fatherCtr,
+                  label: "Father/Husband Name",
+                  icon: Icons.family_restroom,
+                  keyboardType: TextInputType.name,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? "Please enter father/husband name"
+                      : null,
+                ),
+                _buildDropdown<String>(
+                  value: selectedGender,
+                  items: const ["Male", "Female"],
+                  itemBuilder: (g) => g,
+                  label: "Gender",
+                  onChanged: (val) => setState(() => selectedGender = val),
+                ),
+                const SizedBox(height: 18),
+                InkWell(
+                  onTap: () => _selectDate(context),
+                  child: InputDecorator(
+                    decoration: InputDecoration(
+                      labelText: "Date of Birth",
+                      labelStyle: const TextStyle(color: Colors.blue),
+                      prefixIcon:
+                          const Icon(Icons.calendar_today, color: Colors.blue),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(18),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    child: Text(
+                      selectedDob == null
+                          ? "Select DOB"
+                          : DateFormat('dd-MM-yyyy').format(selectedDob!),
+                      style: TextStyle(
+                        color: selectedDob == null
+                            ? Colors.black38
+                            : Colors.black87,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                _inputField(
+                  controller: houseCtr,
+                  label: "House No.",
+                  icon: Icons.home_outlined,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? "Please enter house no."
+                      : null,
+                ),
+                _inputField(
+                  controller: streetCtr,
+                  label: "Street / Village / City",
+                  icon: Icons.location_on_outlined,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? "Please enter street/village"
+                      : null,
+                ),
+                _inputField(
+                  controller: pinCtr,
+                  label: "Pin Code",
+                  icon: Icons.pin_outlined,
+                  keyboardType: TextInputType.number,
+                  maxLength: 6,
+                  validator: (v) => (v == null || v.length != 6)
+                      ? "Enter a valid 6-digit pin code"
+                      : null,
+                ),
+                _buildDropdown(
+                  value: selectedState,
+                  items: states,
+                  itemBuilder: (s) => s['name'].toString(),
+                  label: "Select State",
+                  onChanged: (state) {
+                    setState(() {
+                      selectedState = state;
+                      districts = state['districts'] ?? [];
+                      selectedDistrict = null;
+                      cities = [];
+                      selectedCity = null;
+                    });
+                  },
+                ),
+                const SizedBox(height: 18),
+                _buildDropdown(
+                  value: selectedDistrict,
+                  items: districts,
+                  itemBuilder: (d) => d['name'].toString(),
+                  label: "Select District",
+                  onChanged: districts.isEmpty
+                      ? null
+                      : (district) {
+                          setState(() {
+                            selectedDistrict = district;
+                            cities = district['cities'] ?? [];
+                            selectedCity = null;
+                          });
+                        },
+                ),
+                const SizedBox(height: 18),
+                _buildDropdown(
+                  value: selectedCity,
+                  items: cities,
+                  itemBuilder: (c) => c['name'].toString(),
+                  label: "Select City / Tehsil",
+                  onChanged: cities.isEmpty
+                      ? null
+                      : (city) {
+                          setState(() {
+                            selectedCity = city;
+                          });
+                        },
+                ),
+                const SizedBox(height: 30),
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: isLoading ? null : _saveProfile,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 6,
+                    ),
+                    child: isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text(
+                            "Save Changes",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+        ));
   }
 
   Widget _inputField({
@@ -902,6 +969,7 @@ log('data---$data');
     TextInputType keyboardType = TextInputType.text,
     int? maxLength,
     bool isPassword = false,
+    bool enabled = true,
     String? Function(String?)? validator,
   }) {
     return Container(
@@ -919,6 +987,7 @@ log('data---$data');
       ),
       child: TextFormField(
         controller: controller,
+        enabled: enabled,
         keyboardType: keyboardType,
         maxLength: maxLength,
         obscureText: isPassword,
@@ -946,6 +1015,9 @@ log('data---$data');
     required String Function(dynamic) itemBuilder,
     required void Function(dynamic)? onChanged,
   }) {
+    final T? safeValue =
+        (value != null && items.any((e) => e == value)) ? value : null;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -958,14 +1030,12 @@ log('data---$data');
           ),
         ],
       ),
-      child: DropdownButtonFormField<dynamic>(
-        value: value,
+      child: DropdownButtonFormField<T>(
+        initialValue: safeValue,
         isExpanded: true,
-        dropdownColor: Colors.white,
-        style: const TextStyle(color: Colors.black87),
+        hint: Text(items.isEmpty ? "No data found" : "Select $label"),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: const TextStyle(color: Colors.blue),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(18),
             borderSide: BorderSide.none,
@@ -973,14 +1043,19 @@ log('data---$data');
           filled: true,
           fillColor: Colors.white,
         ),
-        items: items.map<DropdownMenuItem<dynamic>>((item) {
-          return DropdownMenuItem(
-            value: item,
-            child: Text(itemBuilder(item)),
-          );
-        }).toList(),
-        onChanged: onChanged,
-        validator: (v) => v == null ? "Required" : null,
+        items: items
+            .map(
+              (item) => DropdownMenuItem<T>(
+                value: item,
+                child: Text(itemBuilder(item)),
+              ),
+            )
+            .toList(),
+        onChanged: items.isEmpty ? null : onChanged,
+        validator: (v) {
+          if (items.isEmpty) return null;
+          return v == null ? "Required" : null;
+        },
       ),
     );
   }

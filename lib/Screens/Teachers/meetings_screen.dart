@@ -201,6 +201,7 @@ class _MeetingsScreenState extends State<MeetingsScreen> {
       );
     }
   }
+
   Color getStatusColor(String status) {
     switch (status) {
       case "upcoming":
@@ -213,168 +214,171 @@ class _MeetingsScreenState extends State<MeetingsScreen> {
         return Colors.black54;
     }
   }
+
   @override
   Widget build(BuildContext context) {
     print("object--$meetings");
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text("Live Class"),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
+        title: const Text(
+          "Live Class",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: Colors.blue,
       ),
       body: RefreshIndicator(
         onRefresh: fetchMeetings,
-        child:
-            isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : errorMessage.isNotEmpty
+        child: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : errorMessage.isNotEmpty
                 ? ListView(
-                  padding: const EdgeInsets.all(24),
-                  children: [
-                    const SizedBox(height: 80),
-                    Icon(
-                      Icons.wifi_off_rounded,
-                      size: 72,
-                      color: Colors.grey.shade400,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      errorMessage,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                  ],
-                )
+                    padding: const EdgeInsets.all(24),
+                    children: [
+                      const SizedBox(height: 80),
+                      Icon(
+                        Icons.wifi_off_rounded,
+                        size: 72,
+                        color: Colors.grey.shade400,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        errorMessage,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                    ],
+                  )
                 : meetings.isEmpty
-                ? ListView(
-                  padding: const EdgeInsets.all(24),
-                  children: [
-                    const SizedBox(height: 80),
-                    Icon(
-                      Icons.video_call_outlined,
-                      size: 72,
-                      color: Colors.grey.shade400,
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      "No meetings available",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 16),
-                    ),
-                  ],
-                )
-                : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: meetings.length,
-                  itemBuilder: (context, index) {
-                    final item = meetings[index];
-
-                    final title = item["title"] ?? "Meeting";
-                    final link = item["meeting_link"] ?? "";
-                    final batch = item["batch"]?["name"] ?? "";
-                    final subject = item["subject"]?["name"] ?? "";
-                    final chapter = item["chapter"]?["name"] ?? "";
-                    final date = item["date"] ?? "";
-                    final startTime = item["start_time"] ?? "";
-                    final endTime = item["end_time"] ?? "";
-                    final status =
-                        (item["class_status"] ?? "").toString().toLowerCase();
-                    return Card(
-                      color: getStatusColor(status).withValues(alpha: 0.15),
-                      surfaceTintColor: Colors.transparent,
-                      elevation: 0,
-                      margin: const EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        side: BorderSide(
-                          color: getStatusColor(status),
-                          width: 1.2,
-                        ),
-                      ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 10,
-                        ),
-
-                        leading: Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: getStatusColor(
-                              status,
-                            ).withValues(alpha: 0.30),
-                            borderRadius: BorderRadius.circular(10),
+                    ? ListView(
+                        padding: const EdgeInsets.all(24),
+                        children: [
+                          const SizedBox(height: 80),
+                          Icon(
+                            Icons.video_call_outlined,
+                            size: 72,
+                            color: Colors.grey.shade400,
                           ),
-                          child: const Icon(
-                            Icons.video_camera_front_rounded,
-                            color: Colors.blue,
+                          const SizedBox(height: 16),
+                          const Text(
+                            "No meetings available",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 16),
                           ),
-                        ),
+                        ],
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: meetings.length,
+                        itemBuilder: (context, index) {
+                          final item = meetings[index];
 
-                        title: Text(
-                          title,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 4),
-
-                            if (batch.isNotEmpty) Text("Batch: $batch"),
-
-                            if (subject.isNotEmpty) Text("Subject: $subject"),
-                            if (chapter.isNotEmpty) Text("Chapter: $chapter"),
-                            if (date.isNotEmpty) Text("Date: $date"),
-                            if (startTime.isNotEmpty && endTime.isNotEmpty)
-                              Text("Time: $startTime - $endTime"),
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    link,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: Colors.blue,
-                                      decoration: TextDecoration.underline,
-                                    ),
-                                  ),
-                                ),
-
-                                IconButton(
-                                  icon: const Icon(Icons.copy, size: 18),
-                                  onPressed: () {
-                                    Clipboard.setData(
-                                      ClipboardData(text: link),
-                                    );
-
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text("Meeting link copied"),
-                                        duration: Duration(seconds: 1),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ],
+                          final title = item["title"] ?? "Meeting";
+                          final link = item["meeting_link"] ?? "";
+                          final batch = item["batch"]?["name"] ?? "";
+                          final subject = item["subject"]?["name"] ?? "";
+                          final chapter = item["chapter"]?["name"] ?? "";
+                          final date = item["date"] ?? "";
+                          final startTime = item["start_time"] ?? "";
+                          final endTime = item["end_time"] ?? "";
+                          final status = (item["class_status"] ?? "")
+                              .toString()
+                              .toLowerCase();
+                          return Card(
+                            color:
+                                getStatusColor(status).withValues(alpha: 0.15),
+                            surfaceTintColor: Colors.transparent,
+                            elevation: 0,
+                            margin: const EdgeInsets.only(bottom: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              side: BorderSide(
+                                color: getStatusColor(status),
+                                width: 1.2,
+                              ),
                             ),
-                          ],
-                        ),
+                            child: ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 10,
+                              ),
+                              leading: Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: getStatusColor(
+                                    status,
+                                  ).withValues(alpha: 0.30),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(
+                                  Icons.video_camera_front_rounded,
+                                  color: Colors.blue,
+                                ),
+                              ),
+                              title: Text(
+                                title,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w600),
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 4),
+                                  if (batch.isNotEmpty) Text("Batch: $batch"),
+                                  if (subject.isNotEmpty)
+                                    Text("Subject: $subject"),
+                                  if (chapter.isNotEmpty)
+                                    Text("Chapter: $chapter"),
+                                  if (date.isNotEmpty) Text("Date: $date"),
+                                  if (startTime.isNotEmpty &&
+                                      endTime.isNotEmpty)
+                                    Text("Time: $startTime - $endTime"),
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          link,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            color: Colors.blue,
+                                            decoration:
+                                                TextDecoration.underline,
+                                          ),
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.copy, size: 18),
+                                        onPressed: () {
+                                          Clipboard.setData(
+                                            ClipboardData(text: link),
+                                          );
 
-                        trailing: const Icon(
-                          Icons.arrow_forward_ios_rounded,
-                          size: 16,
-                        ),
-
-                        onTap: () => _joinMeeting(link),
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            const SnackBar(
+                                              content:
+                                                  Text("Meeting link copied"),
+                                              duration: Duration(seconds: 1),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              trailing: const Icon(
+                                Icons.arrow_forward_ios_rounded,
+                                size: 16,
+                              ),
+                              onTap: () => _joinMeeting(link),
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
       ),
     );
   }

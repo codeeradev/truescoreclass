@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -17,9 +19,9 @@ class Videos extends StatefulWidget {
 }
 
 class _VideosState extends State<Videos> {
-  Map<String, dynamic>? apiData;
-  bool loading = true;
-  bool loder = false;
+  // Map<String, dynamic>? apiData;
+  // bool loading = true;
+  // bool loder = false;
 
   List<dynamic> mockPapers = [];
   List<dynamic> practicePapers = [];
@@ -31,7 +33,7 @@ class _VideosState extends State<Videos> {
   @override
   void initState() {
     super.initState();
-    fetchCourses();
+    // fetchCourses();
     fetchPapers();
   }
   Widget testoraBannerCard() {
@@ -162,20 +164,20 @@ class _VideosState extends State<Videos> {
         Uri.parse("https://truescoreedu.com/api/get-active-questions"),
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: {"apiToken": apiToken,
-        "courseid":widget.id.toString()},
+          "courseid":widget.id.toString()},
       );
-      print(response.body);
+      log('statusCode--${response.statusCode}');
+      log('body--${response.body}');
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> json = jsonDecode(response.body);
 
         if (json['status'] == "1" && json['data'] != null) {
           final List data = json['data'];
-          print("data--${data.first}");
           setState(() {
             mockPapers = data.where((e) => e['paper_type'] == "1").toList();
             practicePapers = data.where((e) => e['paper_type'] == "2").toList();
-           // pyq = data.where((e) => e['paper_type'] == "3").toList();
+            // pyq = data.where((e) => e['paper_type'] == "3").toList();
 
             isLoadingPapers = false;
           });
@@ -199,25 +201,25 @@ class _VideosState extends State<Videos> {
     }
   }
 
-  Future<void> fetchCourses() async {
-    SharedPreferences preferences = await SharedPreferences.getInstance();
-    final token = preferences.getString('token');
-
-    final response = await http.post(
-      Uri.parse("https://truescoreedu.com/api/get-batches"),
-      body: {"apiToken": token, "type": "free"},
-    );
-
-    final data = jsonDecode(response.body);
-    setState(() {
-      apiData = data["data"];
-      loading = false;
-    });
-
-    Future.delayed(const Duration(seconds: 1), () {
-      setState(() => loder = true);
-    });
-  }
+  // Future<void> fetchCourses() async {
+  //   SharedPreferences preferences = await SharedPreferences.getInstance();
+  //   final token = preferences.getString('token');
+  //
+  //   final response = await http.post(
+  //     Uri.parse("https://truescoreedu.com/api/get-batches"),
+  //     body: {"apiToken": token, "type": "free"},
+  //   );
+  //
+  //   final data = jsonDecode(response.body);
+  //   setState(() {
+  //     apiData = data["data"];
+  //     loading = false;
+  //   });
+  //
+  //   Future.delayed(const Duration(seconds: 1), () {
+  //     setState(() => loder = true);
+  //   });
+  // }
 
   Widget videoLecturesSection(List videoLectures) {
     if (videoLectures.isEmpty) return const SizedBox.shrink();
@@ -398,11 +400,11 @@ class _VideosState extends State<Videos> {
         foregroundColor: Colors.black87,
         centerTitle: true,
       ),
-      body: loder == false
+      body: isLoadingPapers
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
         onRefresh: () async {
-          await fetchCourses();
+          // await fetchCourses();
           await fetchPapers();
         },
         child: SingleChildScrollView(
