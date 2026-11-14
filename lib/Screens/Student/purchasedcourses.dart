@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:online_classes/Screens/Student/Bottombar.dart';
+import 'package:online_classes/Screens/Student/editprofile.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../servcies.dart';
 import 'Onlydetails.dart';
@@ -57,6 +59,12 @@ class _PurchasedCoursesHorizontalState
   }
 
   @override
+  void dispose() {
+    SecureScreen.disable();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     // 🔴 If loading or empty → show NOTHING
     if (isLoading || purchasedCourses.isEmpty) {
@@ -82,26 +90,23 @@ class _PurchasedCoursesHorizontalState
             itemBuilder: (context, index) {
               final course = purchasedCourses[index];
 
-              final String batchName =
-                  course["batch_name"] ?? "Untitled";
-              final String imageUrl =
-                  course["batch_image"] ?? "";
-              final String endDate =
-                  course["end_date"] ?? "";
-              final String courseId =
-              course["id"].toString();
+              final String batchName = course["batch_name"] ?? "Untitled";
+              final String imageUrl = course["batch_image"] ?? "";
+              final String endDate = course["end_date"] ?? "";
+              final String courseId = course["id"].toString();
 
-              return InkWell(onTap: (){
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        PurchasedCourseVideosScreen(
-                          courseId: courseId,
-                        ),
-                  ),
-                );
-              },
+              return InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          PurchasedCourseVideosScreen(
+                            courseId: courseId,
+                          ),
+                    ),
+                  );
+                },
                 child: Container(
                   width: 180,
                   margin: const EdgeInsets.only(right: 14),
@@ -153,12 +158,10 @@ class _PurchasedCoursesHorizontalState
                                   Text(
                                     endDate,
                                     style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey),
+                                        fontSize: 12, color: Colors.grey),
                                   ),
                                 ],
                               ),
-
                             ],
                           ),
                         )
@@ -179,16 +182,11 @@ class _PurchasedCoursesHorizontalState
       height: 120,
       color: Colors.blue[50],
       child: const Center(
-        child: Icon(Icons.menu_book_rounded,
-            size: 50, color: Colors.blue),
+        child: Icon(Icons.menu_book_rounded, size: 50, color: Colors.blue),
       ),
     );
   }
 }
-
-
-
-
 
 class MyOnlyPurchased extends StatefulWidget {
   const MyOnlyPurchased({Key? key}) : super(key: key);
@@ -207,6 +205,7 @@ class _MyOnlyPurchasedState extends State<MyOnlyPurchased> {
     SecureScreen.enable();
     fetchPurchasedCourses();
   }
+
 
   Future<void> fetchPurchasedCourses() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -247,14 +246,18 @@ class _MyOnlyPurchasedState extends State<MyOnlyPurchased> {
 
   @override
   Widget build(BuildContext context) {
-    final double screenWidth = MediaQuery.of(context).size.width;
+    final double screenWidth = MediaQuery
+        .of(context)
+        .size
+        .width;
 
     final int crossAxisCount = screenWidth < 360 ? 1 : 2;
     final double childRatio = screenWidth < 360 ? 1.25 : 0.78;
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title:  Text("My Purchased Courses",style: TextStyle(color: Colors.white)),
+        title:
+        Text("My Purchased Courses", style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.blue,
         iconTheme: IconThemeData(color: Colors.white),
       ),
@@ -279,26 +282,110 @@ class _MyOnlyPurchasedState extends State<MyOnlyPurchased> {
         itemBuilder: (context, index) {
           final course = purchasedCourses[index];
 
-          final String batchName =
-              course["batch_name"] ?? "Untitled";
-          final String imageUrl =
-              course["batch_image"] ?? "";
-          final String endDate =
-              course["end_date"] ?? "";
-          final String courseId =
-          course["id"].toString();
+          final String batchName = course["batch_name"] ?? "Untitled";
+          final String imageUrl = course["batch_image"] ?? "";
+          final String endDate = course["end_date"] ?? "";
+          final String courseId = course["id"].toString();
 
           return InkWell(
             borderRadius: BorderRadius.circular(16),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => PurchasedCourseVideosScreen(
-                    courseId: courseId,
+            onTap: () async {
+              bool isProfileComplete =
+              await checkProfileCompletion(context);
+              if (isProfileComplete) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        PurchasedCourseVideosScreen(
+                          courseId: courseId,
+                        ),
                   ),
-                ),
-              );
+                );
+              } else {
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) {
+                    return Dialog(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircleAvatar(
+                              radius: 34,
+                              backgroundColor:
+                              Colors.orange.withOpacity(.15),
+                              child: const Icon(
+                                Icons.person_outline_rounded,
+                                color: Colors.orange,
+                                size: 34,
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            const Text(
+                              "Complete Your Profile",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            const Text(
+                              "Please complete your profile before continuing. This helps us provide a better experience.",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey,
+                                height: 1.5,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+
+                            // Full Width Button
+                            SizedBox(
+                              width: double.infinity,
+                              height: 48,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  elevation: 0,
+                                  backgroundColor: Colors.blue,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius:
+                                    BorderRadius.circular(12),
+                                  ),
+                                ),
+                                onPressed: () async {
+                                  Navigator.pop(context);
+                                  Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            UpdateProfileScreen(),
+                                      ));
+                                },
+                                child: const Text(
+                                  "Go to Profile",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              }
             },
             child: Card(
               elevation: 0,
@@ -333,8 +420,7 @@ class _MyOnlyPurchasedState extends State<MyOnlyPurchased> {
                     child: Padding(
                       padding: const EdgeInsets.all(10),
                       child: Column(
-                        crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment:
                         MainAxisAlignment.spaceBetween,
                         children: [
@@ -359,8 +445,7 @@ class _MyOnlyPurchasedState extends State<MyOnlyPurchased> {
                                 child: Text(
                                   endDate,
                                   maxLines: 1,
-                                  overflow:
-                                  TextOverflow.ellipsis,
+                                  overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
                                     fontSize: 12,
                                     color: Colors.grey,
@@ -395,5 +480,45 @@ class _MyOnlyPurchasedState extends State<MyOnlyPurchased> {
     );
   }
 }
+Future<bool> checkProfileCompletion(BuildContext context) async {
+  final prefs = await SharedPreferences.getInstance();
 
-
+  bool isProfileComplete =
+      (prefs.getString('studentname') ?? '')
+          .trim()
+          .isNotEmpty &&
+          (prefs.getString('studentph') ?? '')
+              .trim()
+              .isNotEmpty &&
+          (prefs.getString('studentmail') ?? '')
+              .trim()
+              .isNotEmpty &&
+          (prefs.getString('studentfather') ?? '')
+              .trim()
+              .isNotEmpty &&
+          (prefs.getString('studentgender') ?? '')
+              .trim()
+              .isNotEmpty &&
+          (prefs.getString('studentdob') ?? '')
+              .trim()
+              .isNotEmpty &&
+          (prefs.getString('studenthouse') ?? '')
+              .trim()
+              .isNotEmpty &&
+          (prefs.getString('studentstreet') ?? '')
+              .trim()
+              .isNotEmpty &&
+          (prefs.getString('studentpin') ?? '')
+              .trim()
+              .isNotEmpty &&
+          (prefs.getString('studentstateid') ?? '')
+              .trim()
+              .isNotEmpty &&
+          (prefs.getString('studentdistrictid') ?? '')
+              .trim()
+              .isNotEmpty &&
+          (prefs.getString('studentcityid') ?? '')
+              .trim()
+              .isNotEmpty;
+  return isProfileComplete;
+}

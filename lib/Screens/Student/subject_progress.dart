@@ -46,7 +46,7 @@ class _SubjectProgressScreenState extends State<SubjectProgressScreen> {
           "batch_id": widget.batchId,
           "subject_id": "",
         },
-      ).timeout(const Duration(seconds: 15));
+      );
 
       if (kDebugMode) {
         log("fetchBatchProgress STATUS: ${response.statusCode}");

@@ -151,11 +151,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
 
   Future<void> fetchVacancies() async {
     try {
-      final response = await http
-          .post(
-            Uri.parse("https://truescoreedu.com/api/get-vacancies"),
-          )
-          .timeout(const Duration(seconds: 15));
+      final response = await http.post(
+        Uri.parse("https://truescoreedu.com/api/get-vacancies"),
+      );
 
       if (kDebugMode) {
         print("fetchVacancies STATUS: ${response.statusCode}");
@@ -423,36 +421,37 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(
-                    height: 50,
-                    child: ListView.builder(
-                      controller: _scrollController,
-                      scrollDirection: Axis.horizontal,
-                      padding: EdgeInsets.symmetric(horizontal: 10),
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: 100000,
-                      itemBuilder: (context, index) {
-                        final vacancy = vacancies[index % vacancies.length];
-                        return InkWell(
-                          onTap: () => _showVacancyDialog(context, vacancy),
-                          child: Center(
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 10),
-                              child: Text(
-                                vacancy["title"] ?? "",
-                                style: TextStyle(
-                                    color: Colors.red,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    decoration: TextDecoration.underline,
-                                    decorationColor: Colors.red),
+                  if (vacancies.isNotEmpty)
+                    SizedBox(
+                      height: 50,
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        scrollDirection: Axis.horizontal,
+                        padding: EdgeInsets.symmetric(horizontal: 10),
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: 100000,
+                        itemBuilder: (context, index) {
+                          final vacancy = vacancies[index % vacancies.length];
+                          return InkWell(
+                            onTap: () => _showVacancyDialog(context, vacancy),
+                            child: Center(
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 10),
+                                child: Text(
+                                  vacancy["title"] ?? "",
+                                  style: TextStyle(
+                                      color: Colors.red,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      decoration: TextDecoration.underline,
+                                      decorationColor: Colors.red),
+                                ),
                               ),
                             ),
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     ),
-                  ),
                   Row(
                     children: [
                       // if (simage.isNotEmpty)
@@ -945,7 +944,7 @@ class _VacancyDetail extends StatelessWidget {
           runSpacing: 8,
           children: [
             if (startDate.isNotEmpty)
-              _infoChip(Icons.play_circle_outline_rounded, "Starts $startDate"),
+              _infoChip(Icons.play_circle_outline_rounded, "Start date $startDate"),
             if (lastDate.isNotEmpty)
               _infoChip(Icons.event_busy_rounded, "Last date $lastDate"),
             if (mode.isNotEmpty)

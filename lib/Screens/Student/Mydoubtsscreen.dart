@@ -462,6 +462,7 @@ class GetDoubtsScreenstudent extends StatefulWidget {
 
   @override
   State<GetDoubtsScreenstudent> createState() => _GetDoubtsScreenstudentState();
+
 }
 
 class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
@@ -473,43 +474,43 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
   void initState() {
     super.initState();
     SecureScreen.enable();
+
     fetchDoubts();
   }
 
   Future<void> fetchDoubts() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    if (!mounted) return;
     setState(() {
+      doubts.clear();
       isLoading = true;
       errorMessage = null;
     });
-
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-
     if (token == null) {
+      if (!mounted) return;
+
       setState(() {
         errorMessage = "Please login again";
         isLoading = false;
       });
       return;
     }
+    if (!mounted) return;
 
     try {
       final response = await http.post(
         Uri.parse("https://truescoreedu.com/api/get-doubts"),
         body: {"apiToken": token},
       );
-
+      if (!mounted) return;
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
-        print(json);
-
         if (json['status'] == 1) {
           setState(() {
             doubts = json['data'] ?? [];
             isLoading = false;
           });
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setInt("unread_count", json['unread_count']);
         } else {
           setState(() {
             errorMessage = json['msg'] ?? "No doubts found";
@@ -520,13 +521,20 @@ class _GetDoubtsScreenstudentState extends State<GetDoubtsScreenstudent> {
         throw Exception();
       }
     } catch (_) {
-      setState(() {
-        errorMessage = "Failed to load doubts";
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          doubts.clear();
+          errorMessage = "Failed to load doubts";
+          isLoading = false;
+        });
+      }
     }
   }
-
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    fetchDoubts();
+  }
   @override
   void dispose() {
     SecureScreen.disable();

@@ -4,6 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
+import 'package:online_classes/Screens/Student/Bottombar.dart';
+import 'package:online_classes/Screens/Student/chapter_progress.dart';
+import 'package:online_classes/Screens/Student/result.dart';
+import 'package:online_classes/Screens/Student/subject_progress.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -27,11 +31,15 @@ Future<bool> isAllQuestionsAttempted(
   String questionType,
 ) async {
   final prefs = await SharedPreferences.getInstance();
+
   for (var q in questionList) {
-    final qId = q['id']?.toString() ?? q['question_id']?.toString() ?? "";
-    if (qId.isEmpty) continue;
+    final qId = q['id']?.toString() ?? "";
+
     final key = "attempted_${batchId}_${questionType}_$qId";
     final attempted = prefs.getBool(key) ?? false;
+
+    print("$key = $attempted");
+
     if (!attempted) return false;
   }
 
@@ -46,16 +54,20 @@ class AttemptPaperScreen extends StatefulWidget {
   final String questionType;
   final String batchId;
   final String subjectName;
+  final String chapterName;
   final String subjectId;
   final String chapterId;
+  final String attemptedCount;
 
   const AttemptPaperScreen({
     super.key,
     required this.questionType,
     required this.batchId,
     required this.subjectName,
+    required this.chapterName,
     required this.subjectId,
     required this.chapterId,
+    required this.attemptedCount,
   });
 
   @override
@@ -64,12 +76,13 @@ class AttemptPaperScreen extends StatefulWidget {
 
 class _AttemptPaperScreenState extends State<AttemptPaperScreen> {
   int currentIndex = 0;
+  int currentQu = 0;
   int? selectedIndex;
   bool submitted = false;
   late String progressKey;
 
   List<dynamic> questions = [];
-  String questionTotal='0';
+  String questionTotal = '0';
 
   bool isLoading = true;
   bool isLoadingMore = false;
@@ -81,37 +94,85 @@ class _AttemptPaperScreenState extends State<AttemptPaperScreen> {
   void initState() {
     super.initState();
     progressKey =
-        "batch_${widget.batchId}_progress_${widget.questionType}_${widget.subjectId}_${widget.chapterId}";
+        'currentQuestion${widget.batchId}/${widget.subjectId}/${widget.subjectName}/${widget.chapterName}/${widget.chapterId}/${widget.questionType}';
+
     _init();
   }
 
   Future<void> _init() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final int? localCurrent = prefs.getInt(progressKey);
+    final int attemptedCount = int.tryParse(widget.attemptedCount) ?? 0;
+
+    final int cuIndex = localCurrent ?? attemptedCount;
+
+    currentPage = cuIndex == 0 ? 1 : ((cuIndex - 1) ~/ pageSize) + 1;
+    final int displayIndex = cuIndex == 0 ? 0 : (cuIndex - 1) % pageSize;
     await fetchApiCourseQuestions();
 
-    final prefs = await SharedPreferences.getInstance();
-    final savedIndex = prefs.getInt(progressKey) ?? 0;
-    while (questions.length <= savedIndex && hasMore) {
-      await fetchApiCourseQuestions(loadMore: true);
-    }
-
-    if (!mounted) return;
+    print('displayIndex--$displayIndex');
     setState(() {
-      currentIndex = savedIndex < questions.length ? savedIndex : 0;
+      currentQu = displayIndex;
+      currentIndex = cuIndex;
       selectedIndex = null;
       submitted = false;
     });
 
-    if (questions.isNotEmpty && !hasMore) {
-      final isCompleted = await isAllQuestionsAttempted(
-        questions,
-        widget.batchId,
-        widget.questionType,
-      );
-      if (isCompleted) {
-        _showResetDialog();
-      }
+    final totalQuestions = int.tryParse(questionTotal) ?? 0;
+
+    if (currentIndex >= totalQuestions - 1) {
+      _showResetDialog();
     }
   }
+
+  // Future<void> _init() async {
+  //   await fetchApiCourseQuestions();
+  //   await _checkCompletion();
+  //   final prefs = await SharedPreferences.getInstance();
+  //   final savedQuestionId = prefs.getString(progressKey);
+  //
+  //   int savedIndex = 0;
+  //   if (savedQuestionId != null) {
+  //     int foundIndex = questions.indexWhere(
+  //       (q) => q['id'].toString() == savedQuestionId,
+  //     );
+  //
+  //     while (foundIndex == -1 && hasMore) {
+  //       await fetchApiCourseQuestions(loadMore: true);
+  //       foundIndex = questions.indexWhere(
+  //         (q) => q['id'].toString() == savedQuestionId,
+  //       );
+  //     }
+  //
+  //     if (foundIndex != -1) savedIndex = foundIndex;
+  //   }
+  //
+  //   if (!mounted) return;
+  //   setState(() {
+  //     currentIndex = savedIndex;
+  //     selectedIndex = null;
+  //     submitted = false;
+  //   });
+  // }
+
+  // Future<void> _checkCompletion() async {
+  //   print("questions: ${questions.length}");
+  //   print("hasMore: $hasMore");
+  //
+  //   final completed = await isAllQuestionsAttempted(
+  //     questions,
+  //     widget.batchId,
+  //     widget.questionType,
+  //   );
+  //
+  //   print("completed: $completed");
+  //
+  //   if (completed && mounted) {
+  //     print("Showing Reset Dialog");
+  //     _showResetDialog();
+  //   }
+  // }
 
   Future<void> fetchApiCourseQuestions({bool loadMore = false}) async {
     if (loadMore && (isLoadingMore || !hasMore)) return;
@@ -125,7 +186,7 @@ class _AttemptPaperScreenState extends State<AttemptPaperScreen> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('token');
 
-    final int offset = (currentPage - 1) * pageSize;
+    // final int offset = (currentPage - 1) * pageSize;
 
     try {
       final response = await http.post(
@@ -134,12 +195,12 @@ class _AttemptPaperScreenState extends State<AttemptPaperScreen> {
           "apiToken": token,
           "courseId": widget.batchId,
           "page": currentPage.toString(),
-          "offset": offset.toString(),
+          // "offset": offset.toString(),
           "question_type": widget.questionType,
           "subjectId": widget.subjectId,
           "chapterId": widget.chapterId,
         },
-      ).timeout(const Duration(seconds: 15));
+      );
 
       if (kDebugMode) {
         log("fetchApiCourseQuestions STATUS: ${response.statusCode}");
@@ -162,19 +223,24 @@ class _AttemptPaperScreenState extends State<AttemptPaperScreen> {
           data["status"].toString() == "1";
 
       if (success) {
-        final List newQuestions = data["data"]["questions"] ?? [];
-
-        if (newQuestions.isEmpty) {
-          hasMore = false;
-        } else {
-          questions.addAll(newQuestions);
-          currentPage++;
-          if (newQuestions.length < pageSize) {
-            hasMore = false;
-          }
-        }
         setState(() {
-          questionTotal = data["data"]["pagination"]["total"].toString();
+          final List newQuestions = data["data"]["questions"] ?? [];
+          if (!loadMore) {
+            questions.clear();
+          }
+          if (newQuestions.isEmpty) {
+            hasMore = false;
+          } else {
+            questions.addAll(newQuestions);
+            currentPage++;
+            if (newQuestions.length < pageSize) {
+              hasMore = false;
+            }
+          }
+          final pagination = data["data"]["pagination"];
+          // currentPage = pagination["current_page"] + 1;
+          // hasMore = int.parse(pagination['page'].toString()) > currentPage;
+          questionTotal = pagination["total"].toString();
         });
       } else {
         hasMore = false;
@@ -195,7 +261,183 @@ class _AttemptPaperScreenState extends State<AttemptPaperScreen> {
     }
   }
 
+  Future<void> _showCompletionDialog() async {
+    if (!mounted) return;
+
+    await showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierLabel: "Completed",
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 350),
+      pageBuilder: (_, __, ___) => const SizedBox(),
+      transitionBuilder: (dialogContext, animation, secondaryAnimation, child) {
+        return PopScope(
+          canPop: false, // Disable phone back button
+          child: ScaleTransition(
+            scale: CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOutBack,
+            ),
+            child: AlertDialog(
+              backgroundColor: Colors.white,
+              elevation: 12,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              contentPadding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+              content: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          height: 90,
+                          width: 90,
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.emoji_events_rounded,
+                            color: Colors.amber.shade700,
+                            size: 52,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        const Text(
+                          "Congratulations!",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          "You've successfully completed all the questions.",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          "Your responses have been submitted successfully.",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                        const SizedBox(height: 28),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white,
+                              minimumSize: const Size.fromHeight(48),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            onPressed: () {
+                              Navigator.of(dialogContext).pop();
+
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      ModernBottomNav(selectedIndex: 1),
+                                ),
+                                (route) => false,
+                              );
+
+                              if (widget.questionType == '1') {
+                                Future.delayed(
+                                    const Duration(milliseconds: 200), () {
+                                  if (widget.chapterId.isNotEmpty ||
+                                      widget.chapterId != '') {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => ChapterProgressScreen(
+                                          batchId: widget.batchId,
+                                          subjectId: widget.subjectId,
+                                          subjectName: widget.subjectName,
+                                        ),
+                                      ),
+                                    );
+                                  } else {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => SubjectProgressScreen(
+                                          batchId: widget.batchId,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                });
+                              }
+                            },
+                            child: const Text("View Progress"),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  /// Close Button
+                  Positioned(
+                    top: -12,
+                    right: -12,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(20),
+                        onTap: () {
+                          Navigator.of(dialogContext).pop(); // Close dialog
+                          Navigator.of(context).pop(); // Go back
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.15),
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.close,
+                            size: 20,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _showResetDialog() async {
+    final prefs = await SharedPreferences.getInstance();
+
     final shouldReset = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -217,12 +459,17 @@ class _AttemptPaperScreenState extends State<AttemptPaperScreen> {
     );
 
     if (shouldReset == true) {
-      await _clearProgress();
       setState(() {
+        currentPage = 0;
         currentIndex = 0;
+        currentQu = 0;
         selectedIndex = null;
         submitted = false;
       });
+      await prefs.remove(progressKey);
+      await fetchApiCourseQuestions();
+    } else {
+      Navigator.pop(context);
     }
   }
 
@@ -231,10 +478,25 @@ class _AttemptPaperScreenState extends State<AttemptPaperScreen> {
     await prefs.setInt(progressKey, currentIndex);
   }
 
-  Future<void> _clearProgress() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(progressKey);
-  }
+  // Future<void> resetChapterAttempts(
+  //   List<dynamic> questionList,
+  //   String batchId,
+  //   String questionType,
+  //   String chapterId,
+  // ) async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //
+  //   for (var q in questionList) {
+  //     final qId = q['id']?.toString() ?? "";
+  //     if (qId.isEmpty) continue;
+  //
+  //     await prefs.remove("attempted_${batchId}_${questionType}_$qId");
+  //   }
+  //   await prefs.remove(
+  //     "chapter_completed_${batchId}_${questionType}_$chapterId",
+  //   );
+  //   await prefs.remove(progressKey);
+  // }
 
   String _getAttemptedKey(String questionId) {
     return "attempted_${widget.batchId}_${widget.questionType}_$questionId";
@@ -242,7 +504,7 @@ class _AttemptPaperScreenState extends State<AttemptPaperScreen> {
 
   Future<void> _markAsAttempted() async {
     if (selectedIndex == null) return;
-    final q = questions[currentIndex];
+    final q = questions[currentQu];
     final questionId = q['id']?.toString() ??
         q['question_id']?.toString() ??
         currentIndex.toString();
@@ -297,7 +559,7 @@ Options: $optionsText
                 );
 
                 final json = jsonDecode(response.body);
-
+                log('json--te--${json['data']}');
                 if (json['status'] == "true" && json['data'] != null) {
                   matchPercent =
                       double.tryParse(json['match_percent'].toString()) ?? 0;
@@ -610,7 +872,7 @@ My problem: ${problemController.text.trim()}
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading && questions.isEmpty) {
+    if (isLoading) {
       return Scaffold(
         appBar: AppBar(
           backgroundColor: Colors.blue,
@@ -634,7 +896,7 @@ My problem: ${problemController.text.trim()}
       );
     }
 
-    final q = questions[currentIndex];
+    final q = questions[currentQu];
     final question = q['question']?.toString() ?? "";
     String image = q['question_image'] ?? "";
 
@@ -646,12 +908,36 @@ My problem: ${problemController.text.trim()}
     final answerType = q['answer_type'];
     final answerValue = q['answer_value'];
 
+    bool isValue = currentIndex >= int.parse(questionTotal);
     bool isCorrect = selectedIndex == correctIndex;
-
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          "${widget.subjectName} • Question ${currentIndex + 1}/$questionTotal",
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (widget.subjectName.isNotEmpty)
+              Text(
+                widget.subjectName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+              ),
+            if (widget.chapterName.isNotEmpty)
+              Text(
+                widget.chapterName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w400,
+                  fontSize: 12,
+                  color: Colors.grey,
+                ),
+              ),
+          ],
         ),
         actions: [
           InkWell(
@@ -682,11 +968,11 @@ My problem: ${problemController.text.trim()}
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             LinearProgressIndicator(
-              value: (currentIndex + 1) /int.parse(questionTotal),
+              value: (currentIndex + 1) / int.parse(questionTotal),
             ),
             const SizedBox(height: 5),
             Text(
-              "Question ${currentIndex + 1}/$questionTotal",
+              "Question ${isValue ? currentIndex : currentIndex + 1}/$questionTotal",
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
@@ -851,29 +1137,30 @@ My problem: ${problemController.text.trim()}
             const SizedBox(height: 40),
             Row(
               children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 54,
-                    child: ElevatedButton(
-                      onPressed: currentIndex == 0
-                          ? null
-                          : () async {
-                              await _previousQuestion();
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red.shade400,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                if (currentQu > 0)
+                  Expanded(
+                    child: SizedBox(
+                      height: 54,
+                      child: ElevatedButton(
+                        onPressed: currentIndex == 0
+                            ? null
+                            : () async {
+                                await _previousQuestion();
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red.shade400,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
-                      ),
-                      child: const Text(
-                        "Previous",
-                        style: TextStyle(fontSize: 16),
+                        child: const Text(
+                          "Previous",
+                          style: TextStyle(fontSize: 16),
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 10),
+                if (currentQu >= 1) const SizedBox(width: 10),
                 Expanded(
                   child: SizedBox(
                     height: 54,
@@ -925,31 +1212,91 @@ My problem: ${problemController.text.trim()}
     if (currentIndex > 0) {
       setState(() {
         currentIndex--;
+        currentQu--;
         selectedIndex = null;
         submitted = false;
       });
-      await _saveProgress();
     }
   }
 
+  // Future<void> _nextQuestion(String questionsId) async {
+  //   saveProgressApi(questionsId);
+  //   if (hasMore && !isLoadingMore && questions.length - currentIndex <= 3) {
+  //     await fetchApiCourseQuestions(loadMore: true);
+  //   }
+  //   print("currentIndex--$currentIndex---${questions.length}---");
+  //   if (currentIndex < questions.length - 1) {
+  //     setState(() {
+  //       currentIndex++;
+  //       currentQu++;
+  //       selectedIndex = null;
+  //       submitted = false;
+  //     });
+  //     await _saveProgress();
+  //   } else if (hasMore) {
+  //     await fetchApiCourseQuestions(loadMore: true);
+  //     if (currentIndex < questions.length - 1) {
+  //       setState(() {
+  //         currentIndex++;
+  //         currentQu++;
+  //         selectedIndex = null;
+  //         submitted = false;
+  //       });
+  //       await _saveProgress();
+  //     } else {
+  //       _showCompletionDialog();
+  //     }
+  //   } else {
+  //     _showCompletionDialog();
+  //   }
+  // }
   Future<void> _nextQuestion(String questionsId) async {
     saveProgressApi(questionsId);
+    if ((questions.length - currentQu) <= 3) {
+      isLoadingMore = false;
+      hasMore = true;
+      await fetchApiCourseQuestions(loadMore: true);
+    }
+    final int totalQuestions = int.tryParse(questionTotal) ?? 0;
 
-    // Top up the next page proactively if we're nearing the end of what's
-    // currently loaded, so "Next" doesn't stall or bail out early.
-    if (hasMore && !isLoadingMore && questions.length - currentIndex <= 3) {
+    if (currentIndex >= totalQuestions - 1) {
+      _showCompletionDialog();
+      return;
+    }
+
+    if (hasMore && !isLoadingMore && (questions.length - currentQu) <= 3) {
       await fetchApiCourseQuestions(loadMore: true);
     }
 
-    if (currentIndex < questions.length - 1) {
+    if (currentQu < questions.length - 1) {
       setState(() {
         currentIndex++;
+        currentQu++;
         selectedIndex = null;
         submitted = false;
       });
+
       await _saveProgress();
-    } else {
-      Navigator.pop(context);
+      return;
+    }
+
+    if (hasMore) {
+      await fetchApiCourseQuestions(loadMore: true);
+
+      if (currentQu < questions.length - 1) {
+        setState(() {
+          currentIndex++;
+          currentQu++;
+          selectedIndex = null;
+          submitted = false;
+        });
+
+        await _saveProgress();
+        return;
+      }
+    }
+    if (currentIndex >= totalQuestions - 1) {
+      _showCompletionDialog();
     }
   }
 
@@ -965,8 +1312,9 @@ My problem: ${problemController.text.trim()}
           "subject_id": widget.subjectId,
           "chapter_id": widget.chapterId,
           "question_id": questionsId,
+          "question_type": widget.questionType,
         },
-      ).timeout(const Duration(seconds: 15));
+      );
 
       if (kDebugMode) {
         log("saveProgressApi STATUS: ${response.statusCode}");
@@ -1026,6 +1374,11 @@ class _ChapterListScreenState extends State<ChapterListScreen> {
     return set.toList();
   }
 
+  Map<String, dynamic> _getChaptersData(chapterName) {
+    return widget.chapters
+        .firstWhere((element) => element['chapter_name'] == chapterName);
+  }
+
   @override
   Widget build(BuildContext context) {
     final chapters = _getChapters();
@@ -1038,78 +1391,136 @@ class _ChapterListScreenState extends State<ChapterListScreen> {
         ),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: chapters.length,
-        itemBuilder: (context, index) {
-          final chapter = chapters[index];
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 14),
-            child: Material(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              elevation: 2,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => AttemptPaperScreen(
-                        questionType: widget.questionType,
-                        batchId: widget.batchId,
-                        subjectName: widget.subjectName,
-                        subjectId: widget.subjectId,
-                        chapterId: widget.chapterId,
+      body: chapters.isEmpty
+          ? const Center(child: Text("No chapter available"))
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: chapters.length,
+              itemBuilder: (context, index) {
+                final chapter = chapters[index];
+                final chapterData = _getChaptersData(chapter);
+                bool isComplete = chapterData['complete'] ?? false;
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: Material(
+                    color: isComplete ? Colors.green.shade50 : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    elevation: isComplete ? 0 : 2,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => AttemptPaperScreen(
+                              questionType: widget.questionType,
+                              batchId: widget.batchId,
+                              subjectName: widget.subjectName,
+                              subjectId: widget.subjectId,
+                              chapterId: chapterData['chapter_id'].toString(),
+                              attemptedCount:
+                                  chapterData['attempted_count'].toString(),
+                              chapterName: chapter,
+                            ),
+                          ),
+                        );
+                        if (mounted) {
+                          setState(() {});
+                        }
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 16,
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: isComplete
+                                    ? Colors.green.withValues(alpha: .12)
+                                    : Colors.purple.withValues(alpha: .12),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                isComplete
+                                    ? Icons.check_circle
+                                    : Icons.menu_book_rounded,
+                                color:
+                                    isComplete ? Colors.green : Colors.purple,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Text(
+                                chapter,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: isComplete
+                                      ? Colors.green.shade800
+                                      : Colors.black87,
+                                ),
+                              ),
+                            ),
+                            if (isComplete)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.green,
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                                child: const Text(
+                                  "Completed",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            const SizedBox(width: 4),
+                            if ((chapterData['question_count'] ?? '')
+                                    .toString()
+                                    .isNotEmpty &&
+                                !isComplete)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.purple,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  "${chapterData['question_count']}",
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            const SizedBox(width: 4),
+                            const Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              size: 18,
+                              color: Colors.grey,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  );
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 16,
                   ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.purple.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          Icons.menu_book_rounded,
-                          color: Colors.purple,
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Text(
-                          chapter,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 16.5,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      ),
-                      const Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        size: 18,
-                        color: Colors.grey,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+                );
+              },
             ),
-          );
-        },
-      ),
     );
   }
 }
@@ -1150,7 +1561,7 @@ class _SubjectListScreenState extends State<SubjectListScreen> {
           "apiToken": token,
           "courseId": widget.courseId,
         },
-      ).timeout(const Duration(seconds: 15));
+      );
 
       if (kDebugMode) {
         log("fetchApiCourseQuestions STATUS: ${response.statusCode}");
@@ -1242,32 +1653,58 @@ class _SubjectListScreenState extends State<SubjectListScreen> {
                       (element) => element['subject_name'] == subject,
                       orElse: () => null,
                     );
+                    final chaptersList =
+                        List.from(subjectQuestions.first['chapters']);
+                    bool isComplete = subjectMeta?['complete'] ?? false;
                     return InkWell(
                       borderRadius: BorderRadius.circular(18),
                       onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ChapterListScreen(
-                              chapters:
-                                  subjectQuestions.first['chapters'] ?? [],
-                              batchId: widget.courseId,
-                              questionType: widget.questionType,
-                              subjectName: subject,
-                              subjectId:
-                                  subjectMeta?['subject_id']?.toString() ?? '',
-                              chapterId:
-                                  subjectMeta?['chapter_id']?.toString() ?? '',
+                        if (chaptersList.isNotEmpty) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ChapterListScreen(
+                                chapters:
+                                    subjectQuestions.first['chapters'] ?? [],
+                                batchId: widget.courseId,
+                                questionType: widget.questionType,
+                                subjectName: subject,
+                                subjectId:
+                                    subjectMeta?['subject_id']?.toString() ??
+                                        '',
+                                chapterId:
+                                    subjectMeta?['chapter_id']?.toString() ??
+                                        '',
+                              ),
                             ),
-                          ),
-                        );
+                          );
+                        } else {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => AttemptPaperScreen(
+                                questionType: widget.questionType,
+                                batchId: widget.courseId,
+                                subjectName: subject,
+                                subjectId:
+                                    subjectMeta?['subject_id']?.toString() ??
+                                        '',
+                                chapterId: '',
+                                attemptedCount:
+                                    subjectMeta?['attempted_count'] ?? '',
+                                chapterName: '',
+                              ),
+                            ),
+                          );
+                        }
                       },
                       child: Container(
                         margin: const EdgeInsets.only(bottom: 16),
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         height: 86,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color:
+                              isComplete ? Colors.green.shade50 : Colors.white,
                           borderRadius: BorderRadius.circular(18),
                           boxShadow: [
                             BoxShadow(
@@ -1281,49 +1718,72 @@ class _SubjectListScreenState extends State<SubjectListScreen> {
                           spacing: 4,
                           children: [
                             Container(
-                              height: 52,
-                              width: 52,
+                              padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: Colors.blue.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(14),
+                                color: isComplete
+                                    ? Colors.green.withValues(alpha: .12)
+                                    : Colors.blue.withValues(alpha: .12),
+                                borderRadius: BorderRadius.circular(12),
                               ),
                               child: Icon(
-                                Icons.menu_book_rounded,
-                                color: Colors.blue,
-                                size: 28,
+                                isComplete
+                                    ? Icons.check_circle
+                                    : Icons.menu_book_rounded,
+                                color:
+                                    isComplete ? Colors.green : Colors.purple,
                               ),
                             ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                maxLines: 2,
                                 subject,
                                 style: TextStyle(
-                                  fontSize: 17.5,
-                                  overflow: TextOverflow.ellipsis,
+                                  fontSize: 16,
                                   fontWeight: FontWeight.w600,
-                                  color: Colors.black87,
+                                  color: isComplete
+                                      ? Colors.green.shade800
+                                      : Colors.black87,
                                 ),
                               ),
                             ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.blue,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                "${List.from(subjectQuestions.first['chapters']).length}",
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
+                            if (isComplete)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.green,
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                                child: const Text(
+                                  "Completed",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
                                 ),
                               ),
-                            ),
+                            if (chaptersList.isNotEmpty && !isComplete)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  "${chaptersList.length}",
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
                             const SizedBox(width: 8),
                             Icon(
                               Icons.arrow_forward_ios_rounded,

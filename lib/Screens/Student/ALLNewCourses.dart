@@ -31,10 +31,6 @@ class _AllCoursesScreenState extends State<AllCoursesScreen> {
   Future<void> fetchCoursesData() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? "";
-    final enrollmentId = prefs.getString('studentData') ?? "";
-    log("token---$token");
-    log("enrollmentId---$enrollmentId");
-
     try {
       final response = await http.post(
         Uri.parse("https://truescoreedu.com/api/get-batches"),
@@ -43,6 +39,7 @@ class _AllCoursesScreenState extends State<AllCoursesScreen> {
           "type": "free",
         },
       );
+      if(!mounted)return;
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
@@ -65,13 +62,19 @@ class _AllCoursesScreenState extends State<AllCoursesScreen> {
         throw Exception("Failed to load");
       }
     } catch (e) {
+      if(!mounted)return;
+
       setState(() => isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Failed to load courses")),
       );
     }
   }
-
+@override
+  void dispose() {
+  SecureScreen.disable();
+  super.dispose();
+  }
   @override
   Widget build(BuildContext context) {
     final double screenWidth = MediaQuery.of(context).size.width;

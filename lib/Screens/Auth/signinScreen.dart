@@ -28,6 +28,7 @@ class SigninScreen extends StatefulWidget {
 class _SigninScreenState extends State<SigninScreen>
     with TickerProviderStateMixin {
   final TextEditingController emailController = TextEditingController();
+
   // final TextEditingController passwordController = TextEditingController();
 
   bool _obscurePassword = true;
@@ -62,6 +63,7 @@ class _SigninScreenState extends State<SigninScreen>
 
   @override
   void dispose() {
+    SecureScreen.disable();
     _imageController.dispose();
     emailController.dispose();
     // passwordController.dispose();
@@ -93,7 +95,7 @@ class _SigninScreenState extends State<SigninScreen>
         body: {
           "username": emailController.text.trim(),
           // "password": passwordController.text.trim(),
-          "otp_login":'true',
+          "otp_login": 'true',
           "token": "sadfsa",
           "versionCode": "1",
           'fcm_token': preferences.getString('fcm_token').toString(),
@@ -104,7 +106,8 @@ class _SigninScreenState extends State<SigninScreen>
       print('data--signin--$data');
       print(response.statusCode);
       if (response.statusCode == 200) {
-        if (data['status'].toString() == "1"||data['status'].toString()=='true') {
+        if (data['status'].toString() == "1" ||
+            data['status'].toString() == 'true') {
           // if (data['requires_verification'] == true) {
           //   Navigator.push(
           //     context,
@@ -124,18 +127,18 @@ class _SigninScreenState extends State<SigninScreen>
           //     isError: false,
           //   );
           // }
-           if (data['requires_otp_verification']==true){
+          if (data['requires_otp_verification'] == true) {
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => OtpStudentPage(),
                 settings: RouteSettings(
                   arguments: {
-                    "user_id": data["student_id"]??'',
-                    "enrollment_id": data["enrollment_id"]??'',
+                    "user_id": data["student_id"] ?? '',
+                    "enrollment_id": data["enrollment_id"] ?? '',
                     "isPageValue": false,
-                    "contact_no": data['contact_no']??'',
-                    "email": data['email']??'',
+                    "contact_no": data['contact_no'] ?? '',
+                    "email": data['email'] ?? '',
                   },
                 ),
               ),
@@ -144,7 +147,7 @@ class _SigninScreenState extends State<SigninScreen>
               data['msg'],
               isError: false,
             );
-          }else {
+          } else {
             // await preferences.setString(
             //   "studentData",
             //   data['studentData']['enrollmentId'],
@@ -195,7 +198,7 @@ class _SigninScreenState extends State<SigninScreen>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError?Colors.red.shade700:Colors.green.shade700,
+        backgroundColor: isError ? Colors.red.shade700 : Colors.green.shade700,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
@@ -318,23 +321,22 @@ class _SigninScreenState extends State<SigninScreen>
                                 0.5,
                               ),
                             ),
-                            child:
-                                isLoading
-                                    ? const SizedBox(
-                                      height: 24,
-                                      width: 24,
-                                      child: CircularProgressIndicator(
-                                        color: Colors.white,
-                                        strokeWidth: 3,
-                                      ),
-                                    )
-                                    : const Text(
-                                      "Sign In",
-                                      style: TextStyle(
-                                        fontSize: 17,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                            child: isLoading
+                                ? const SizedBox(
+                                    height: 24,
+                                    width: 24,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 3,
                                     ),
+                                  )
+                                : const Text(
+                                    "Sign In",
+                                    style: TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                           ),
                         ),
 
@@ -362,7 +364,7 @@ class _SigninScreenState extends State<SigninScreen>
                               ),
                             ),
                             child: const Text(
-                              "Register Now",
+                              "Register to new User",
                               style: TextStyle(
                                 color: Color(0xFF2563EB),
                                 fontSize: 17,
@@ -371,23 +373,23 @@ class _SigninScreenState extends State<SigninScreen>
                             ),
                           ),
                         ),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => ForgotPasswordScreen(type: 'student',),
-                                ),
-                              );
-                            },
-                            child: const Text(
-                              "Forgot Password?",
-                              style: TextStyle(color: Colors.blue),
-                            ),
-                          ),
-                        ),
+                        // Align(
+                        //   alignment: Alignment.centerRight,
+                        //   child: TextButton(
+                        //     onPressed: () {
+                        //       Navigator.push(
+                        //         context,
+                        //         MaterialPageRoute(
+                        //           builder: (context) => ForgotPasswordScreen(type: 'student',),
+                        //         ),
+                        //       );
+                        //     },
+                        //     child: const Text(
+                        //       "Forgot Password?",
+                        //       style: TextStyle(color: Colors.blue),
+                        //     ),
+                        //   ),
+                        // ),
                       ],
                     ),
                   ),
@@ -462,18 +464,17 @@ class _SigninScreenState extends State<SigninScreen>
         hintText: hint,
         hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 15),
         prefixIcon: Icon(icon, color: const Color(0xFF3B82F6)),
-        suffixIcon:
-            isPassword
-                ? IconButton(
-                  icon: Icon(
-                    obscureText
-                        ? Icons.visibility_off_rounded
-                        : Icons.visibility_rounded,
-                    color: const Color(0xFF3B82F6),
-                  ),
-                  onPressed: onVisibilityTap,
-                )
-                : null,
+        suffixIcon: isPassword
+            ? IconButton(
+                icon: Icon(
+                  obscureText
+                      ? Icons.visibility_off_rounded
+                      : Icons.visibility_rounded,
+                  color: const Color(0xFF3B82F6),
+                ),
+                onPressed: onVisibilityTap,
+              )
+            : null,
         filled: true,
         fillColor: const Color(0xFFF0F7FF),
         contentPadding: const EdgeInsets.symmetric(

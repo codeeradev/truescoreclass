@@ -171,7 +171,11 @@ class _SelfRegistrationScreen1State extends State<SelfRegistrationScreen1> {
       ),
     );
   }
-
+@override
+  void dispose() {
+  SecureScreen.disable();
+  super.dispose();
+  }
   @override
   Widget build(BuildContext context) {
     // bool isTeacher = registerAs == "Teacher";

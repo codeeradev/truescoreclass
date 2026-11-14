@@ -39,7 +39,7 @@ class _CourseProgressScreenState extends State<CourseProgressScreen> {
       final response = await http.post(
         Uri.parse("https://truescoreedu.com/api/get-progress"),
         body: {"apiToken": token},
-      ).timeout(const Duration(seconds: 15));
+      );
 
       if (kDebugMode) {
         log("fetchProgress STATUS: ${response.statusCode}");

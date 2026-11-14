@@ -25,7 +25,9 @@
         android:usesCleartextTraffic="true"
         android:label="TrueScore Class"
         android:name="${applicationName}"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher">
+
 
         <service
             android:name="com.dexterous.flutterlocalnotifications.ForegroundService"

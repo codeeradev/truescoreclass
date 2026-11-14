@@ -5,7 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:online_classes/Screens/Student/Bottombar.dart';
+import 'package:online_classes/Screens/Student/Onlydetails.dart';
+import 'package:online_classes/Screens/Student/editprofile.dart';
 import 'package:online_classes/Screens/Student/percentage.dart';
+import 'package:online_classes/Screens/Student/purchasedcourses.dart';
 import 'package:online_classes/Screens/Student/videos.dart';
 import 'package:online_classes/Screens/Student/webview.dart';
 import 'package:phonepe_payment_sdk/phonepe_payment_sdk.dart';
@@ -316,10 +319,10 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
     _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
     _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
     fetchNotes();
-    checkPurchaseStatus();
+    checkPurchaseStatus(true);
   }
 
-  Future<void> checkPurchaseStatus() async {
+  Future<void> checkPurchaseStatus(bool isValueInit) async {
     SharedPreferences preferences = await SharedPreferences.getInstance();
     final token = preferences.getString('token');
     final String courseId = widget.courseData["id"]?.toString() ?? "";
@@ -387,6 +390,24 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
               TabController(length: availableTabs.length, vsync: this);
           isLoading = false;
         });
+        if (isPurchased&&isValueInit) {
+          showCoursePurchasedDialog(context, widget.courseData["id"] ?? "");
+        } else if (isTrial&&isValueInit) {
+          final String id = widget.courseData["id"] ?? "";
+          final String rawPrice =
+              (widget.courseData["batch_price"] ?? "").toString().trim();
+          final String rawOfferPrice =
+              (widget.courseData["batch_offer_price"] ?? "").toString().trim();
+          final String offerPrice =
+              rawOfferPrice.isEmpty ? rawPrice : rawOfferPrice;
+          showTrialClaimedDialog(
+              context,
+              widget.courseData["batch_name"] ?? '',
+              widget.courseData["start_date"] ?? '',
+              widget.courseData["end_date"] ?? '',
+              offerPrice,
+              id);
+        }
       } else {
         setState(() {
           isLoading = false;
@@ -465,6 +486,7 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
 
   String orderids = '';
   String mecrhant = '';
+  bool isLoadingPay = false;
 
   Future<void> addPhonePay(
       {required BuildContext context,
@@ -472,8 +494,12 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
       required bool isTrial}) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
-    print(token);
-    print(batchId);
+    if (!mounted) return;
+    if (!isTrial) {
+      setState(() {
+        isLoadingPay = true;
+      });
+    }
     try {
       final response = await http.post(
         Uri.parse("https://truescoreedu.com/api/payment/initiate"),
@@ -541,7 +567,7 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
                   content: Text(data['message']), backgroundColor: Colors.red),
             );
           } else {
-            checkPurchaseStatus();
+            checkPurchaseStatus(false);
 
             showDialog(
               context: context,
@@ -576,11 +602,35 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      onPressed: () {
-                        Navigator.pop(context);
+                      onPressed: () async {
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ModernBottomNav(
+                              selectedIndex: 1,
+                            ),
+                          ),
+                              (route) => false,
+                        );
+
+                        bool isProfileComplete =
+                            await checkProfileCompletion(context);
+                        if (isProfileComplete) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  PurchasedCourseVideosScreen(
+                                    courseId: batchId,
+                                  ),
+                            ),
+                          );
+                        } else {
+                          checkProfileShow(context);
+                        }
                       },
                       child: const Text(
-                        "OK",
+                        "View Course",
                         style: TextStyle(color: Colors.white),
                       ),
                     ),
@@ -600,6 +650,11 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
       }
     } catch (e) {
       print('error---$e');
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        isLoadingPay = false;
+      });
     }
   }
 
@@ -659,7 +714,7 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
         builder: (_) => const CoursePurchasedDialog(),
       );
 
-      checkPurchaseStatus();
+      checkPurchaseStatus(false);
     }
   }
 
@@ -793,81 +848,96 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
   Future<void> _verifyPayment(String signature) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
-
-    final response = await http.post(
-      Uri.parse("https://truescoreedu.com/api/payment/verify"),
-      headers: {
-        "Accept": "application/json",
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: {
-        "merchantOrderId": mecrhant,
-        "orderid": orderids,
-        "apiToken": token.toString(),
-        "gateway": "RAZORPAY",
-        "signature": signature,
-        "paymentStatus": "paid",
-      },
-    );
-
-    final data = jsonDecode(response.body);
-
-    print("_verifyPayment---$data");
-
     if (!mounted) return;
-
-    if (response.statusCode == 200 &&
-        (data["status"] == 1 ||
-            data["status"] == true ||
-            data["status"] == "success")) {
-      checkPurchaseStatus();
-
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          content: const Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.check_circle, color: Colors.green, size: 70),
-              SizedBox(height: 15),
-              Text(
-                "Payment Successful",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: 8),
-              Text(
-                "Thank you! Your payment has been verified.",
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
+    setState(() {
+      isLoadingPay = true;
+    });
+    try {
+      final response = await http.post(
+        Uri.parse("https://truescoreedu.com/api/payment/verify"),
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: {
+          "merchantOrderId": mecrhant,
+          "orderid": orderids,
+          "apiToken": token.toString(),
+          "gateway": "RAZORPAY",
+          "signature": signature,
+          "paymentStatus": "paid",
+        },
       );
 
-      await Future.delayed(const Duration(seconds: 4));
+      final data = jsonDecode(response.body);
+
+      print("_verifyPayment---$data");
 
       if (!mounted) return;
 
-      Navigator.pop(context);
+      if (response.statusCode == 200 &&
+          (data["status"] == 1 ||
+              data["status"] == true ||
+              data["status"] == "success")) {
+        checkPurchaseStatus(false);
 
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const ModernBottomNav()),
-        (route) => false,
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(data["message"] ?? "Payment verification failed"),
-        ),
-      );
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            content: const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.check_circle, color: Colors.green, size: 70),
+                SizedBox(height: 15),
+                Text(
+                  "Payment Successful",
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  "Thank you! Your payment has been verified.",
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        );
+
+        await Future.delayed(const Duration(seconds: 4));
+
+        if (!mounted) return;
+
+        Navigator.pop(context);
+
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+              builder: (_) => ModernBottomNav(
+                    selectedIndex: 1,
+                  )),
+          (route) => false,
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(data["message"] ?? "Payment verification failed"),
+          ),
+        );
+      }
+    } catch (e) {
+      print("err--pay--$e");
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        isLoadingPay = false;
+      });
     }
   }
 
@@ -884,8 +954,33 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
   }
 
   Future<void> _handlePaymentError(PaymentFailureResponse response) async {
+    String message;
+
+    switch (response.code) {
+      case Razorpay.PAYMENT_CANCELLED:
+        message = "Payment was cancelled by the user.";
+        break;
+
+      case Razorpay.NETWORK_ERROR:
+        message =
+            "Network error. Please check your internet connection and try again.";
+        break;
+
+      default:
+        message = response.message?.isNotEmpty == true
+            ? response.message!
+            : "Payment failed. Please try again.";
+    }
+
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Payment Failed: ${response.message}")),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+      ),
     );
   }
 
@@ -1132,542 +1227,992 @@ class _CourseDetailScreen2State extends State<CourseDetailScreen2>
     final String payMode = widget.courseData["pay_mode"] ?? "Online";
     List<dynamic> benefits = widget.courseData["course_benifits"] ?? [];
     print("isPurchased----$isTrialOver $isPurchased $isTrialAvailable}");
-    print("courseData----${widget.courseData}");
     print("courseData----${apiCourseData}");
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.blue,
-        title: const Text("Course Details",
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.pop(context)),
-        // actions: [InkWell(onTap: (){
-        //   initSdk();
-        //   createPhonePeOrder(authToken: 'O-Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHBpcmVzT24iOjE3NzAxMTMzOTUzNTksIm1lcmNoYW50SWQiOiJNMjNRQ1UzTjU0Q0pGIn0.Rp7_fFbvQ3lpd0ES4RgGfd58wtkT2BHC7vlcDR55v-I', merchantOrderId: 'TEST123', amount: 100);
-        //
-        //   //initSdk();
-        //
-        // },child: Icon(Icons.eighteen_mp)),
-        //   InkWell(onTap: (){
-        //     initSdk();
-        //     //startTransaction();
-        //   },child: Icon(Icons.eighteen_mp)),
-        //   InkWell(onTap: (){
-        //     //startTransaction();
-        //   },child: Icon(Icons.eighteen_mp))],
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: double.infinity,
-              height: 220,
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                image: imageUrl.isNotEmpty
-                    ? DecorationImage(
-                        image: NetworkImage(
-                            "https://truescoreedu.com/uploads/batch_image/$imageUrl"),
-                        fit: BoxFit.cover,
-                      )
-                    : null,
-              ),
-              child: imageUrl.isEmpty
-                  ? const Icon(Icons.menu_book_rounded,
-                      size: 80, color: Colors.blue)
-                  : null,
+    return PopScope(
+      canPop: !isLoadingPay,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Scaffold(
+            backgroundColor: Colors.white,
+            appBar: AppBar(
+              elevation: 0,
+              backgroundColor: Colors.blue,
+              title: const Text("Course Details",
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold)),
+              leading: IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => Navigator.pop(context)),
+              // actions: [InkWell(onTap: (){
+              //   initSdk();
+              //   createPhonePeOrder(authToken: 'O-Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHBpcmVzT24iOjE3NzAxMTMzOTUzNTksIm1lcmNoYW50SWQiOiJNMjNRQ1UzTjU0Q0pGIn0.Rp7_fFbvQ3lpd0ES4RgGfd58wtkT2BHC7vlcDR55v-I', merchantOrderId: 'TEST123', amount: 100);
+              //
+              //   //initSdk();
+              //
+              // },child: Icon(Icons.eighteen_mp)),
+              //   InkWell(onTap: (){
+              //     initSdk();
+              //     //startTransaction();
+              //   },child: Icon(Icons.eighteen_mp)),
+              //   InkWell(onTap: (){
+              //     //startTransaction();
+              //   },child: Icon(Icons.eighteen_mp))],
             ),
-            Padding(
-              padding: const EdgeInsets.all(16),
+            body: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(batchName,
-                      style: const TextStyle(
-                          fontSize: 24, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  Text(
-                      "$category ${subCategory.isNotEmpty ? '• $subCategory' : ''}",
-                      style:
-                          const TextStyle(fontSize: 16, color: Colors.black54)),
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      if (rawPrice.isEmpty)
-                        const Text("Free Course",
-                            style: TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.green))
-                      else if (hasOffer) ...[
-                        Text("₹$rawPrice",
-                            style: const TextStyle(
-                                fontSize: 20,
-                                color: Colors.grey,
-                                decoration: TextDecoration.lineThrough)),
-                        const SizedBox(width: 12),
-                        Text("₹$offerPrice",
-                            style: const TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.green)),
-                      ] else
-                        Text("₹$rawPrice",
-                            style: const TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blue)),
-                      const Spacer(),
-                      Chip(
-                          backgroundColor: Colors.blue.shade50,
-                          label: Text(payMode,
-                              style: const TextStyle(color: Colors.blue))),
-                    ],
+                  Container(
+                    width: double.infinity,
+                    height: 220,
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      image: imageUrl.isNotEmpty
+                          ? DecorationImage(
+                              image: NetworkImage(
+                                  "https://truescoreedu.com/uploads/batch_image/$imageUrl"),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
+                    ),
+                    child: imageUrl.isEmpty
+                        ? const Icon(Icons.menu_book_rounded,
+                            size: 80, color: Colors.blue)
+                        : null,
                   ),
-                  const SizedBox(height: 20),
-                  const Text("Description",
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  //htmlTextViewer(description),
-                  courseDescription(description),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(batchName,
+                            style: const TextStyle(
+                                fontSize: 24, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 8),
+                        Text(
+                            "$category ${subCategory.isNotEmpty ? '• $subCategory' : ''}",
+                            style: const TextStyle(
+                                fontSize: 16, color: Colors.black54)),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            if (rawPrice.isEmpty)
+                              const Text("Free Course",
+                                  style: TextStyle(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.green))
+                            else if (hasOffer) ...[
+                              Text("₹$rawPrice",
+                                  style: const TextStyle(
+                                      fontSize: 20,
+                                      color: Colors.grey,
+                                      decoration: TextDecoration.lineThrough)),
+                              const SizedBox(width: 12),
+                              Text("₹$offerPrice",
+                                  style: const TextStyle(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.green)),
+                            ] else
+                              Text("₹$rawPrice",
+                                  style: const TextStyle(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blue)),
+                            const Spacer(),
+                            Chip(
+                                backgroundColor: Colors.blue.shade50,
+                                label: Text(payMode,
+                                    style:
+                                        const TextStyle(color: Colors.blue))),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        const Text("Description",
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 8),
+                        //htmlTextViewer(description),
+                        courseDescription(description),
 
-                  // Html(
-                  //   data: description.isEmpty
-                  //       ? "<p>No description available for this course.</p>"
-                  //       : description,
-                  //   style: {
-                  //     "body": Style(
-                  //       fontSize: FontSize(15),
-                  //       lineHeight: const LineHeight(1.5),
-                  //       color: Colors.black87,
-                  //       margin: Margins.zero,
-                  //       padding: HtmlPaddings.zero,
-                  //     ),
-                  //     "b": Style(fontWeight: FontWeight.bold),
-                  //     "strong": Style(fontWeight: FontWeight.bold),
-                  //     "p": Style(margin: Margins.only(bottom: 10)),
-                  //     "li": Style(margin: Margins.only(bottom: 6)),
-                  //   },
-                  // ),
-                  const SizedBox(height: 20),
-                  const Text("BENEFITS",
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  benefits.isEmpty
-                      ? SizedBox()
-                      : ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: benefits.length,
-                          itemBuilder: (context, i) {
-                            final spec = benefits[i];
+                        // Html(
+                        //   data: description.isEmpty
+                        //       ? "<p>No description available for this course.</p>"
+                        //       : description,
+                        //   style: {
+                        //     "body": Style(
+                        //       fontSize: FontSize(15),
+                        //       lineHeight: const LineHeight(1.5),
+                        //       color: Colors.black87,
+                        //       margin: Margins.zero,
+                        //       padding: HtmlPaddings.zero,
+                        //     ),
+                        //     "b": Style(fontWeight: FontWeight.bold),
+                        //     "strong": Style(fontWeight: FontWeight.bold),
+                        //     "p": Style(margin: Margins.only(bottom: 10)),
+                        //     "li": Style(margin: Margins.only(bottom: 6)),
+                        //   },
+                        // ),
+                        const SizedBox(height: 20),
+                        const Text("BENEFITS",
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold)),
+                        benefits.isEmpty
+                            ? SizedBox()
+                            : ListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: benefits.length,
+                                itemBuilder: (context, i) {
+                                  final spec = benefits[i];
 
-                            // ── safe features getter ──
-                            final features = () {
-                              final val = spec['batch_fecherd'];
-                              if (val is List) return val.cast<dynamic>();
-                              if (val is String) {
-                                try {
-                                  final decoded = json.decode(val);
-                                  if (decoded is List)
-                                    return decoded.cast<dynamic>();
-                                } catch (_) {}
-                              }
-                              return <dynamic>[];
-                            }();
+                                  // ── safe features getter ──
+                                  final features = () {
+                                    final val = spec['batch_fecherd'];
+                                    if (val is List) return val.cast<dynamic>();
+                                    if (val is String) {
+                                      try {
+                                        final decoded = json.decode(val);
+                                        if (decoded is List)
+                                          return decoded.cast<dynamic>();
+                                      } catch (_) {}
+                                    }
+                                    return <dynamic>[];
+                                  }();
 
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 12, horizontal: 16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    spec['batch_specification_heading']
-                                            ?.toString() ??
-                                        '',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.w600,
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12, horizontal: 16),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          spec['batch_specification_heading']
+                                                  ?.toString() ??
+                                              '',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleMedium
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w600,
+                                              ),
                                         ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  ...features.asMap().entries.map(
-                                        (e) => Padding(
-                                          padding: const EdgeInsets.only(
-                                              left: 12, bottom: 6),
-                                          child: Row(
-                                            children: [
-                                              Text(
-                                                "${e.key + 1}.",
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.w500,
-                                                  color: Colors.blueGrey,
+                                        const SizedBox(height: 8),
+                                        ...features.asMap().entries.map(
+                                              (e) => Padding(
+                                                padding: const EdgeInsets.only(
+                                                    left: 12, bottom: 6),
+                                                child: Row(
+                                                  children: [
+                                                    Text(
+                                                      "${e.key + 1}.",
+                                                      style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.w500,
+                                                        color: Colors.blueGrey,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Expanded(
+                                                        child: Text(e.value
+                                                            .toString())),
+                                                  ],
                                                 ),
                                               ),
-                                              const SizedBox(width: 8),
-                                              Expanded(
-                                                  child:
-                                                      Text(e.value.toString())),
-                                            ],
-                                          ),
+                                            ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+
+                        _buildDetailRow(
+                            Icons.calendar_today, "Start Date", startDate),
+                        _buildDetailRow(
+                            Icons.calendar_month, "End Date", endDate),
+                        // if (startTime.isNotEmpty && endTime.isNotEmpty)
+                        //   _buildDetailRow(Icons.access_time, "Time", "$startTime - $endTime"),
+                        // _buildDetailRow(Icons.groups, "Enrolled Students", "10000+ students"),
+                        const SizedBox(height: 40),
+                        if (canClaimTrial || trialClaimed) ...[
+                          SizedBox(
+                            width: double.infinity,
+                            height: 55,
+                            child: ElevatedButton(
+                              onPressed: canClaimTrial
+                                  ? () async {
+                                      addPhonePay(
+                                        context: context,
+                                        batchId: id,
+                                        isTrial: true,
+                                      );
+                                    }
+                                  : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: trialClaimed
+                                    ? Colors.grey
+                                    : Colors.blue.shade600,
+                                disabledBackgroundColor: Colors.grey,
+                                elevation: 6,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    trialClaimed
+                                        ? Icons.check_circle
+                                        : Icons.workspace_premium_rounded,
+                                    color: Colors.white,
+                                    size: 26,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        trialClaimed
+                                            ? "Trial Already Claimed"
+                                            : "Start Free Trial",
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
                                         ),
                                       ),
+                                      Text(
+                                        trialClaimed
+                                            ? "You have already claimed your trial."
+                                            : "$trialDays Days Access",
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.white.withOpacity(0.9),
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ],
                               ),
-                            );
-                          },
-                        ),
-
-                  _buildDetailRow(
-                      Icons.calendar_today, "Start Date", startDate),
-                  _buildDetailRow(Icons.calendar_month, "End Date", endDate),
-                  // if (startTime.isNotEmpty && endTime.isNotEmpty)
-                  //   _buildDetailRow(Icons.access_time, "Time", "$startTime - $endTime"),
-                  // _buildDetailRow(Icons.groups, "Enrolled Students", "10000+ students"),
-                  const SizedBox(height: 40),
-                  if (canClaimTrial || trialClaimed) ...[
-                    SizedBox(
-                      width: double.infinity,
-                      height: 55,
-                      child: ElevatedButton(
-                        onPressed: canClaimTrial
-                            ? () async {
-                                addPhonePay(
-                                  context: context,
-                                  batchId: id,
-                                  isTrial: true,
-                                );
-                              }
-                            : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              trialClaimed ? Colors.grey : Colors.blue.shade600,
-                          disabledBackgroundColor: Colors.grey,
-                          elevation: 6,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              trialClaimed
-                                  ? Icons.check_circle
-                                  : Icons.workspace_premium_rounded,
-                              color: Colors.white,
-                              size: 26,
                             ),
-                            const SizedBox(width: 12),
-                            Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  trialClaimed
-                                      ? "Trial Already Claimed"
-                                      : "Start Free Trial",
-                                  style: const TextStyle(
+                          ),
+                          const SizedBox(height: 20),
+                        ],
+
+                        if (!isPurchased)
+                          SizedBox(
+                            width: double.infinity,
+                            height: 55,
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                couponApplied = false;
+                                couponId = null;
+                                couponController.clear();
+                                discountPercent = 0;
+                                discountAmount = 0;
+                                finalAmount = 0;
+                                isLoadingCoupon = false;
+                                buyShowBottom(context, batchName, startDate,
+                                    endDate, offerPrice, id);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16)),
+                                elevation: 4,
+                              ),
+                              child: Text(
+                                "Buy Now",
+                                style: const TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                Text(
-                                  trialClaimed
-                                      ? "You have already claimed your trial."
-                                      : "$trialDays Days Access",
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.white.withOpacity(0.9),
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
+                                    color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        const SizedBox(height: 20),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (isLoadingPay)
+            Container(
+              color: Colors.black.withValues(alpha: 0.6),
+              child: const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(
+                        color: Colors.white,
+                      ),
+                      SizedBox(height: 20),
+                      Text(
+                        "Processing your payment...\nPlease do not press Back or close the app.",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          decoration: TextDecoration.none,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void buyShowBottom(BuildContext context, String batchName, String startDate,
+      String endDate, String offerPrice, String id) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Container(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 20,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(25),
+                ),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    /// Drag Handle
+                    Container(
+                      width: 50,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade400,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const CircleAvatar(
+                        backgroundColor: Colors.blue,
+                        child: Icon(Icons.school, color: Colors.white),
+                      ),
+                      title: Text(
+                        batchName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      ),
+                    ),
+
+                    _buildDetailRow(
+                        Icons.calendar_today, "Start Date", startDate),
+                    _buildDetailRow(Icons.calendar_month, "End Date", endDate),
+
+                    const SizedBox(height: 15),
+
+                    TextField(
+                      controller: couponController,
+                      enabled: !couponApplied,
+                      decoration: InputDecoration(
+                        hintText: "Enter Coupon Code",
+                        prefixIcon: const Icon(Icons.discount),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              couponApplied ? Colors.red : Colors.green,
+                        ),
+                        onPressed: () async {
+                          if (couponApplied) {
+                            setState(() {
+                              couponApplied = false;
+                              couponId = null;
+                              couponController.clear();
+                              discountPercent = 0;
+                              discountAmount = 0;
+                              finalAmount = 0;
+                              isLoadingCoupon = false;
+                            });
+                            return;
+                          }
+
+                          if (couponController.text.trim().isEmpty) {
+                            Fluttertoast.showToast(
+                              msg: "Enter coupon code",
+                              toastLength: Toast.LENGTH_SHORT,
+                              gravity: ToastGravity.TOP,
+                            );
+
+                            return;
+                          }
+
+                          final value = await applyCouponApi();
+
+                          if (value != null) {
+                            setState(() {
+                              couponApplied = true;
+                              couponId = value["coupon_id"].toString();
+                              originalAmount = double.parse(
+                                  value["original_amount"].toString());
+                              discountPercent = double.parse(
+                                  value["discount_percent"].toString());
+                              discountAmount = double.parse(
+                                  value["discount_amount"].toString());
+                              finalAmount = double.parse(
+                                  value["final_amount"].toString());
+                            });
+                          }
+                        },
+                        child: isLoadingCoupon
+                            ? Center(
+                                child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: CircularProgressIndicator(),
+                              ))
+                            : Text(
+                                couponApplied
+                                    ? "Remove Coupon"
+                                    : "Apply Coupon",
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 15),
+
+                    Card(
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(15),
+                        child: Column(
+                          children: [
+                            _priceRow(
+                              "Amount",
+                              "₹$offerPrice",
+                            ),
+                            const SizedBox(height: 10),
+                            _priceRow(
+                              "Discount",
+                              "- ₹${discountAmount.toStringAsFixed(0)}",
+                              color: Colors.green,
+                            ),
+                            const Divider(),
+                            _priceRow(
+                              "Payable Amount",
+                              "₹${finalAmount == 0 ? offerPrice : finalAmount}",
+                              isBold: true,
                             ),
                           ],
                         ),
                       ),
                     ),
-                    const SizedBox(height: 20),
-                  ],
 
-                  if (!isPurchased)
+                    const SizedBox(height: 20),
+
                     SizedBox(
                       width: double.infinity,
-                      height: 55,
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          couponApplied = false;
-                          couponId = null;
-                          couponController.clear();
-                          discountPercent = 0;
-                          discountAmount = 0;
-                          finalAmount = 0;
-                          isLoadingCoupon = false;
-                          showModalBottomSheet(
+                      height: 52,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                        ),
+                        onPressed: () {
+                          Navigator.pop(context);
+
+                          addPhonePay(
                             context: context,
-                            isScrollControlled: true,
-                            backgroundColor: Colors.transparent,
-                            builder: (context) {
-                              return StatefulBuilder(
-                                builder: (context, setState) {
-                                  return Container(
-                                    padding: EdgeInsets.only(
-                                      left: 20,
-                                      right: 20,
-                                      top: 20,
-                                      bottom: MediaQuery.of(context)
-                                              .viewInsets
-                                              .bottom +
-                                          20,
-                                    ),
-                                    decoration: const BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.vertical(
-                                        top: Radius.circular(25),
-                                      ),
-                                    ),
-                                    child: SingleChildScrollView(
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          /// Drag Handle
-                                          Container(
-                                            width: 50,
-                                            height: 5,
-                                            decoration: BoxDecoration(
-                                              color: Colors.grey.shade400,
-                                              borderRadius:
-                                                  BorderRadius.circular(20),
-                                            ),
-                                          ),
-
-                                          const SizedBox(height: 20),
-
-                                          ListTile(
-                                            contentPadding: EdgeInsets.zero,
-                                            leading: const CircleAvatar(
-                                              backgroundColor: Colors.blue,
-                                              child: Icon(Icons.school,
-                                                  color: Colors.white),
-                                            ),
-                                            title: Text(
-                                              batchName,
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 18,
-                                              ),
-                                            ),
-                                          ),
-
-                                          _buildDetailRow(Icons.calendar_today,
-                                              "Start Date", startDate),
-                                          _buildDetailRow(Icons.calendar_month,
-                                              "End Date", endDate),
-
-                                          const SizedBox(height: 15),
-
-                                          TextField(
-                                            controller: couponController,
-                                            enabled: !couponApplied,
-                                            decoration: InputDecoration(
-                                              hintText: "Enter Coupon Code",
-                                              prefixIcon:
-                                                  const Icon(Icons.discount),
-                                              border: OutlineInputBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
-                                              ),
-                                            ),
-                                          ),
-
-                                          const SizedBox(height: 12),
-
-                                          SizedBox(
-                                            width: double.infinity,
-                                            child: ElevatedButton(
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: couponApplied
-                                                    ? Colors.red
-                                                    : Colors.green,
-                                              ),
-                                              onPressed: () async {
-                                                if (couponApplied) {
-                                                  setState(() {
-                                                    couponApplied = false;
-                                                    couponId = null;
-                                                    couponController.clear();
-                                                    discountPercent = 0;
-                                                    discountAmount = 0;
-                                                    finalAmount = 0;
-                                                    isLoadingCoupon = false;
-                                                  });
-                                                  return;
-                                                }
-
-                                                if (couponController.text
-                                                    .trim()
-                                                    .isEmpty) {
-                                                  Fluttertoast.showToast(
-                                                    msg: "Enter coupon code",
-                                                    toastLength:
-                                                        Toast.LENGTH_SHORT,
-                                                    gravity: ToastGravity.TOP,
-                                                  );
-
-                                                  return;
-                                                }
-
-                                                final value =
-                                                    await applyCouponApi();
-
-                                                if (value != null) {
-                                                  setState(() {
-                                                    couponApplied = true;
-                                                    couponId =
-                                                        value["coupon_id"]
-                                                            .toString();
-                                                    originalAmount = double.parse(
-                                                        value["original_amount"]
-                                                            .toString());
-                                                    discountPercent =
-                                                        double.parse(value[
-                                                                "discount_percent"]
-                                                            .toString());
-                                                    discountAmount = double.parse(
-                                                        value["discount_amount"]
-                                                            .toString());
-                                                    finalAmount = double.parse(
-                                                        value["final_amount"]
-                                                            .toString());
-                                                  });
-                                                }
-                                              },
-                                              child: isLoadingCoupon
-                                                  ? Center(
-                                                      child: Padding(
-                                                      padding:
-                                                          const EdgeInsets.all(
-                                                              8.0),
-                                                      child:
-                                                          CircularProgressIndicator(),
-                                                    ))
-                                                  : Text(
-                                                      couponApplied
-                                                          ? "Remove Coupon"
-                                                          : "Apply Coupon",
-                                                      style: const TextStyle(
-                                                          color: Colors.white),
-                                                    ),
-                                            ),
-                                          ),
-
-                                          const SizedBox(height: 15),
-
-                                          Card(
-                                            elevation: 2,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                            child: Padding(
-                                              padding: const EdgeInsets.all(15),
-                                              child: Column(
-                                                children: [
-                                                  _priceRow(
-                                                    "Amount",
-                                                    "₹$offerPrice",
-                                                  ),
-                                                  const SizedBox(height: 10),
-                                                  _priceRow(
-                                                    "Discount",
-                                                    "- ₹${discountAmount.toStringAsFixed(0)}",
-                                                    color: Colors.green,
-                                                  ),
-                                                  const Divider(),
-                                                  _priceRow(
-                                                    "Payable Amount",
-                                                    "₹${finalAmount == 0 ? offerPrice : finalAmount}",
-                                                    isBold: true,
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-
-                                          const SizedBox(height: 20),
-
-                                          SizedBox(
-                                            width: double.infinity,
-                                            height: 52,
-                                            child: ElevatedButton.icon(
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: Colors.blue,
-                                              ),
-                                              onPressed: () {
-                                                Navigator.pop(context);
-
-                                                addPhonePay(
-                                                  context: context,
-                                                  batchId: id,
-                                                  isTrial: false,
-                                                );
-                                              },
-                                              icon: const Icon(
-                                                Icons.shopping_cart,
-                                                color: Colors.white,
-                                              ),
-                                              label: Text(
-                                                "Buy Now • ₹${finalAmount == 0 ? offerPrice : finalAmount}",
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 17,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                },
-                              );
-                            },
+                            batchId: id,
+                            isTrial: false,
                           );
                         },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16)),
-                          elevation: 4,
+                        icon: const Icon(
+                          Icons.shopping_cart,
+                          color: Colors.white,
                         ),
-                        child: Text(
-                          "Buy Now",
+                        label: Text(
+                          "Buy Now • ₹${finalAmount == 0 ? offerPrice : finalAmount}",
                           style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white),
+                            color: Colors.white,
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
-                  const SizedBox(height: 20),
-                ],
+                  ],
+                ),
               ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void showTrialClaimedDialog(BuildContext context, String batchName,
+      String startDate, String endDate, String offerPrice, String id) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(22, 16, 22, 22),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 30,
+                  offset: const Offset(0, 12),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Close Button
+                Align(
+                  alignment: Alignment.topRight,
+                  child: InkWell(
+                    onTap: () => Navigator.pop(dialogContext),
+                    borderRadius: BorderRadius.circular(50),
+                    child: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.close_rounded,
+                        color: Colors.grey.shade700,
+                        size: 22,
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 4),
+
+                // Icon
+                Container(
+                  width: 90,
+                  height: 90,
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Container(
+                      width: 66,
+                      height: 66,
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade100,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.workspace_premium_rounded,
+                        size: 38,
+                        color: Colors.orange.shade700,
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 22),
+
+                // Title
+                const Text(
+                  "Trial Already Claimed",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 23,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF1D2530),
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                // Description
+                Text(
+                  "You have already claimed your free trial for this course.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 15,
+                    height: 1.5,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                Text(
+                  "Continue learning by purchasing the full course.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    height: 1.4,
+                    color: Colors.grey.shade500,
+                  ),
+                ),
+
+                const SizedBox(height: 26),
+
+                // Buy Now Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(dialogContext);
+                      buyShowBottom(context, batchName, startDate, endDate,
+                          offerPrice, id);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue.shade600,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.shopping_bag_rounded,
+                          size: 22,
+                        ),
+                        SizedBox(width: 10),
+                        Text(
+                          "Buy Now",
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void showCoursePurchasedDialog(BuildContext context, String id) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(22, 16, 22, 22),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 30,
+                  offset: const Offset(0, 12),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Close Icon
+                Align(
+                  alignment: Alignment.topRight,
+                  child: InkWell(
+                    onTap: () => Navigator.pop(dialogContext),
+                    borderRadius: BorderRadius.circular(50),
+                    child: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.close_rounded,
+                        color: Colors.grey.shade700,
+                        size: 22,
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 4),
+
+                // Success Icon
+                Container(
+                  width: 90,
+                  height: 90,
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Container(
+                      width: 66,
+                      height: 66,
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade100,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.check_circle_rounded,
+                        size: 42,
+                        color: Colors.green.shade600,
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 22),
+
+                const Text(
+                  "Course Purchased",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 23,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF1D2530),
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                Text(
+                  "You have already purchased this course.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 15,
+                    height: 1.5,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+
+                const SizedBox(height: 6),
+
+                Text(
+                  "You can access all course content anytime.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    height: 1.4,
+                    color: Colors.grey.shade500,
+                  ),
+                ),
+
+                const SizedBox(height: 26),
+
+                // Continue Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: () async {
+
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ModernBottomNav(
+                            selectedIndex: 1,
+                          ),
+                        ),
+                        (route) => false,
+                      );
+
+                      bool isProfileComplete =
+                          await checkProfileCompletion(context);
+                      if (isProfileComplete) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                PurchasedCourseVideosScreen(
+                                  courseId: id,
+                                ),
+                          ),
+                        );
+                      } else {
+                        checkProfileShow(context);
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade600,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.play_circle_fill_rounded,
+                          size: 23,
+                        ),
+                        SizedBox(width: 9),
+                        Text(
+                          "Continue Learning",
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void checkProfileShow(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircleAvatar(
+                  radius: 34,
+                  backgroundColor:
+                  Colors.orange.withOpacity(.15),
+                  child: const Icon(
+                    Icons.person_outline_rounded,
+                    color: Colors.orange,
+                    size: 34,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  "Complete Your Profile",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  "Please complete your profile before continuing. This helps us provide a better experience.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Full Width Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      elevation: 0,
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                        BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                UpdateProfileScreen(),
+                          ));
+                    },
+                    child: const Text(
+                      "Go to Profile",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

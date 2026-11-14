@@ -38,6 +38,8 @@ class _PurchasedCourseVideosScreenState
   String videoLecturesCount = '';
   String mcqCount = '';
   String currentAffairCount = '';
+  String currentAffairAttemptedCount = '';
+  String pyqAttemptedCount = '';
   String pyqCount = '';
 
   // late TabController _tabController;
@@ -46,14 +48,12 @@ class _PurchasedCourseVideosScreenState
 
   //String? errorMessage;
   Future<void> fetchNotes() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
     setState(() {
       isLoading2 = true;
       errorMessage = null;
     });
-
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-
     if (token == null) {
       setState(() {
         errorMessage = "Please login again";
@@ -68,8 +68,8 @@ class _PurchasedCourseVideosScreenState
         body: {"apiToken": token, "course_id": widget.courseId.toString()},
       );
       if (kDebugMode) {
-        print(
-            "api--get-notes--statusCode---${response.statusCode}\ndata--${response.body}");
+        log("api--get-notes--statusCode---${response
+            .statusCode}\ndata--${response.body}");
       }
 
       if (response.statusCode == 200) {
@@ -122,12 +122,15 @@ class _PurchasedCourseVideosScreenState
         body: {"apiToken": token, "courseId": widget.courseId},
       );
 
-      if (response.body.trim().isEmpty) {
+      if (response.body
+          .trim()
+          .isEmpty) {
         throw Exception("Empty response");
       }
       final data = jsonDecode(response.body);
       if (kDebugMode) {
-        log("api--get-batche-details--statusCode---${response.statusCode}\ndata--$data");
+        log("api--get-batche-details--statusCode---${response
+            .statusCode}\ndata--$data");
       }
       if (data["status"].toString() == "true") {
         setState(() {
@@ -138,6 +141,8 @@ class _PurchasedCourseVideosScreenState
           videoLecturesCount = data["data"]["videoLecturesCount"].toString();
           mcqCount = data["data"]["mcqCount"].toString();
           currentAffairCount = data["data"]["currentAffairCount"].toString();
+          currentAffairAttemptedCount = data["data"]["currentAffairAttemptedCount"].toString();
+          pyqAttemptedCount = data["data"]["pyqAttemptedCount"].toString();
           pyqCount = data["data"]["pyqCount"].toString();
           isLoading = false;
         });
@@ -190,6 +195,7 @@ class _PurchasedCourseVideosScreenState
         ),
         child: Stack(
           children: [
+
             /// 🔵 Decorative circles
             Positioned(
               top: -30,
@@ -205,6 +211,7 @@ class _PurchasedCourseVideosScreenState
             /// CONTENT
             Row(
               children: [
+
                 /// ICON CONTAINER
                 Container(
                   height: 56,
@@ -321,7 +328,7 @@ class _PurchasedCourseVideosScreenState
                           fontSize: 15,
                           color: isCorrect ? Colors.green[800] : Colors.black87,
                           fontWeight:
-                              isCorrect ? FontWeight.bold : FontWeight.normal,
+                          isCorrect ? FontWeight.bold : FontWeight.normal,
                         ),
                       ),
                     ),
@@ -412,7 +419,9 @@ class _PurchasedCourseVideosScreenState
         ),
       );
     }
-
+    if (isTrialOver && !isPurchased) {
+      return CourseDetailScreen2(courseData: courseData ?? {});
+    }
     if (!isTrial && !isPurchased) {
       // return Scaffold(
       //   appBar: AppBar(
@@ -618,7 +627,7 @@ class _PurchasedCourseVideosScreenState
       //               ),
       //             ),
       // );
-     return CourseDetailScreen2(courseData: courseData??{});
+      return CourseDetailScreen2(courseData: courseData ?? {});
     }
     final String batchName = courseData!["batch_name"] ?? "Course";
     final String category = courseData!["cat_name"] ?? "";
@@ -697,7 +706,9 @@ class _PurchasedCourseVideosScreenState
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    "$category ${subCategory.isNotEmpty ? '• $subCategory' : ''}",
+                    "$category ${subCategory.isNotEmpty
+                        ? '• $subCategory'
+                        : ''}",
                     style: const TextStyle(fontSize: 16, color: Colors.black54),
                   ),
                   const SizedBox(height: 20),
@@ -727,24 +738,11 @@ class _PurchasedCourseVideosScreenState
                       ),
                     ),
                   ),
-                  const SizedBox(height: 30),
+                  if (videoLecturesCount.toString() != "0" || notes.isNotEmpty)
+                    const SizedBox(height: 30),
                   Row(
                     children: [
-                      // _optionCard(
-                      //   title: "MCQ",
-                      //   icon: Icons.quiz_rounded,
-                      //   color: const Color(0xFF4F46E5),
-                      //   onTap: () {
-                      //     Navigator.push(
-                      //       context,
-                      //       MaterialPageRoute(
-                      //         builder: (_) => QuestionTypeSelectionScreen(
-                      //           questions: allQuestions,
-                      //         ),
-                      //       ),
-                      //     );
-                      //   },
-                      // ),
+
                       if (videoLecturesCount.toString() != "0")
                         _optionCard(
                           title: "Videos",
@@ -754,8 +752,9 @@ class _PurchasedCourseVideosScreenState
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => VideoListScreenfull(
-                                    courseId: widget.courseId),
+                                builder: (context) =>
+                                    VideoListScreenfull(
+                                        courseId: widget.courseId),
                               ),
                             );
                           },
@@ -769,9 +768,10 @@ class _PurchasedCourseVideosScreenState
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => GetNotesScreen(
-                                  batchid: widget.courseId.toString(),
-                                ),
+                                builder: (context) =>
+                                    GetNotesScreen(
+                                      batchid: widget.courseId.toString(),
+                                    ),
                               ),
                             );
                           },
@@ -824,32 +824,50 @@ class _PurchasedCourseVideosScreenState
     );
   }
 
-  Widget _typeCard(
-    BuildContext context,
-    String title,
-    String questionType,
-    String count,
-    Color color,
-  ) {
+  Widget _typeCard(BuildContext context,
+      String title,
+      String questionType,
+      String count,
+      Color color,) {
     final bool isEmpty = (count.isEmpty || count == '0');
     return InkWell(
-      // Disable tap when empty
       onTap: isEmpty
           ? null
           : () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => SubjectListScreen(
+        if (questionType == '1') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  SubjectListScreen(
                       courseId: widget.courseId, questionType: questionType),
-                ),
-              );
-            },
+            ),
+          );
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  AttemptPaperScreen(
+                    questionType: questionType,
+                    batchId: widget.courseId,
+                    subjectName: title,
+                    subjectId: '',
+                    chapterId: '',
+                    attemptedCount: questionType == '2'
+                        ?currentAffairAttemptedCount: pyqAttemptedCount,
+                      chapterName: '',
+
+                  ),
+            ),
+          );
+        }
+      },
       child: Container(
         height: 100,
         decoration: BoxDecoration(
           color:
-              isEmpty ? Colors.grey.withOpacity(0.08) : color.withOpacity(0.12),
+          isEmpty ? Colors.grey.withOpacity(0.08) : color.withOpacity(0.12),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isEmpty ? Colors.grey.shade400 : color,

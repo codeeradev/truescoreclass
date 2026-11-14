@@ -181,6 +181,7 @@ class _AskTypeState extends State<AskType> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: Colors.white,
       appBar: AppBar(title: const Text('Who Are You'), backgroundColor: Colors.white),
       body: Stack(

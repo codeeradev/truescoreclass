@@ -36,9 +36,13 @@ class _OnBoardingPageState extends State<OnBoardingPage> {
 
 
   void _onDone() {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) =>  AskType()),
-    );
+    Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (context) => AskType(),
+        ),
+            (route) => false);
+
   }
 
   Widget _buildDots() {

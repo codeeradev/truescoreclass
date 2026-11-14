@@ -34,30 +34,36 @@ class _SplashScreenState extends State<SplashScreen> {
 
       final prefs = await SharedPreferences.getInstance();
       final check = prefs.getString('type') ?? ''; // safe fallback
-      print("type: $check");
-
       if (check == 'teacher') {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const TeacherDashboardScreen()),
-        );
+        Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (context) => TeacherDashboardScreen(),
+            ),
+            (route) => false);
         return;
       } else if (check == 'student') {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const ModernBottomNav()),
-        );
+        Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ModernBottomNav(),
+            ),
+            (route) => false);
+
         return;
       } else {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const OnBoardingPage()),
-        );
+        Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (context) => OnBoardingPage(),
+            ),
+            (route) => false);
+
         return;
       }
     });
-
   }
+
   @override
   void initState() {
     super.initState();
@@ -72,17 +78,19 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Center(
           child: Column(
             children: [
-              Container(height: MediaQuery.of(context).size.height*0.3
-                ,child: Image.asset('assets/images/logo.png',fit: BoxFit.cover,),),
-
               Container(
-
-                child:  Lottie.asset(
+                height: MediaQuery.of(context).size.height * 0.3,
+                child: Image.asset(
+                  'assets/images/logo.png',
+                  fit: BoxFit.cover,
+                ),
+              ),
+              Container(
+                child: Lottie.asset(
                   'assets/images/splash.json',
                   width: double.maxFinite,
-                  height: MediaQuery.of(context).size.height*0.6,
+                  height: MediaQuery.of(context).size.height * 0.6,
                   fit: BoxFit.contain,
-
                 ),
               ),
             ],
@@ -92,4 +100,3 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 }
-

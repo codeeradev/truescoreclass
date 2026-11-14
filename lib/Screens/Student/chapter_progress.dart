@@ -53,7 +53,7 @@ class _ChapterProgressScreenState extends State<ChapterProgressScreen> {
           "batch_id": widget.batchId,
           "subject_id": widget.subjectId,
         },
-      ).timeout(const Duration(seconds: 15));
+      );
 
       if (kDebugMode) {
         log("fetchChapterProgress STATUS: ${response.statusCode}");

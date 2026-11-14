@@ -51,6 +51,7 @@ class _OtpStudentPageState extends State<OtpStudentPage> {
   @override
   void dispose() {
     timer?.cancel();
+    SecureScreen.disable();
     super.dispose();
   }
 
@@ -394,20 +395,86 @@ class _OtpStudentPageState extends State<OtpStudentPage> {
         if ((data["status"].toString() == '1' ||
                 data['status'].toString() == 'true') &&
             isOtpType) {
-          _showSnackBar(data["msg"], isError: false);
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (_) => Dialog(
-              backgroundColor: Colors.transparent,
-              insetPadding: const EdgeInsets.all(16),
-              child: RegistrationSuccessCard(
-                message: data['msg'],
-                enrollmentId: data['credentials']['enrollment_id'].toString(),
-                // password: data['credentials']['password'].toString(),
-              ),
-            ),
+          await preferences.setString(
+            "studentEnrollmentId",
+            data['credentials']['enrollmentId'],
           );
+          await preferences.setString(
+            "studentId",
+            data['credentials']['studentId'],
+          );
+          await preferences.setString(
+            "token",
+            data['credentials']['apiToken'],
+          );
+          await preferences.setString('type', 'student');
+          await preferences.setString(
+            "studentname",
+            data['credentials']['fullName'],
+          );
+          await preferences.setString(
+            "studentimage",
+            data['credentials']['image'].toString(),
+          );
+          await preferences.setString(
+            "studentmail",
+            data['credentials']['userEmail'].toString(),
+          );
+          await preferences.setString(
+            "studentph",
+            data['credentials']['mobile'].toString(),
+          );
+          await preferences.setString('studentAlternateNo',
+              data['credentials']['alternate_number']?.toString() ?? '');
+
+          await preferences.setString('studentfather',
+              data['credentials']['father_name']?.toString() ?? '');
+          await preferences.setString(
+              'studentgender', data['credentials']['gender']?.toString() ?? '');
+          await preferences.setString(
+            'studentdob',
+            data['credentials']['dob']?.toString() ?? '',
+          );
+          final addressString =
+              data['credentials']['address']?.toString() ?? '';
+
+          final address =
+              addressString.isEmpty ? <String>[] : addressString.split(',');
+
+          await preferences.setString(
+            'studenthouse',
+            address.isNotEmpty ? address[0].trim() : '',
+          );
+
+          await preferences.setString(
+            'studentstreet',
+            address.length > 1 ? address[1].trim() : '',
+          );
+
+          await preferences.setString(
+            'studentpin',
+            address.length > 2 ? address[2].trim() : '',
+          );
+          await preferences.setString(
+            'studentstateid',
+            data['credentials']['state_id']?.toString() ?? '',
+          );
+          await preferences.setString(
+            'studentdistrictid',
+            data['credentials']['district_id']?.toString() ?? '',
+          );
+          await preferences.setString(
+            'studentcityid',
+            data['credentials']['city_id']?.toString() ?? '',
+          );
+
+          Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ModernBottomNav(),
+              ),
+              (route) => false);
+          _showSnackBar(data["msg"], isError: false);
         } else if (!isOtpType &&
             (data["status"].toString() == '1' ||
                 data['status'].toString() == 'true')) {
@@ -440,8 +507,8 @@ class _OtpStudentPageState extends State<OtpStudentPage> {
             "studentph",
             data['studentData']['mobile'].toString(),
           );
-          await preferences.setString(
-              'studentAlternateNo', data['alternate_number']?.toString() ?? '');
+          await preferences.setString('studentAlternateNo',
+              data['studentData']['alternate_number']?.toString() ?? '');
 
           await preferences.setString('studentfather',
               data['studentData']['father_name']?.toString() ?? '');
@@ -484,10 +551,12 @@ class _OtpStudentPageState extends State<OtpStudentPage> {
             data['studentData']['city_id']?.toString() ?? '',
           );
 
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => ModernBottomNav()),
-          );
+          Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ModernBottomNav(),
+              ),
+              (route) => false);
           _showSnackBar(
             data['msg'],
             isError: false,
@@ -499,7 +568,7 @@ class _OtpStudentPageState extends State<OtpStudentPage> {
         _showSnackBar("Something went wrong", isError: true);
       }
     } catch (e) {
-      _showSnackBar("Verification failed: $e", isError: true);
+      print('err--$e');
     } finally {
       if (!mounted) return;
       setState(() {

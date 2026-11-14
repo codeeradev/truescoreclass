@@ -24,6 +24,8 @@ class _ResultScreenState extends State<ResultScreen> {
   bool loading = true;
   String errorMsg = "";
   Map resultData = {};
+  int correctAnswers = 0;
+  int wrongAnswers = 0;
 
   @override
   void initState() {
@@ -45,16 +47,24 @@ class _ResultScreenState extends State<ResultScreen> {
           "paper_type": widget.paperType,
         },
       );
+if(response.body.trim().isEmpty){
 
+  throw Exception('response is empty');
+}
       final json = jsonDecode(response.body);
-      print("RESULT JSON: $json");
+      print("response ${response.body}");
 
       if (json["status"] == "1") {
         resultData = json["data"];
+
+          correctAnswers = json['data']['right_question'] ?? 0;
+          wrongAnswers = json['data']['wrong_question'] ?? 0;
+
       } else {
         errorMsg = json["msg"];
       }
     } catch (e) {
+      print("error---$e");
       errorMsg = "Error: $e";
     }
 
@@ -92,12 +102,12 @@ class _ResultScreenState extends State<ResultScreen> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(22),
                 boxShadow: const [
                   BoxShadow(
                     color: Colors.black26,
-                    blurRadius: 12,
-                    offset: Offset(0, 4),
+                    blurRadius: 14,
+                    offset: Offset(0, 6),
                   ),
                 ],
               ),
@@ -105,26 +115,166 @@ class _ResultScreenState extends State<ResultScreen> {
                 children: [
                   const Text(
                     "Overall Score",
-                    style: TextStyle(color: Colors.white70, fontSize: 16),
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                  const SizedBox(height: 8),
+
+                  const SizedBox(height: 6),
+
                   Text(
                     "${resultData['percentage']}%",
                     style: const TextStyle(
-                      fontSize: 42,
+                      fontSize: 44,
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    "Attempted: ${resultData['attempted_question']}",
-                    style: const TextStyle(color: Colors.white70, fontSize: 14),
+
+                  const SizedBox(height: 20),
+
+                  Row(
+                    children: [
+                      /// Correct Answers
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 14,
+                            horizontal: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: Colors.greenAccent.withOpacity(0.5),
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              const Icon(
+                                Icons.check_circle_rounded,
+                                color: Colors.greenAccent,
+                                size: 30,
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                "$correctAnswers",
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              const Text(
+                                "Correct",
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(width: 12),
+
+                      /// Wrong Answers
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 14,
+                            horizontal: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: Colors.redAccent.withOpacity(0.5),
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              const Icon(
+                                Icons.cancel_rounded,
+                                color: Colors.redAccent,
+                                size: 30,
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                "$wrongAnswers",
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              const Text(
+                                "Wrong",
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    "Date: ${resultData['date']}",
-                    style: const TextStyle(color: Colors.white60),
+
+                  const SizedBox(height: 18),
+
+                  Container(
+                    height: 1,
+                    color: Colors.white24,
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.quiz_outlined,
+                            size: 17,
+                            color: Colors.white60,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            "Attempted: ${resultData['attempted_question']}",
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.calendar_today_outlined,
+                            size: 15,
+                            color: Colors.white60,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            "${resultData['date']}",
+                            style: const TextStyle(
+                              color: Colors.white60,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ],
               ),

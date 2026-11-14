@@ -107,7 +107,8 @@ class _CoursesScreenState extends State<CoursesScreen> {
                 height: 140,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   itemCount: categories.length,
                   itemBuilder: (context, index) {
                     final cat = categories[index] ?? {};
@@ -120,17 +121,17 @@ class _CoursesScreenState extends State<CoursesScreen> {
                         onTap: id.isEmpty
                             ? null
                             : () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => CategoryDetailScreen(
-                                categoryId: id,
-                                categoryName: name,
-                                allData: apiData ?? {},
-                              ),
-                            ),
-                          );
-                        },
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => CategoryDetailScreen(
+                                      categoryId: id,
+                                      categoryName: name,
+                                      allData: apiData ?? {},
+                                    ),
+                                  ),
+                                );
+                              },
                         child: Column(
                           children: [
                             Container(
@@ -149,7 +150,8 @@ class _CoursesScreenState extends State<CoursesScreen> {
                                   ),
                                 ],
                               ),
-                              child: const Icon(Icons.category_rounded, color: Colors.white, size: 36),
+                              child: const Icon(Icons.category_rounded,
+                                  color: Colors.white, size: 36),
                             ),
                             const SizedBox(height: 8),
                             SizedBox(
@@ -159,7 +161,8 @@ class _CoursesScreenState extends State<CoursesScreen> {
                                 textAlign: TextAlign.center,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                                style: const TextStyle(
+                                    fontSize: 13, fontWeight: FontWeight.w600),
                               ),
                             ),
                           ],
@@ -209,7 +212,6 @@ class CategoryDetailScreen extends StatelessWidget {
     final screenWidth = MediaQuery.of(context).size.width;
 
     /// 🔥 RESPONSIVE GRID
-    final int crossAxisCount = screenWidth < 400 ? 2 : 2;
 
     final trending = _getCoursesByType("trendingCourses");
     final free = _getCoursesByType("freeCourses");
@@ -225,7 +227,6 @@ class CategoryDetailScreen extends StatelessWidget {
       ),
       body: CustomScrollView(
         slivers: [
-
           /// HEADER
           SliverToBoxAdapter(
             child: Container(
@@ -238,24 +239,25 @@ class CategoryDetailScreen extends StatelessWidget {
                 ),
               ),
               child: const Center(
-                child: Icon(Icons.school_rounded, size: 80, color: Colors.white70),
+                child:
+                    Icon(Icons.school_rounded, size: 80, color: Colors.white70),
               ),
             ),
           ),
 
           if (trending.isNotEmpty) ...[
             _buildSectionHeader("Trending Courses 🔥"),
-            _buildCourseGrid(trending, crossAxisCount, "Trending"),
+            _buildCourseGrid(trending, "Trending"),
           ],
 
           if (free.isNotEmpty) ...[
             _buildSectionHeader("Free Courses 🎁"),
-            _buildCourseGrid(free, crossAxisCount, "Free"),
+            _buildCourseGrid(free, "Free"),
           ],
 
           if (newCourses.isNotEmpty) ...[
             _buildSectionHeader("New Courses ✨"),
-            _buildCourseGrid(newCourses, crossAxisCount, "New"),
+            _buildCourseGrid(newCourses, "New"),
           ],
         ],
       ),
@@ -280,21 +282,17 @@ class CategoryDetailScreen extends StatelessWidget {
   }
 
   /// 🔥 RESPONSIVE GRID FIX
-  SliverPadding _buildCourseGrid(List courses, int crossAxisCount, String type) {
+  SliverPadding _buildCourseGrid(List courses, String type) {
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       sliver: SliverGrid(
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: crossAxisCount,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-
-          /// 🔥 FIXED RATIO
-          childAspectRatio: crossAxisCount == 2 ? 0.62 : 0.72,
-        ),
+            crossAxisCount: 2,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 0.9),
         delegate: SliverChildBuilderDelegate(
-              (context, index) =>
-              _courseCard(courses[index], context, type),
+          (context, index) => _courseCard(courses[index], context, type),
           childCount: courses.length,
         ),
       ),
@@ -303,20 +301,18 @@ class CategoryDetailScreen extends StatelessWidget {
 
   /// 🔥 FULLY RESPONSIVE CARD
   Widget _courseCard(dynamic item, BuildContext context, String type) {
-
     final String imageUrl = item["batch_image"]?.toString() ?? "";
 
     return LayoutBuilder(
       builder: (context, constraints) {
-
         final isSmall = constraints.maxWidth < 180;
         final imageHeight = isSmall ? 110.0 : 140.0;
 
         final Color badgeColor = type == "Trending"
             ? Colors.orange
             : type == "Free"
-            ? Colors.green
-            : Colors.blueAccent;
+                ? Colors.green
+                : Colors.blueAccent;
 
         return InkWell(
           borderRadius: BorderRadius.circular(18),
@@ -342,27 +338,26 @@ class CategoryDetailScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-
-                /// 🔥 IMAGE
                 Stack(
                   children: [
                     ClipRRect(
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(18)),
                       child: imageUrl.isNotEmpty
                           ? Image.network(
-                        'https://truescoreedu.com/uploads/batch_image/$imageUrl',
-                        height: imageHeight,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      )
+                              'https://truescoreedu.com/uploads/batch_image/$imageUrl',
+                              height: imageHeight,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            )
                           : _imagePlaceholder(imageHeight),
                     ),
-
                     Positioned(
                       top: 8,
                       right: 8,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: badgeColor,
                           borderRadius: BorderRadius.circular(12),
@@ -379,27 +374,25 @@ class CategoryDetailScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-
-                /// 🔥 TEXT (NO OVERFLOW)
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-
-                        Text(
-                          item["batch_name"] ?? "Course",
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: isSmall ? 13 : 14,
+                        Flexible(
+                          child: Text(
+                            item["batch_name"] ?? "Course",
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: isSmall ? 13 : 14,
+                            ),
                           ),
                         ),
-
                         const SizedBox(height: 4),
-
                         Text(
                           item["sub_cat_name"] ?? "",
                           maxLines: 1,
@@ -431,4 +424,3 @@ class CategoryDetailScreen extends StatelessWidget {
     );
   }
 }
-

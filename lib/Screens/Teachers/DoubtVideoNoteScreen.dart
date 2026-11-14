@@ -57,7 +57,7 @@ class _DoubtVideoNoteScreenState extends State<DoubtVideoNoteScreen> {
   void dispose() {
     _transformController.dispose();
     // Restore app secure flag and default orientation policy.
-    SecureScreen.enable();
+    SecureScreen.disable();
     SystemChrome.setPreferredOrientations(const [
       DeviceOrientation.portraitUp,
       DeviceOrientation.landscapeLeft,
@@ -198,7 +198,6 @@ class _DoubtVideoNoteScreenState extends State<DoubtVideoNoteScreen> {
       if (mounted) setState(() => _isBusy = false);
     }
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(

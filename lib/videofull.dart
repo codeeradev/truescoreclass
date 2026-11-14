@@ -64,7 +64,7 @@ class _VideoListScreenfullState extends State<VideoListScreenfull> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('token');
 
-    final int offset = (currentPage - 1) * pageSize;
+    // final int offset = (currentPage - 1) * pageSize;
 
     try {
       final response = await http.post(
@@ -73,7 +73,7 @@ class _VideoListScreenfullState extends State<VideoListScreenfull> {
           "apiToken": token,
           "courseId": widget.courseId,
           "page": currentPage.toString(),
-          "offset": offset.toString(),
+          // "offset": offset.toString(),
         },
       );
 

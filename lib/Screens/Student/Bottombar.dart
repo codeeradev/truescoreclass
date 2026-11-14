@@ -13,14 +13,15 @@ import 'Mydoubtsscreen.dart';
 import 'purchasedcourses.dart';
 
 class ModernBottomNav extends StatefulWidget {
-  const ModernBottomNav({super.key});
+    int selectedIndex = 0 ;
+
+    ModernBottomNav({super.key, this.selectedIndex=0});
 
   @override
   State<ModernBottomNav> createState() => _ModernBottomNavState();
 }
 
 class _ModernBottomNavState extends State<ModernBottomNav> {
-  int selectedIndex = 0;
 
   // List<dynamic> doubts = [];
   int unreadCount = 0;
@@ -33,9 +34,9 @@ class _ModernBottomNavState extends State<ModernBottomNav> {
     ProfileScreen1(),
   ];
 
-  bool get showFab => selectedIndex == 0 || selectedIndex == 1;
+  bool get showFab => widget.selectedIndex == 0 || widget.selectedIndex == 1;
 
-  bool get showBottomBar => selectedIndex != 2;
+  bool get showBottomBar =>widget. selectedIndex != 2;
 
   @override
   void initState() {
@@ -71,7 +72,7 @@ class _ModernBottomNavState extends State<ModernBottomNav> {
 
           setState(() {
             // doubts = data;
-            unreadCount = json['unread_count']??0;
+            unreadCount = json['unread_count'] ?? 0;
           });
         }
       }
@@ -80,13 +81,16 @@ class _ModernBottomNavState extends State<ModernBottomNav> {
     }
   }
 
+  @override
+  void dispose() {
+    super.dispose();
+    SecureScreen.disable();
+  }
+
   //---------------- UI ----------------//
   @override
   Widget build(BuildContext context) {
-    final bool isKeyboardOpen = MediaQuery
-        .of(context)
-        .viewInsets
-        .bottom > 0;
+    final bool isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
 
     return WillPopScope(
       onWillPop: _onWillPop,
@@ -94,22 +98,25 @@ class _ModernBottomNavState extends State<ModernBottomNav> {
         resizeToAvoidBottomInset: false,
         backgroundColor: Colors.white,
 
-        body: IndexedStack(
-          index: selectedIndex,
-          children: pages,
-        ),
+        // body: IndexedStack(
+        //   index: selectedIndex,
+        //   children: pages,
+        // ),
+        body: pages[widget.selectedIndex],
 
         /// FAB
+        ///
         floatingActionButton: isKeyboardOpen || !showBottomBar
             ? null
             : FloatingActionButton(
-          backgroundColor: Colors.black,
-          elevation: 8,
-          onPressed: () {
-            setState(() => selectedIndex = 2);
-          },
-          child: const Icon(Icons.search, color: Colors.white, size: 28),
-        ),
+                heroTag: null,
+                backgroundColor: Colors.black,
+                elevation: 8,
+                onPressed: () {
+                  setState(() => widget.selectedIndex = 2);
+                },
+                child: const Icon(Icons.search, color: Colors.white, size: 28),
+              ),
 
         floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
 
@@ -117,31 +124,31 @@ class _ModernBottomNavState extends State<ModernBottomNav> {
         bottomNavigationBar: isKeyboardOpen || !showBottomBar
             ? const SizedBox.shrink()
             : BottomAppBar(
-          color: Colors.white,
-          elevation: 12,
-          shape: const CircularNotchedRectangle(),
-          notchMargin: 8,
-          child: SizedBox(
-            height: 65,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _navItem(Icons.home_rounded, "Home", 0),
-                _navItem(Icons.monetization_on, "Purchased", 1),
-                const SizedBox(width: 40),
-                _navItem(Icons.help, "Doubts", 3),
-                _navItem(Icons.person_rounded, "Profile", 4),
-              ],
-            ),
-          ),
-        ),
+                color: Colors.white,
+                elevation: 12,
+                shape: const CircularNotchedRectangle(),
+                notchMargin: 8,
+                child: SizedBox(
+                  height: 65,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _navItem(Icons.home_rounded, "Home", 0),
+                      _navItem(Icons.monetization_on, "Purchased", 1),
+                      const SizedBox(width: 40),
+                      _navItem(Icons.help, "Doubts", 3),
+                      _navItem(Icons.person_rounded, "Profile", 4),
+                    ],
+                  ),
+                ),
+              ),
       ),
     );
   }
 
   //---------------- NAV ITEM ----------------//
   Widget _navItem(IconData icon, String label, int index) {
-    final bool isSelected = selectedIndex == index;
+    final bool isSelected = widget.selectedIndex == index;
     final bool showBadge = index == 3 && unreadCount > 0;
     return InkWell(
       onTap: () async {
@@ -156,7 +163,7 @@ class _ModernBottomNavState extends State<ModernBottomNav> {
           fetchDoubts();
         }
 
-        setState(() => selectedIndex = index);
+        setState(() => widget.selectedIndex = index);
       },
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -177,7 +184,7 @@ class _ModernBottomNavState extends State<ModernBottomNav> {
                   right: -10,
                   child: Container(
                     padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: Colors.red,
                       borderRadius: BorderRadius.circular(12),
@@ -215,15 +222,14 @@ class _ModernBottomNavState extends State<ModernBottomNav> {
 
   //---------------- BACK BUTTON ----------------//
   Future<bool> _onWillPop() async {
-    if (selectedIndex != 0) {
-      setState(() => selectedIndex = 0);
+    if (widget.selectedIndex != 0) {
+      setState(() => widget.selectedIndex = 0);
       return false;
     }
 
     return await showDialog(
-      context: context,
-      builder: (_) =>
-          AlertDialog(
+          context: context,
+          builder: (_) => AlertDialog(
             title: const Text("Exit App"),
             content: const Text("Are you sure you want to exit?"),
             actions: [
@@ -237,7 +243,7 @@ class _ModernBottomNavState extends State<ModernBottomNav> {
               ),
             ],
           ),
-    ) ??
+        ) ??
         false;
   }
 }

@@ -692,19 +692,14 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
           await prefs.setString(
               'studentimage', data['image']?.toString() ?? '');
         }
-
+        Navigator.pop(context);
         _showSnackBar(jsonResp['msg'] ?? 'Profile updated successfully!');
-        Future.delayed(const Duration(seconds: 1), () {
-          if (mounted) {
-            Navigator.pop(context, true);
-          }
-        });
       } else {
         _showSnackBar(jsonResp['msg'] ?? 'Failed to update profile',
             isError: true);
       }
     } catch (e) {
-      _showSnackBar('Network error. Please try again.', isError: true);
+      print("_saveProfile--error--$e");
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
@@ -763,7 +758,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  "Tap to change photo",
+                  "Add / Change Photo",
                   style: TextStyle(
                       color: Colors.blue, fontWeight: FontWeight.w500),
                 ),
@@ -809,6 +804,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
                       : null,
                 ),
                 _inputField(
+                  maxLength: 10,
                   controller: alternateNoController,
                   label: "Alternate Mobile Number",
                   icon: Icons.phone_outlined,
